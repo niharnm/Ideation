@@ -79,6 +79,49 @@
       @media (max-width: 1080px) { .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }.workspace { grid-template-columns: 1fr; }.right-col { grid-template-columns: repeat(2,minmax(0,1fr)); }.right-col .ticket { grid-column: 1 / -1; } }
       @media (max-width: 780px) { .app { grid-template-columns: 1fr; }.sidebar { display: none; }.topbar,.main { padding-left: 18px; padding-right: 18px; }.main { padding-top: 22px; }.orders-table th:nth-child(3),.orders-table td:nth-child(3) { display: none; } }
       @media (max-width: 540px) { .metrics,.right-col,.scope-facts,.action-grid { grid-template-columns: 1fr; }.right-col .ticket { grid-column: auto; }.heading-row { align-items: start; flex-direction: column; }.service-control { display: none; }.topbar { min-height: 58px; }.customer-link { font-size: 11px; }.orders-table th,.orders-table td { padding-left: 11px; padding-right: 11px; }.record-row { align-items: stretch; flex-direction: column; }.record { width: 100%; } }
+
+      /* Shared Fieldline visual system. Green is reserved for permission and service states. */
+      :root { color: #171719; background: #f8f8f6; }
+      body { background: #f8f8f6; }
+      .sidebar { color: #b9b9bc; background: #1d1d20; }
+      .mark { color: #1d1d20; background: #f5f5f3; }
+      .brand small { color: #9a9a9e; }
+      .location { border-color: #424246; color: #f6f6f4; background: #28282b; }
+      .location span, .nav-label, .side-footer { color: #98989d; }
+      .nav-item { color: #c2c2c5; }
+      .nav-item.active { color: #1d1d20; background: #f5f5f3; }
+      .side-footer { border-color: #424246; }
+      .side-footer strong { color: #f5f5f3; }
+      .topbar { border-color: #e1e1de; }
+      .crumb, .subheading, .head-meta, .ticket-title p, .section-intro, .record-note, .history-item { color: #77777a; }
+      .crumb strong, h1, h2, .metric-value, .orders-table strong, .ticket-line strong, textarea { color: #202023; }
+      .customer-link { color: #3d3d40; }
+      .avatar, .filter.active, .action.active, .record { background: #1d1d20; }
+      .avatar { color: #fff; }
+      .service-control { border-color: #dce7dc; color: #456e4b; background: #f5f8f4; }
+      .metric, .card { border-color: #e1e1de; box-shadow: 0 5px 18px rgba(23,23,25,.035); }
+      .metric-label, .orders-table th, .ticket-label, .scope-label, .scope-fact span, .prep-box label { color: #85858a; }
+      .filters, .orders-table td, .ticket-top, .ticket-line, .card-head { border-color: #ececea; }
+      .filter, .action, textarea { border-color: #dededb; color: #444447; }
+      .filter.active, .action.active { border-color: #1d1d20; }
+      .orders-table th { background: #fafaf8; }
+      .orders-table td { color: #5f5f63; }
+      .orders-table tr.selected td { background: #f7f7f5; }
+      .orders-table tr.selected td:first-child { box-shadow: inset 3px 0 #1d1d20; }
+      .status.waiting { color: #626267; background: #f0f0ee; }
+      .ticket-badge { color: #3f6947; background: #e8f2e8; }
+      .scope-card { border-color: #dfe2de; }
+      .scope-card.active .scope-status { color: #456e4b; background: #e8f2e8; }
+      .scope-card.locked .scope-status { color: #68686d; background: #f1f1ef; }
+      .scope-detail { border-color: #dce7dc; background: #f9fcf9; }
+      .scope-detail-icon { color: #456e4b; background: #e3efe3; }
+      .scope-detail p { color: #36563b; }
+      .scope-fact strong, .locked-body strong { color: #3e3e42; }
+      .scope-note, .locked-body { color: #6c6c70; }
+      .action.active, .record { color: #fff; }
+      textarea { background: #fcfcfa; }
+      .notice { color: #456e4b; }
+      .history-item strong { color: #414145; }
     </style>
   </head>
   <body>
