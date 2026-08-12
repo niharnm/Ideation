@@ -9,6 +9,7 @@ const port = Number(process.env.PORT ?? 4173);
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".png": "image/png",
   ".ts": "text/javascript; charset=utf-8",
 };
 const browserCryptoModulePath = "/src/__browser-crypto.js";
@@ -89,10 +90,15 @@ createServer(async (request, response) => {
   }
 
   try {
-    const source = await readFile(resolved.filePath, "utf8");
-    const body = rewriteBrowserImports(
-      resolved.isSourceModule ? stripTypeScriptTypes(source) : source,
+    const source = await readFile(
+      resolved.filePath,
+      resolved.contentType.startsWith("image/") ? undefined : "utf8",
     );
+    const body = typeof source === "string"
+      ? rewriteBrowserImports(
+        resolved.isSourceModule ? stripTypeScriptTypes(source) : source,
+      )
+      : source;
     response.writeHead(200, {
       "Content-Type": resolved.contentType,
       "Cache-Control": "no-store",

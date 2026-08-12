@@ -4,248 +4,176 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>Handshake prototype</title>
+    <title>Handshake, scoped permission for one order</title>
     <style>
-      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171714; background: #f3f1eb; }
+      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171719; background: #f8f8f6; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-width: 320px; }
+      html { background: #f8f8f6; }
+      body { margin: 0; min-width: 320px; background: #f8f8f6; }
       button, input, select { font: inherit; }
       button { cursor: pointer; }
-      .shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
-      header, footer { width: min(100% - 32px, 720px); margin: 0 auto; }
-      header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 20px; }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 760; letter-spacing: -0.02em; }
-      .mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: white; background: #25251f; font-size: 14px; }
-      .private { font-size: 12px; color: #65645c; }
-      main { width: min(100% - 32px, 620px); margin: auto; padding: 28px 0 56px; }
-      .card { overflow: hidden; border: 1px solid #dedbd1; border-radius: 24px; background: #fffefa; box-shadow: 0 18px 50px rgba(51, 48, 38, 0.09); }
-      .hero { padding: 30px 30px 25px; border-bottom: 1px solid #ebe8df; }
-      .eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: #736c50; font-size: 12px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
-      .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 99px; background: #bc9c37; box-shadow: 0 0 0 4px #f6edcc; }
-      h1 { margin: 0; max-width: 520px; font-size: clamp(28px, 6vw, 42px); line-height: 1.06; letter-spacing: -0.04em; }
-      .intro { margin: 14px 0 0; color: #65645c; line-height: 1.55; }
-      .details { display: grid; gap: 0; padding: 4px 30px; }
-      .detail { padding: 21px 0; border-bottom: 1px solid #ebe8df; }
-      .detail:last-child { border-bottom: 0; }
-      .label { margin: 0 0 9px; color: #77756c; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-      .value { margin: 0; font-size: 16px; line-height: 1.45; }
-      .field-list { display: grid; gap: 9px; }
-      .field { display: flex; align-items: center; gap: 11px; padding: 12px 13px; border: 1px solid #dfdcd2; border-radius: 12px; background: white; }
-      .field:has(input:checked) { border-color: #99906c; background: #fbf7e9; }
-      .field input { width: 18px; height: 18px; accent-color: #25251f; }
-      .time-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-      select { min-width: 124px; padding: 9px 32px 9px 11px; border: 1px solid #d6d2c7; border-radius: 10px; background: white; color: #25251f; }
-      .end-time { margin-top: 7px; color: #65645c; font-size: 14px; }
-      .actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; padding: 22px 30px 30px; }
-      .button { min-height: 50px; border-radius: 13px; border: 1px solid #d4d0c5; font-weight: 700; }
-      .button:focus-visible, .field:has(input:focus-visible) { outline: 3px solid #91b4fa; outline-offset: 2px; }
-      .deny { color: #3f3e39; background: transparent; }
-      .approve { border-color: #25251f; color: white; background: #25251f; }
-      .revoke { width: 100%; color: #8d2c23; border-color: #e4bcb7; background: #fff8f7; }
-      .button:disabled { cursor: not-allowed; opacity: .45; }
-      .error { margin: 0 30px 20px; padding: 12px 14px; border-radius: 10px; color: #8d2c23; background: #fff0ee; font-size: 14px; }
-      .outcome { padding: 34px 30px; }
-      .status-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 18px; border-radius: 50%; color: white; background: #2e6d4d; font-size: 22px; }
-      .status-icon.denied, .status-icon.expired, .status-icon.revoked { background: #6d6760; }
-      .outcome h2 { margin: 0; font-size: 27px; letter-spacing: -0.03em; }
-      .outcome p { margin: 10px 0 0; color: #65645c; line-height: 1.55; }
-      .summary-grid { display: grid; gap: 14px; margin: 24px 0; padding: 18px; border-radius: 14px; background: #f5f3ed; }
-      .summary-grid p { margin: 2px 0 0; color: #25251f; }
-      .receipt-section { margin: 24px 0; }
-      .receipt-fields { display: grid; gap: 8px; }
-      .receipt-fields code { padding: 10px 12px; border: 1px solid #dedbd1; border-radius: 10px; background: white; color: #35342f; font-size: 13px; overflow-wrap: anywhere; }
-      .receipt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .receipt-pending { margin: 20px 0 0; padding: 16px; border: 1px dashed #c8c2af; border-radius: 12px; background: #faf8f1; }
-      .receipt-pending p, .receipt-section p { margin: 4px 0 0; }
-      .receipt-error { margin: 20px 0 0; }
-      .unverified-notice { padding: 12px 14px; border: 1px solid #d6b661; border-radius: 10px; background: #fff8df; color: #62501f !important; font-weight: 650; }
-      .delivery-pending { color: #8d5b23 !important; font-weight: 650; }
-      .badge-group { display: flex; gap: 6px; align-items: center; margin-left: auto; }
-      .badge { padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 650; text-transform: capitalize; }
-      .badge.severe { background: #fbeae9; color: #9e2a2b; }
-      .badge.moderate { background: #fff3db; color: #8c5800; }
-      .badge.mild { background: #eaf5ea; color: #2d6a4f; }
-      .badge.cross-contam { background: #f0f0f0; color: #555; font-size: 10px; }
-      .remove-allergy-btn { background: none; border: none; color: #a3a097; font-size: 16px; font-weight: bold; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1; transition: all 0.2s; }
-      .remove-allergy-btn:hover { color: #8d2c23; background: #fff0ee; }
-      .vault-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-      .button-link { background: none; border: none; color: #25251f; font-weight: 750; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
-      .button-link:hover { opacity: 0.75; }
-      .modal-overlay { position: fixed; inset: 0; background: rgba(23, 23, 20, 0.45); display: grid; place-items: center; z-index: 1000; padding: 16px; backdrop-filter: blur(4px); }
-      .modal-card { background: #fffefa; border: 1px solid #dedbd1; border-radius: 20px; width: min(100%, 460px); padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.18); }
-      .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-      .modal-header h3 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
-      .close-btn { background: none; border: none; font-size: 24px; color: #77756c; cursor: pointer; padding: 0 4px; line-height: 1; }
-      .form-group { margin-bottom: 16px; }
-      .form-group .label { display: block; margin-bottom: 4px; }
-      .input-text, .select-full { width: 100%; padding: 10px 12px; border: 1px solid #d6d2c7; border-radius: 10px; background: white; color: #25251f; }
-      .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-      .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: #35342f; }
-      .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
-      footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
+      button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #879989; outline-offset: 3px; }
       [hidden] { display: none !important; }
-      @media (max-width: 520px) { .hero, .details, .outcome { padding-left: 21px; padding-right: 21px; } .actions, .receipt-grid { grid-template-columns: 1fr; } .actions { padding-left: 21px; padding-right: 21px; } .approve { order: -1; } .time-row { align-items: flex-start; flex-direction: column; } }
-
-      :root { color: #18181a; background: #f7f7f6; }
-      body { background: #f7f7f6; }
-      .shell { background: #f7f7f6; }
-      header, footer { width: min(100% - 48px, 1120px); }
-      header { padding: 24px 0; }
-      .brand { gap: 0; color: #171719; font-size: 15px; font-weight: 800; letter-spacing: -.055em; text-transform: uppercase; }
-      .mark { display: none; }
-      .brand::after { content: "Local Passport"; margin-left: 12px; padding-left: 12px; border-left: 1px solid #d9d9d7; color: #777779; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
-      .private { padding: 7px 11px; border: 1px solid #dededb; border-radius: 999px; color: #606063; background: rgba(255,255,255,.7); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-      main { width: min(100% - 48px, 760px); margin: 0 auto; padding: 54px 0 64px; }
-      .card { border: 1px solid #dfdfdc; border-radius: 28px; background: rgba(255,255,255,.9); box-shadow: 0 20px 60px rgba(24,24,26,.08); }
-      .hero { padding: 36px 38px 30px; border-bottom: 0; }
-      .eyebrow { margin-bottom: 17px; color: #6b6b6e; font-size: 10px; letter-spacing: .12em; }
-      .eyebrow::before { display: none; }
-      h1 { max-width: 580px; font-size: clamp(38px, 6vw, 58px); line-height: .98; letter-spacing: -.065em; }
-      .intro { max-width: 510px; margin-top: 18px; color: #68686c; font-size: 16px; line-height: 1.48; }
-      .details { gap: 0; padding: 0 38px; }
-      .detail { padding: 24px 0; border-color: #e7e7e5; }
-      .label { margin-bottom: 10px; color: #858588; font-size: 10px; letter-spacing: .11em; }
-      .value { color: #242426; font-size: 16px; line-height: 1.45; }
-      .vault-header { align-items: baseline; margin-bottom: 12px; }
-      .button-link { color: #171719; font-size: 12px; text-decoration-thickness: 1px; }
-      .field-list { gap: 8px; }
-      .field { min-height: 62px; gap: 12px; padding: 13px 14px; border-color: #e2e2e0; border-radius: 16px; background: #fff; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
-      .field:hover { border-color: #b7b7b4; transform: translateY(-1px); }
-      .field:has(input:checked) { border-color: #202023; background: #fafafa; }
-      .field input { width: 17px; height: 17px; accent-color: #1c1c1f; }
-      .badge-group { gap: 5px; }
-      .badge { border-radius: 999px; font-size: 10px; font-weight: 750; letter-spacing: .02em; }
-      .badge.severe { background: #f7e5e4; color: #8f2b2c; }
-      .badge.moderate { background: #f7eedf; color: #855618; }
-      .badge.mild { background: #e7f1e9; color: #2a6547; }
-      .badge.cross-contam { background: #ececeb; color: #525255; }
-      .remove-allergy-btn { color: #9a9a9d; }
-      .time-row { align-items: end; }
-      select { min-width: 142px; padding: 10px 34px 10px 12px; border-color: #dededb; border-radius: 999px; }
-      .end-time { margin-top: 9px; color: #69696d; }
-      .actions { grid-template-columns: 1fr 1.65fr; gap: 10px; padding: 30px 38px 38px; }
-      .button { min-height: 54px; border-radius: 999px; font-size: 14px; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
-      .button:hover:not(:disabled) { transform: translateY(-1px); }
-      .deny { border-color: #dededb; background: #fff; }
-      .approve { border-color: #1b1b1d; background: #1b1b1d; }
-      .outcome { padding: 40px 38px; }
-      .status-icon { width: auto; height: auto; margin-bottom: 18px; padding: 7px 11px; border-radius: 999px; background: #e4f0e7; color: #256342; font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
-      .status-icon.denied, .status-icon.expired, .status-icon.revoked { background: #ededec; color: #5c5c60; }
-      .outcome h2 { font-size: 38px; letter-spacing: -.055em; }
-      .summary-grid { gap: 16px; padding: 18px; border-radius: 18px; background: #f5f5f4; }
-      .modal-overlay { background: rgba(25,25,27,.38); backdrop-filter: blur(10px); }
-      .modal-card { border-radius: 24px; background: #fdfdfc; }
-      .input-text, .select-full { border-color: #dededb; border-radius: 12px; }
-      footer { color: #858588; }
-      @media (max-width: 520px) { header, footer, main { width: min(100% - 32px, 760px); } header { padding-top: 18px; } main { padding-top: 25px; } .brand::after { display: none; } .private { padding: 6px 9px; font-size: 9px; } .hero, .details, .outcome { padding-left: 22px; padding-right: 22px; } .hero { padding-top: 30px; } h1 { font-size: 39px; } .actions { padding: 24px 22px 22px; } }
+      .shell { min-height: 100vh; overflow: hidden; }
+      .site-header, footer { width: min(100% - 48px, 1360px); margin: 0 auto; }
+      .site-header { display: flex; align-items: center; justify-content: space-between; min-height: 86px; }
+      .brand { color: #171719; font-size: 15px; font-weight: 850; letter-spacing: -.07em; text-transform: uppercase; }
+      .brand::after { content: "Allergy-consent passport"; margin-left: 13px; padding-left: 13px; border-left: 1px solid #dbdbd8; color: #77777a; font-size: 10px; font-weight: 750; letter-spacing: .11em; }
+      .private { padding: 8px 12px; border: 1px solid #dededb; border-radius: 999px; color: #68686b; background: #fff; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+      main { width: min(100% - 48px, 1360px); margin: 0 auto; }
+      .experience { min-height: calc(100vh - 180px); padding: 48px 0 34px; }
+      .hero { position: relative; display: grid; justify-items: center; text-align: center; }
+      .eyebrow { display: inline-flex; align-items: center; gap: 9px; margin: 0 0 24px; color: #5c6c60; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; animation: rise-in .7s .05s both cubic-bezier(.22, 1, .36, 1); }
+      .eyebrow::before { width: 8px; height: 8px; border-radius: 50%; background: #7eaf7c; content: ""; }
+      h1 { display: grid; margin: 0; font-size: clamp(58px, 9.15vw, 132px); line-height: .84; letter-spacing: -.095em; }
+      .motion-line { display: block; overflow: hidden; padding: .11em .08em .19em; }
+      .motion-word { display: inline-block; animation: word-arrival .9s both cubic-bezier(.16, 1, .3, 1); }
+      .motion-line:first-child .motion-word { animation-delay: .16s; }
+      .motion-line:last-child .motion-word { animation-delay: .28s; }
+      .intro { max-width: 510px; margin: 22px 0 0; color: #747477; font-size: 17px; line-height: 1.48; animation: rise-in .8s .48s both cubic-bezier(.22, 1, .36, 1); }
+      .scope-signal { display: inline-flex; align-items: center; gap: 9px; margin: 25px 0 0; padding: 9px 14px; border: 1px solid #e2e2df; border-radius: 999px; background: rgba(255,255,255,.78); color: #67676a; font-size: 12px; font-weight: 650; animation: rise-in .8s .58s both cubic-bezier(.22, 1, .36, 1); }
+      .scope-signal strong { color: #242427; }
+      .signal-divider { width: 3px; height: 3px; border-radius: 50%; background: #a2a2a4; }
+      .hero-action { display: inline-flex; align-items: center; justify-content: center; min-width: 292px; min-height: 58px; margin-top: 23px; padding: 0 23px; border: 1px solid #18181a; border-radius: 999px; background: #18181a; color: #fff; font-size: 15px; font-weight: 780; letter-spacing: -.02em; box-shadow: 0 14px 28px rgba(24,24,26,.16); transition: transform .25s ease, box-shadow .25s ease, background .25s ease; animation: rise-in .8s .68s both cubic-bezier(.22, 1, .36, 1); }
+      .hero-action:hover { background: #343438; box-shadow: 0 19px 34px rgba(24,24,26,.2); transform: translateY(-3px); }
+      .trust-copy { margin: 13px 0 0; color: #8a8a8d; font-size: 12px; animation: rise-in .8s .75s both cubic-bezier(.22, 1, .36, 1); }
+      .scope-tray { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; align-items: center; margin-top: 58px; padding: 18px 21px; border: 1px solid #e1e1de; border-radius: 21px; background: rgba(255,255,255,.87); box-shadow: 0 18px 42px rgba(31,31,34,.06); animation: tray-arrival 1s .45s both cubic-bezier(.22, 1, .36, 1); }
+      .tray-copy { padding-left: 4px; }
+      .tray-label { display: block; margin-bottom: 5px; color: #202023; font-size: 13px; font-weight: 780; letter-spacing: -.02em; }
+      .tray-copy p { margin: 0; color: #7a7a7d; font-size: 12px; line-height: 1.4; }
+      .field-list { display: flex; gap: 9px; overflow-x: auto; padding: 4px 1px 5px; scrollbar-width: thin; }
+      .field { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-height: 42px; padding: 7px 9px 7px 11px; border: 1px solid #e1e1de; border-radius: 999px; background: #fff; color: #4a4a4d; font-size: 12px; font-weight: 680; transition: transform .25s ease, color .2s ease, background .2s ease, border-color .2s ease; }
+      .field:hover { transform: translateY(-2px); border-color: #bdbdbb; }
+      .field:has(input:checked) { border-color: #1d1d20; background: #1d1d20; color: #fff; }
+      .field input { width: 15px; height: 15px; margin: 0; accent-color: #fff; }
+      .badge-group { display: none; }
+      .remove-allergy-btn { padding: 4px 7px; border: 0; border-radius: 999px; color: inherit; background: rgba(255,255,255,.14); font-size: 10px; font-weight: 750; line-height: 1; opacity: .76; }
+      .field:not(:has(input:checked)) .remove-allergy-btn { color: #747477; background: #f0f0ee; }
+      .passport-stage { position: relative; isolation: isolate; min-height: 265px; margin: 29px 0 0; overflow: hidden; border-top: 1px solid #e5e5e2; }
+      .passport-intro { position: absolute; z-index: 2; top: 38px; left: 0; max-width: 200px; }
+      .passport-intro h2 { margin: 0 0 8px; color: #202023; font-size: 22px; letter-spacing: -.055em; }
+      .passport-intro p { margin: 0; color: #79797c; font-size: 13px; line-height: 1.46; }
+      .ingredient-strip { position: absolute; z-index: 1; top: 0; left: 188px; width: calc(100% - 188px); min-width: 880px; height: 265px; object-fit: cover; object-position: center; mix-blend-mode: multiply; animation: strip-settle 1.25s .8s both cubic-bezier(.16, 1, .3, 1), strip-drift 13s 2s ease-in-out infinite alternate; }
+      .passport-card { position: absolute; z-index: 10; right: 8%; top: 57px; width: min(280px, 31vw); padding: 18px 19px; border: 1px solid rgba(207,207,202,.9); border-radius: 19px; background: rgba(255,255,255,.86); box-shadow: 0 16px 35px rgba(31,31,34,.12); transform: rotate(-3deg); animation: card-arrival 1s .88s both cubic-bezier(.16, 1, .3, 1), card-breathe 6s 2s ease-in-out infinite alternate; }
+      .passport-card p { margin: 0; }
+      .passport-card .card-kicker { margin-bottom: 15px; color: #6d806e; font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+      .passport-card strong { display: block; margin-bottom: 8px; font-size: 19px; letter-spacing: -.05em; }
+      .passport-card .card-detail { color: #757579; font-size: 12px; line-height: 1.45; }
+      .passport-card .card-expiry { display: inline-block; margin-top: 15px; padding: 7px 9px; border-radius: 999px; background: #f0f4ef; color: #547056; font-size: 10px; font-weight: 780; }
+      .details { display: grid; grid-template-columns: .85fr 1.15fr 1fr; gap: 10px; margin-top: 22px; }
+      .detail { min-width: 0; padding: 17px; border: 1px solid #e4e4e1; border-radius: 16px; background: rgba(255,255,255,.54); }
+      .detail p { margin: 0; }
+      .label { display: block; margin-bottom: 8px; color: #89898c; font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+      .value { color: #333337; font-size: 13px; line-height: 1.42; }
+      .time-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+      select { width: 100%; padding: 9px 30px 9px 10px; border: 1px solid #dededb; border-radius: 999px; background: #fff; color: #29292d; font-size: 12px; }
+      .end-time { margin: 10px 0 0 !important; color: #77777a; font-size: 11px; line-height: 1.4; }
+      .vault-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+      .button-link { padding: 0; border: 0; color: #28282b; background: transparent; font-size: 12px; font-weight: 720; text-decoration: underline; text-underline-offset: 3px; }
+      .vault-editor { margin-top: 16px; }
+      .mcp-row { display: flex; gap: 9px; }
+      .input-text { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid #dededb; border-radius: 11px; background: #fff; color: #262629; font-size: 12px; }
+      .mcp-submit { flex: 0 0 auto; min-height: 38px; padding: 0 13px; border: 1px solid #1f1f22; border-radius: 999px; background: #1f1f22; color: #fff; font-size: 11px; font-weight: 750; }
+      .mcp-status { margin: 9px 0 0; color: #527157; font-size: 11px; line-height: 1.4; }
+      .secondary-action { align-self: start; min-height: 40px; padding: 0 13px; border: 1px solid #dededb; border-radius: 999px; background: #fff; color: #303034; font-size: 11px; font-weight: 750; }
+      .error { margin: 16px 0 0; padding: 12px 14px; border: 1px solid #f0d0cc; border-radius: 12px; color: #952e27; background: #fff3f1; font-size: 13px; }
+      .outcome { max-width: 630px; margin: 0 auto; padding: 92px 0 55px; text-align: center; }
+      .status-icon { display: inline-flex; margin-bottom: 18px; padding: 8px 12px; border-radius: 999px; color: #456e4b; background: #e6f1e7; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+      .status-icon.denied, .status-icon.expired, .status-icon.revoked { color: #66666a; background: #ececeb; }
+      .outcome h2 { margin: 0; font-size: clamp(43px, 6vw, 68px); letter-spacing: -.075em; line-height: .93; }
+      .outcome > p { color: #77777a; font-size: 16px; line-height: 1.5; }
+      .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 30px 0; text-align: left; }
+      .summary-grid > div { padding: 15px; border: 1px solid #e5e5e2; border-radius: 15px; background: #fff; }
+      .summary-grid p { margin: 0; color: #29292c; font-size: 13px; line-height: 1.42; }
+      .button { min-height: 49px; padding: 0 20px; border: 1px solid #dcdcd9; border-radius: 999px; background: #fff; color: #2a2a2e; font-size: 13px; font-weight: 750; }
+      .revoke { color: #9c342e; border-color: #edceca; background: #fff7f6; }
+      .receipt-section, .receipt-pending { margin: 23px 0; text-align: left; }
+      .receipt-fields { display: grid; gap: 8px; }
+      .receipt-fields code { display: block; padding: 10px; border: 1px solid #e2e2df; border-radius: 10px; background: #fff; color: #353538; font-size: 12px; overflow-wrap: anywhere; }
+      .receipt-grid { grid-template-columns: repeat(2, 1fr); }
+      .unverified-notice, .delivery-pending, .receipt-pending { padding: 13px; border: 1px dashed #d2c8ae; border-radius: 12px; background: #fff9e6; color: #6c5723 !important; font-size: 13px; }
+      .modal-overlay { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(22,22,25,.4); backdrop-filter: blur(9px); }
+      .modal-card { width: min(100%, 440px); padding: 24px; border: 1px solid #e1e1de; border-radius: 22px; background: #fff; box-shadow: 0 24px 60px rgba(20,20,23,.2); }
+      .modal-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 19px; }
+      .modal-header h3 { margin: 0; font-size: 21px; letter-spacing: -.045em; }
+      .close-btn { border: 0; color: #6d6d71; background: transparent; font-size: 12px; font-weight: 700; line-height: 1; }
+      .form-group { display: grid; gap: 6px; margin-bottom: 15px; }
+      .select-full { width: 100%; padding: 10px; border: 1px solid #dededb; border-radius: 11px; background: #fff; }
+      .checkbox-group { display: flex; align-items: center; }
+      .checkbox-label { display: flex; gap: 8px; color: #515155; font-size: 13px; }
+      .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+      footer { padding: 26px 0 35px; color: #8b8b8e; font-size: 11px; text-align: center; }
+      @keyframes word-arrival { from { opacity: 0; filter: blur(11px); transform: translateY(115%) rotate(2deg); } to { opacity: 1; filter: blur(0); transform: translateY(0) rotate(0); } }
+      @keyframes rise-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes tray-arrival { from { opacity: 0; transform: translateY(36px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      @keyframes strip-settle { from { opacity: 0; transform: translateX(70px) scale(1.04); } to { opacity: .88; transform: translateX(0) scale(1); } }
+      @keyframes strip-drift { from { transform: translateX(-10px); } to { transform: translateX(13px); } }
+      @keyframes card-arrival { from { opacity: 0; transform: translateY(34px) rotate(2deg); } to { opacity: 1; transform: translateY(0) rotate(-3deg); } }
+      @keyframes card-breathe { from { translate: 0 0; } to { translate: 0 -7px; } }
+      @media (max-width: 760px) { .site-header, main, footer { width: min(100% - 32px, 1360px); } .site-header { min-height: 66px; } .brand::after { display: none; } .private { font-size: 9px; } .experience { padding-top: 34px; } h1 { font-size: clamp(55px, 14.5vw, 104px); } .scope-tray { grid-template-columns: 1fr; gap: 11px; margin-top: 39px; } .passport-stage { min-height: 230px; } .passport-intro { top: 27px; max-width: 148px; } .passport-intro h2 { font-size: 18px; } .ingredient-strip { left: 85px; width: calc(100% - 85px); min-width: 720px; height: 230px; } .passport-card { right: 0; top: 100px; width: 220px; } .details { grid-template-columns: 1fr 1fr; } .detail:last-child { grid-column: 1 / -1; } }
+      @media (max-width: 520px) { .hero-action { width: 100%; min-width: 0; } .intro { font-size: 15px; } .scope-tray { padding: 15px; border-radius: 17px; } .passport-stage { min-height: 210px; } .passport-card { display: none; } .ingredient-strip { left: 50px; width: calc(100% - 50px); min-width: 610px; } .details { grid-template-columns: 1fr; } .detail:last-child { grid-column: auto; } .mcp-row { display: grid; } .mcp-submit { min-height: 39px; } .summary-grid, .receipt-grid { grid-template-columns: 1fr; } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
     </style>
   </head>
   <body>
     <div class="shell">
-      <header>
+      <header class="site-header">
         <div class="brand">Handshake</div>
         <div class="private">Private by default</div>
       </header>
       <main>
-        <section class="card" aria-live="polite">
-          <div id="request-view">
-            <div class="hero">
-              <p class="eyebrow">Permission request, one order only</p>
-              <h1>Share only what this order needs.</h1>
-              <p class="intro">You decide the exact constraints, the recipient, and when this temporary access ends.</p>
-            </div>
-            <!-- Egoist MCP Server Hub Inspector -->
-            <div class="mcp-card" style="margin: 20px 30px 0; padding: 16px 18px; border: 1px solid #cce3f5; border-radius: 14px; background: #f0f7ff;">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <strong style="color: #1a4971; font-size: 13px; text-transform: uppercase; letter-spacing: .05em;">🤖 Egoist MCP Server Hub (ChatGPT Tool Call)</strong>
-                <span style="font-size: 11px; background: #dbebfa; color: #1a4971; padding: 2px 8px; border-radius: 6px; font-weight: 600;">MCP Connected</span>
-              </div>
-              <p style="margin: 0 0 10px; font-size: 13px; color: #335c81; line-height: 1.4;">ChatGPT sends tool calls to Egoist MCP to update your Passport Vault. DoorDash reads from Egoist automatically with zero direct connection.</p>
-              <div style="display: flex; gap: 8px;">
-                <input type="text" id="mcp-input" class="input-text" placeholder="Type prompt to ChatGPT: 'I am severely allergic to peanuts and gluten'..." style="font-size: 13px; padding: 8px 10px;" />
-                <button type="button" id="mcp-submit-btn" class="button" style="min-height: 38px; padding: 0 14px; font-size: 13px; background: #1a4971; color: white; border: none; border-radius: 8px; white-space: nowrap;">Send MCP Tool Call</button>
-              </div>
-              <div id="mcp-status" style="margin-top: 8px; font-size: 12px; color: #2e6d4d; font-weight: 600;" hidden></div>
-            </div>
-            <div class="details">
-              <div class="detail">
-                <p class="label">Who is asking</p>
-                <p class="value"><strong>Recipient</strong>, scoped request recipient</p>
-              </div>
-              <div class="detail">
-                <p class="label">Why</p>
-                <p class="value" id="purpose">Prepare one restaurant order from the constraints you choose.</p>
-              </div>
-              <fieldset class="detail" style="border-left:0;border-right:0;border-top:0;padding-inline:0;margin:0">
-                <div class="vault-header">
-                  <legend class="label" style="margin:0">Fields to share (Local Vault)</legend>
-                  <button type="button" id="open-add-allergy-btn" class="button-link">+ Add Custom Allergy</button>
-                </div>
-                <div class="field-list" id="fields"></div>
-              </fieldset>
-              <div class="detail">
-                <div class="time-row">
-                  <div>
-                    <p class="label">Access duration</p>
-                    <p class="value">Temporary access only</p>
-                  </div>
-                  <label>
-                    <span class="label" style="position:absolute;clip:rect(0 0 0 0)">Duration</span>
-                    <select id="duration">
-                      <option value="15">15 minutes</option>
-                      <option value="30" selected>30 minutes</option>
-                      <option value="60">1 hour</option>
-                    </select>
-                  </label>
-                </div>
-                <p class="end-time">Access ends <strong id="end-time"></strong>.</p>
-              </div>
-            </div>
-            <p class="error" id="error" role="alert" hidden></p>
-            <div class="actions">
-              <button class="button deny" id="deny" type="button">Keep my data private</button>
-              <button class="button approve" id="approve" type="button">Approve this exact scope</button>
-            </div>
+        <section id="request-view" class="experience" aria-live="polite">
+          <div class="hero">
+            <p class="eyebrow">Permission request, one order only</p>
+            <h1><span class="motion-line"><span class="motion-word">You decide</span></span><span class="motion-line"><span class="motion-word">what travels.</span></span></h1>
+            <p class="intro">Select the exact dietary constraints this restaurant may use for one order. Nothing else in your passport leaves with it.</p>
+            <p class="scope-signal"><strong id="scope-count">One selected field</strong><span class="signal-divider" aria-hidden="true"></span><span>Access ends <span id="signal-end-time">soon</span></span></p>
+            <button class="hero-action" id="approve" type="button">Approve this exact scope</button>
+            <p class="trust-copy">You can revoke access whenever you need to.</p>
           </div>
-          <div class="outcome" id="outcome-view" hidden></div>
+
+          <section class="scope-tray" aria-labelledby="scope-title">
+            <div class="tray-copy"><span class="tray-label" id="scope-title">Your constraints</span><p>Only selected rules will be shared.</p></div>
+            <div class="field-list" id="fields" aria-label="Constraints to share"></div>
+          </section>
+
+          <section class="passport-stage" aria-labelledby="passport-title">
+            <div class="passport-intro"><h2 id="passport-title">Your ingredient passport</h2><p>A moving view of the boundaries you keep in your control.</p></div>
+            <img class="ingredient-strip" src="/assets/ingredient-passport-strip.png" alt="Illustrations of foods commonly associated with dietary constraints: peanuts, dairy, fish, soybeans, and celery." />
+            <article class="passport-card"><p class="card-kicker">Scoped for this order</p><strong id="passport-card-title">Restaurant review</strong><p class="card-detail" id="passport-card-detail">The kitchen can use only your selected constraints to evaluate this order.</p><p class="card-expiry" id="passport-card-expiry">Temporary access</p></article>
+          </section>
+
+          <section class="details" aria-label="Permission details">
+            <article class="detail"><span class="label">Who is asking</span><p class="value"><strong>Recipient</strong>, scoped request recipient</p></article>
+            <article class="detail"><span class="label">Why</span><p class="value" id="purpose">Prepare one restaurant order from the constraints you choose.</p></article>
+            <article class="detail"><div class="time-row"><div><span class="label">Access duration</span><p class="value">Temporary access only</p></div><label><span class="label">Duration</span><select id="duration"><option value="15">15 minutes</option><option value="30" selected>30 minutes</option><option value="60">1 hour</option></select></label></div><p class="end-time">Access ends <strong id="end-time"></strong>.</p></article>
+          </section>
+
+          <section class="detail vault-editor" aria-labelledby="vault-title">
+            <div class="vault-header"><span class="label" id="vault-title">Add to your passport</span><button type="button" id="open-add-allergy-btn" class="button-link">Add a custom constraint</button></div>
+            <div class="mcp-row"><input type="text" id="mcp-input" class="input-text" placeholder="For example: I need strict gluten and peanut separation" /><button type="button" id="mcp-submit-btn" class="mcp-submit">Add from sentence</button></div>
+            <p id="mcp-status" class="mcp-status" hidden></p>
+          </section>
+
+          <button class="secondary-action" id="deny" type="button">Keep my data private</button>
+          <p class="error" id="error" role="alert" hidden></p>
         </section>
+        <section class="outcome" id="outcome-view" hidden></section>
       </main>
       <footer>Handshake records your choice. The recipient can review only the fields you approve, until access ends.</footer>
     </div>
 
     <div id="add-allergy-modal" class="modal-overlay" hidden>
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Add Custom Allergy to Vault</h3>
-          <button type="button" id="close-add-allergy-btn" class="close-btn" aria-label="Close">&times;</button>
-        </div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-allergy-title">
+        <div class="modal-header"><h3 id="add-allergy-title">Add a custom constraint</h3><button type="button" id="close-add-allergy-btn" class="close-btn">Close</button></div>
         <form id="add-allergy-form">
-          <div class="form-group">
-            <label for="allergy-label" class="label">Allergy / Constraint Name</label>
-            <input type="text" id="allergy-label" placeholder="e.g. Alpha-gal, Tree Nuts, Sesame" required class="input-text" />
-          </div>
-          <div class="form-group">
-            <label for="allergy-severity" class="label">Severity Level</label>
-            <select id="allergy-severity" class="select-full">
-              <option value="severe">Severe (Anaphylaxis risk)</option>
-              <option value="moderate" selected>Moderate (Intolerance / Reaction)</option>
-              <option value="mild">Mild (Preference / Sensitivity)</option>
-            </select>
-          </div>
-          <div class="form-group checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="allergy-cross-contam" />
-              <span>Strict zero cross-contamination preference</span>
-            </label>
-          </div>
-          <div class="modal-actions">
-            <button type="button" id="cancel-add-allergy" class="button deny" style="min-height:42px">Cancel</button>
-            <button type="submit" class="button approve" style="min-height:42px">Save to Local Vault</button>
-          </div>
+          <div class="form-group"><label for="allergy-label" class="label">Allergy or constraint</label><input type="text" id="allergy-label" placeholder="For example, sesame" required class="input-text" /></div>
+          <div class="form-group"><label for="allergy-severity" class="label">Severity</label><select id="allergy-severity" class="select-full"><option value="severe">Severe</option><option value="moderate" selected>Moderate</option><option value="mild">Mild</option></select></div>
+          <div class="form-group checkbox-group"><label class="checkbox-label"><input type="checkbox" id="allergy-cross-contam" /><span>Require zero cross-contamination</span></label></div>
+          <div class="modal-actions"><button type="button" id="cancel-add-allergy" class="button">Cancel</button><button type="submit" class="button" style="border-color:#1d1d20;background:#1d1d20;color:#fff">Save to passport</button></div>
         </form>
       </div>
     </div>
-
     <script type="module" src="/app.js"></script>
   </body>
 </html>
