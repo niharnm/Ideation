@@ -7,6 +7,7 @@ import {
   GOLDEN_THAI_KITCHEN,
   MENU_ITEMS,
   RESTAURANT_FIXTURES,
+  SEASIDE_SUSHI_BAR,
   VERIFIED_ALLERGENS,
   evaluateMenuSafety,
   getAvailableSubstitutions,
@@ -15,15 +16,16 @@ import {
 } from "../src/index.ts";
 
 test("verifies restaurant fixtures and allergen constants", () => {
-  assert.equal(RESTAURANT_FIXTURES.length, 2);
+  assert.equal(RESTAURANT_FIXTURES.length, 3);
   assert.equal(GOLDEN_THAI_KITCHEN.name, "Golden Thai Kitchen");
   assert.equal(BURGERS_AND_GREENS.name, "Burgers & Greens");
+  assert.equal(SEASIDE_SUSHI_BAR.name, "Seaside Sushi Bar");
 
   assert.deepEqual(VERIFIED_ALLERGENS, ["peanut", "tree_nut", "dairy", "gluten"]);
   assert.equal(ALLERGEN_MAP.peanut, "Peanut");
   assert.equal(ALLERGEN_MAP.gluten, "Gluten");
 
-  assert.ok(MENU_ITEMS.length >= 7);
+  assert.ok(MENU_ITEMS.length >= 8);
 });
 
 test("verifies menu lookup by item ID and restaurant ID", () => {
@@ -136,4 +138,16 @@ test("verifies detection of unconfirmed / unknown ingredients", () => {
   assert.equal(evalUnknownItem.isSafe, false);
   assert.equal(evalUnknownItem.policyDecision.response, "cannot_determine");
   assert.ok(evalUnknownItem.rationale.includes("was not found"));
+});
+
+test("cannot determine safety when a preparation input is unconfirmed", () => {
+  const crispyTofuRoll = getMenuItem("crispy-tofu-roll");
+  assert.ok(crispyTofuRoll);
+  assert.equal(crispyTofuRoll.restaurantName, "Seaside Sushi Bar");
+  assert.deepEqual(crispyTofuRoll.unconfirmedIngredients, ["Shared Fryer Oil"]);
+
+  const evaluation = evaluateMenuSafety("crispy-tofu-roll", ["peanut"]);
+  assert.equal(evaluation.isSafe, false);
+  assert.equal(evaluation.policyDecision.response, "cannot_determine");
+  assert.deepEqual(evaluation.unconfirmedIngredients, ["Shared Fryer Oil"]);
 });

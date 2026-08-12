@@ -241,9 +241,37 @@ export const BURGERS_AND_GREENS: RestaurantFixture = {
   ],
 };
 
+export const SEASIDE_SUSHI_BAR: RestaurantFixture = {
+  id: "restaurant-seaside-sushi",
+  name: "Seaside Sushi Bar",
+  cuisine: "Japanese",
+  menuItems: [
+    {
+      id: "crispy-tofu-roll",
+      restaurantId: "restaurant-seaside-sushi",
+      restaurantName: "Seaside Sushi Bar",
+      name: "Crispy Tofu Roll",
+      description:
+        "Rice, avocado, cucumber, and crispy tofu. The fryer oil used for the tofu is not confirmed for this service.",
+      ingredients: [
+        { id: "ing-sushi-rice", name: "Sushi Rice", allergens: [], isConfirmed: true },
+        { id: "ing-avocado", name: "Avocado", allergens: [], isConfirmed: true },
+        { id: "ing-cucumber", name: "Cucumber", allergens: [], isConfirmed: true },
+        { id: "ing-crispy-tofu", name: "Crispy Tofu", allergens: [], isConfirmed: true },
+        { id: "ing-shared-fryer-oil", name: "Shared Fryer Oil", allergens: [], isConfirmed: false },
+      ],
+      allergens: [],
+      substitutions: [],
+      hasUnconfirmedIngredients: true,
+      unconfirmedIngredients: ["Shared Fryer Oil"],
+    },
+  ],
+};
+
 export const RESTAURANT_FIXTURES: readonly RestaurantFixture[] = [
   GOLDEN_THAI_KITCHEN,
   BURGERS_AND_GREENS,
+  SEASIDE_SUSHI_BAR,
 ];
 
 export const MENU_ITEMS: readonly MenuItem[] = RESTAURANT_FIXTURES.flatMap(
