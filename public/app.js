@@ -726,3 +726,37 @@ if (mcpSubmitBtn && mcpInput && mcpStatus) {
     renderVaultFields();
   });
 }
+
+let lastVaultUpdatedAt = userVault.updatedAt || "";
+
+async function pollEgoistPassportVault() {
+  try {
+    const res = await fetch("/api/passport/vault");
+    if (!res.ok) return;
+    const serverVault = await res.json();
+    if (!serverVault.updatedAt || serverVault.updatedAt === lastVaultUpdatedAt) return;
+    lastVaultUpdatedAt = serverVault.updatedAt;
+
+    const nonEgoist = userVault.allergies.filter(
+      (allergy) => !allergy.allergenId.startsWith("allergen."),
+    );
+    const egoist = (serverVault.allergies || []).filter((allergy) =>
+      allergy.allergenId.startsWith("allergen."),
+    );
+    userVault = {
+      ...userVault,
+      allergies: [...nonEgoist, ...egoist],
+      updatedAt: serverVault.updatedAt,
+    };
+    saveUserPassportVault(userVault, dependencies.storage);
+    for (const allergy of egoist) {
+      selectedFieldIds.add(allergy.allergenId);
+    }
+    renderVaultFields();
+  } catch {
+    // Retry on the next interval.
+  }
+}
+
+setInterval(pollEgoistPassportVault, 3000);
+pollEgoistPassportVault();

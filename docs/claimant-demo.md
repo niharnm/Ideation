@@ -10,30 +10,25 @@ proof case only.
 
 ## Live demo, 60 to 75 seconds
 
-Prerequisite: Node.js 22.18 or newer.
+Prerequisite: Node.js 22.18 or newer. Copy `.env.example` to `.env` and set
+`GROQ_API_KEY`.
 
 ```sh
 npm test
 npm start
 ```
 
-1. Open the customer permission screen at `http://127.0.0.1:4173/`. Explain
-   that the customer talks to an AI, and Egoist asks for a narrow permission
-   for one restaurant order.
-2. Keep the default **Peanut constraint**, choose the displayed end time, and
-   select **Approve this exact scope**. Point out that the permission is
-   temporary and limited to the selected field.
-3. Select **Fieldline restaurant ops** in the header. In the Fieldline order
-   queue, open **Pad Thai · #A1024** and show the green **Allergy scope active**
-   card. It contains only the approved constraint, the order purpose, context,
-   and remaining access time.
-4. In **Kitchen decision**, choose **Request preparation change** and record
-   the prefilled peanut-free preparation surface and substitution detail. This
-   is a local proof-case decision for the active order scope only.
-5. Return to the customer screen with **View customer permission**, select
-   **Revoke access now**, then return to Fieldline. Show the red **Access ended
-   by customer** state: the allergy detail is gone and future kitchen actions
-   are locked.
+1. Open three tabs: ChatGPT at `http://127.0.0.1:4173/chatgpt.html`, Handshake
+   at `http://127.0.0.1:4173/index.html`, and checkout at
+   `http://127.0.0.1:4173/recipient.html`.
+2. In ChatGPT, say you don't like milk and can't eat peanuts. The Egoist AI
+   Passport plugin saves those memories locally.
+3. Return to Handshake. The new constraints appear within a few seconds.
+   Choose an end time and select **Approve this exact scope**.
+4. In Fieldline checkout, open **Pad Thai · #A1024** and show the green
+   **Allergy scope active** card. It contains only the approved constraints.
+5. Record a kitchen decision, then return to Handshake and **Revoke access
+   now**. Fieldline should lock future kitchen actions.
 6. Keep automated tests as fallback evidence, not the main demo:
 
    ```sh

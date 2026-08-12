@@ -21,6 +21,7 @@
       .brand::after { content: "Allergy-consent passport"; margin-left: 13px; padding-left: 13px; border-left: 1px solid #dbdbd8; color: #77777a; font-size: 10px; font-weight: 750; letter-spacing: .11em; }
       .private { padding: 8px 12px; border: 1px solid #dededb; border-radius: 999px; color: #68686b; background: #fff; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
       .merchant-link { text-decoration: none; }
+      .header-links { display: flex; gap: 8px; align-items: center; }
       main { width: min(100% - 48px, 1360px); margin: 0 auto; }
       .experience { min-height: calc(100vh - 180px); padding: 48px 0 34px; }
       .hero { position: relative; display: grid; justify-items: center; text-align: center; }
@@ -121,7 +122,10 @@
     <div class="shell">
       <header class="site-header">
         <div class="brand">Handshake</div>
-        <a class="private merchant-link" href="/recipient.html">Fieldline restaurant ops</a>
+        <div class="header-links">
+          <a class="private merchant-link" href="/chatgpt.html">ChatGPT</a>
+          <a class="private merchant-link" href="/recipient.html">Fieldline restaurant ops</a>
+        </div>
       </header>
       <main>
         <section id="request-view" class="experience" aria-live="polite">
@@ -151,6 +155,7 @@
 
           <section class="detail vault-editor" aria-labelledby="vault-title">
             <div class="vault-header"><span class="label" id="vault-title">Add to your passport</span><button type="button" id="open-add-allergy-btn" class="button-link">Add a custom constraint</button></div>
+            <p class="mcp-status" id="chat-hint">Or talk in <a href="/chatgpt.html">ChatGPT</a>. The Egoist plugin saves dietary memories here for checkout.</p>
             <div class="mcp-row"><input type="text" id="mcp-input" class="input-text" placeholder="For example: I need strict gluten and peanut separation" /><button type="button" id="mcp-submit-btn" class="mcp-submit">Add from sentence</button></div>
             <p id="mcp-status" class="mcp-status" hidden></p>
           </section>
