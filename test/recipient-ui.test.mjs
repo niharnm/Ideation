@@ -18,7 +18,7 @@ test("Fieldline restaurant view starts with a locked scope and no rendered aller
   assert.match(app, /fetch\("\/api\/demo"/);
   assert.match(app, /storage\.getItem\(API_HANDSHAKE_STORAGE_KEY\)/);
   assert.match(app, /phase: "locked"/);
-  assert.match(buildScript, /sourceRelativePath === "src\/recipient-console\.ts"/);
+  assert.match(buildScript, /buildSourceDirectory\(join\(root, "src"\)\)/);
   assert.match(app, /window\.location\.href = "\/index\.html"/);
   assert.doesNotMatch(app, /Emit N1 request & consent events automatically/);
 });
