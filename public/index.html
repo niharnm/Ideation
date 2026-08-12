@@ -23,6 +23,16 @@
       .private { padding: 8px 12px; border: 1px solid #dededb; border-radius: 999px; color: #68686b; background: #fff; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
       .merchant-link { text-decoration: none; }
       .header-links { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+      .header-links .demo-flow { flex: 0 1 auto; }
+      .demo-flow { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 10px 12px; min-width: 0; }
+      .demo-flow-kicker { margin: 0; color: #6d6d71; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+      .demo-steps { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+      .demo-steps > li { display: flex; list-style: none; }
+      .demo-steps a { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 11px; border-radius: 999px; color: #3e3e42; font-size: 12px; font-weight: 700; letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; }
+      .demo-steps a:hover { background: rgba(23, 23, 25, 0.06); }
+      .demo-steps a[aria-current="page"] { background: #1d1d20; color: #fff; }
+      .demo-steps .num { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(23, 23, 25, 0.08); font-size: 10px; font-weight: 800; }
+      .demo-steps a[aria-current="page"] .num { background: rgba(255, 255, 255, 0.18); color: #fff; }
       main { width: min(100% - 48px, 1360px); margin: 0 auto; }
       .experience { min-height: calc(100vh - 180px); padding: 48px 0 34px; }
       .hero { position: relative; display: grid; justify-items: center; text-align: center; }
@@ -59,7 +69,7 @@
       .badge-group { display: inline-flex; gap: 4px; }
       .badge { padding: 2px 7px; border-radius: 999px; background: #eef1ee; color: #5c6c60; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
       .field:has(input:checked) .badge { background: rgba(255,255,255,.16); color: #fff; }
-      .field-list:empty::after { content: "No constraints yet. Mention an allergy in ChatGPT, or add one below."; color: #7a7a7d; font-size: 12px; }
+      .field-list:empty::after { content: "No constraints yet. Mention an allergy in NimGTP, or add one below."; color: #7a7a7d; font-size: 12px; }
       .remove-allergy-btn { display: grid; place-items: center; width: 21px; height: 21px; padding: 0; border: 0; border-radius: 50%; color: inherit; background: rgba(255,255,255,.14); font-size: 16px; line-height: 1; opacity: .76; }
       .field:not(:has(input:checked)) .remove-allergy-btn { color: #747477; background: #f0f0ee; }
       .passport-stage { position: relative; isolation: isolate; min-height: 265px; margin: 29px 0 0; overflow: hidden; border-top: 1px solid #e5e5e2; }
@@ -146,14 +156,14 @@
         <div class="brand">Handshake</div>
         <div class="header-links">
           <nav class="demo-flow" aria-label="Demo path">
-            <p class="demo-flow-kicker">Identity · one fact</p>
+            <p class="demo-flow-kicker">Identity · Build</p>
             <ol class="demo-steps">
-              <li><a href="/chatgpt.html"><span class="num">1</span> Chat</a></li>
+              <li><a href="/chatgpt.html"><span class="num">1</span> NimGTP</a></li>
               <li><a href="/index.html" aria-current="page"><span class="num">2</span> Handshake</a></li>
-              <li><a href="/recipient.html"><span class="num">3</span> Fieldline</a></li>
+              <li><a href="/recipient.html"><span class="num">3</span> Dash</a></li>
             </ol>
           </nav>
-          <a class="private merchant-link" href="/chatgpt.html">ChatGPT</a>
+          <a class="private merchant-link" href="/chatgpt.html">NimGTP</a>
           <a class="private merchant-link" href="/recipient.html">Fieldline restaurant ops</a>
         </div>
       </header>
@@ -174,7 +184,7 @@
             <div class="tray-copy">
               <span class="tray-label" id="scope-title">Your constraints</span>
               <p>Only selected rules will be shared.</p>
-              <p class="poll-status is-waiting" id="poll-status" aria-live="polite">Waiting for ChatGPT memories. This page checks every few seconds.</p>
+              <p class="poll-status is-waiting" id="poll-status" aria-live="polite">Waiting for NimGTP memories. This page checks every few seconds.</p>
             </div>
             <div class="field-list" id="fields" aria-label="Constraints to share"></div>
           </section>
@@ -187,9 +197,7 @@
 
           <section class="detail vault-editor" aria-labelledby="vault-title">
             <div class="vault-header"><span class="label" id="vault-title">Add to your passport</span><button type="button" id="open-add-allergy-btn" class="button-link">Add a custom constraint</button></div>
-            <p class="mcp-status" id="chat-hint">Waiting for ChatGPT memories. Mention an allergy in <a href="/chatgpt.html">ChatGPT</a> and it appears here within a few seconds.</p>
-            <div class="mcp-row"><input type="text" id="mcp-input" class="input-text" placeholder="For example: I need strict gluten and peanut separation" /><button type="button" id="mcp-submit-btn" class="mcp-submit">Add from sentence</button></div>
-            <p id="mcp-status" class="mcp-status" hidden></p>
+            <p class="mcp-status" id="chat-hint">Waiting for NimGTP memories. Mention an allergy in <a href="/chatgpt.html">NimGTP</a> and it appears here within a few seconds.</p>
           </section>
 
           <button class="secondary-action" id="deny" type="button">Keep my data private</button>

@@ -14,9 +14,9 @@ test("claimant screen supports removable constraints, exact expiry, and a new re
   assert.match(app, /The claimant started a new request and ended this access\./);
 });
 
-test("Handshake shows ChatGPT poll status and an Approve shortcut", () => {
+test("Handshake shows NimGTP poll status and an Approve shortcut", () => {
   assert.match(html, /id="poll-status"/);
-  assert.match(html, /Waiting for ChatGPT memories/);
+  assert.match(html, /Waiting for NimGTP memories/);
   assert.match(app, /event\.metaKey \|\| event\.ctrlKey/);
   assert.match(app, /approveButton\.click\(\)/);
   assert.match(app, /setPollStatus/);

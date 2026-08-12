@@ -39,6 +39,18 @@ test("Egoist MCP Server: Natural language parser extracts structured constraints
   assert.ok(result.some((c) => c.allergenId === "allergen.dairy"));
 });
 
+test("Egoist MCP Server: word boundaries avoid eggplant and selfish false positives", () => {
+  assert.equal(parseNaturalLanguageToConstraints("I like eggplant and I am not selfish").length, 0);
+});
+
+test("Egoist MCP Server: dislikes are mild preferences, not severe isolation", () => {
+  const result = parseNaturalLanguageToConstraints("I don't like milk");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].allergenId, "allergen.dairy");
+  assert.equal(result[0].severity, "mild");
+  assert.equal(result[0].crossContaminationTolerance, true);
+});
+
 test("Egoist MCP Server: Handles tool call egoist_passport_update_vault", () => {
   const storage = new MemoryStorage();
   const res = handleEgoistMCPRequest(
@@ -56,7 +68,9 @@ test("Egoist MCP Server: Handles tool call egoist_passport_update_vault", () => 
   assert.ok(res.content[0].text.includes("Vault updated"));
 
   const vault = loadUserPassportVault(storage);
-  assert.ok(vault.allergies.some((a) => a.allergenId === "allergen.gluten"));
+  const gluten = vault.allergies.find((a) => a.allergenId === "allergen.gluten");
+  assert.ok(gluten);
+  assert.equal(gluten.crossContaminationTolerance, true);
 });
 
 test("Egoist MCP Server: Handles tool call egoist_passport_read_vault", () => {

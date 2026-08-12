@@ -2,7 +2,7 @@ const MEMORY_FENCE = /```json\s*([\s\S]*?)```/i;
 const CLEAR_PATTERN =
   /\b(no (allerg|diet|constraint)|deleted all|clear (my )?(allerg|memor)|i have no allerg)\b/i;
 const DIETARY_TURN_PATTERN =
-  /\b(allerg|anaphylac|intoleran|celiac|gluten|peanut|tree\s*nut|\bnuts?\b|dairy|lactose|\bmilk\b|wheat|\beggs?\b|\bsoy\b|\bfish\b|shellfish|shrimp|sesame|vegan|vegetarian|cross[-\s]?contam|diet(ary)?|passport|memor(y|ies))\b/i;
+  /\b(allerg|anaphylac|intoleran|celiac|glutens?|peanuts?|tree\s*nuts?|nuts?|dairy|lactose|milk|wheat|eggs?|soy|fish|shellfish|shrimp|sesame|vegan|vegetarian|cross[-\s]?contam|diet(ary)?|passport|memor(?:y|ies))\b/i;
 
 export function extractMemoryJsonFromReply(reply: string): string[] | null {
   const fence = reply.match(MEMORY_FENCE);

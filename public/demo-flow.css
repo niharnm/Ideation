@@ -1,26 +1,34 @@
 /* Shared three-tab demo path. Light by default; .demo-flow--dark for ChatGPT. */
 .demo-flow {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px 16px;
+  gap: 10px 12px;
+  min-width: 0;
 }
 .demo-flow-kicker {
   margin: 0;
+  flex: 0 0 auto;
   color: #6d6d71;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .demo-steps {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
+  gap: 4px;
   margin: 0;
   padding: 0;
+  list-style: none;
+}
+.demo-steps > li {
+  display: flex;
   list-style: none;
 }
 .demo-steps a {
@@ -35,6 +43,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   text-decoration: none;
+  white-space: nowrap;
 }
 .demo-steps a:hover {
   background: rgba(23, 23, 25, 0.06);
@@ -80,6 +89,24 @@
 }
 .demo-flow--dark .demo-steps a:focus-visible {
   outline-color: #10a37f;
+}
+.demo-flow--stack {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: auto;
+}
+.demo-flow--stack .demo-steps {
+  flex-direction: column;
+  align-items: stretch;
+}
+.demo-flow--stack .demo-steps a {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .demo-flow:not(.demo-flow--stack) {
+    overflow-x: auto;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

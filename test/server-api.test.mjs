@@ -79,4 +79,17 @@ test("Server API: chat status endpoint exists and client never embeds a Groq key
   assert.doesNotMatch(chatgpt, /gsk_[A-Za-z0-9]+/);
   assert.doesNotMatch(app, /gsk_[A-Za-z0-9]+/);
   assert.doesNotMatch(chatgpt, /Authorization:\s*`Bearer/);
+  assert.match(server, /extractMemoriesWithGroq/);
+  assert.match(server, /mergeMemoryStrings/);
+  assert.doesNotMatch(server, /\/api\/egoist\/connect/);
+  assert.doesNotMatch(server, /passport\.ego\.ist/);
+  assert.match(server, /"\.css": "text\/css; charset=utf-8"/);
+});
+
+test("Landing nav is styled in the page so Chat/Handshake/Fieldline stay on one row", () => {
+  const html = readFileSync(new URL("../public/demo.html", import.meta.url), "utf8");
+  assert.match(html, /\.demo-steps \{ display: flex; flex-direction: row/);
+  assert.match(html, /\.demo-steps \{[^}]*list-style: none/);
+  assert.match(html, /Identity · Build/);
+  assert.match(html, /<span class="num">1<\/span> NimGTP/);
 });

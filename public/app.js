@@ -14,7 +14,6 @@ import {
   removeVaultAllergy,
   saveUserPassportVault,
 } from "/src/passport-vault.ts";
-import { handleEgoistMCPRequest } from "/src/egoist-mcp-server.ts";
 
 const recipient = { id: "recipient-1", displayName: "Fieldline" };
 const purpose = "Prepare one restaurant order from the constraint you choose.";
@@ -78,19 +77,27 @@ function constraintFamily(allergenId) {
     .replace(/-/g, "_");
 }
 
+const SEED_FIELD_IDS = new Set(
+  defaultFieldOptions.map((field) => field.id),
+);
+
 function allergiesForShare(allergies) {
+  const hasEgoist = allergies.some((allergy) => allergy.allergenId.startsWith("allergen."));
   const egoistFamilies = new Set(
     allergies
       .filter((allergy) => allergy.allergenId.startsWith("allergen."))
       .map((allergy) => constraintFamily(allergy.allergenId)),
   );
   return allergies.filter((allergy) => {
+    if (allergy.allergenId.startsWith("allergen.")) return true;
+    if (hasEgoist && SEED_FIELD_IDS.has(allergy.allergenId)) return false;
     if (!allergy.allergenId.startsWith("order.constraint.")) return true;
     return !egoistFamilies.has(constraintFamily(allergy.allergenId));
   });
 }
 
 let seenEgoistIds = new Set();
+const deselectedFieldIds = new Set();
 
 function renderVaultFields() {
   fieldsView.replaceChildren();
@@ -99,7 +106,7 @@ function renderVaultFields() {
   if (visible.length === 0) {
     const empty = document.createElement("p");
     empty.className = "mcp-status";
-    empty.textContent = "No constraints yet. Mention an allergy in ChatGPT, or add a custom constraint.";
+    empty.textContent = "No constraints yet. Mention an allergy in NimGTP, or add a custom constraint.";
     fieldsView.append(empty);
     renderScopeSummary();
     return;
@@ -124,8 +131,10 @@ function renderVaultFields() {
     input.addEventListener("change", () => {
       if (input.checked) {
         selectedFieldIds.add(allergy.allergenId);
+        deselectedFieldIds.delete(allergy.allergenId);
       } else {
         selectedFieldIds.delete(allergy.allergenId);
+        deselectedFieldIds.add(allergy.allergenId);
       }
       renderScopeSummary();
     });
@@ -139,7 +148,7 @@ function renderVaultFields() {
     if (allergy.allergenId.startsWith("allergen.")) {
       const sourceBadge = document.createElement("span");
       sourceBadge.className = "badge";
-      sourceBadge.textContent = "From ChatGPT";
+      sourceBadge.textContent = "From NimGTP";
       badgeGroup.append(sourceBadge);
     }
 
@@ -166,8 +175,16 @@ function renderVaultFields() {
       e.stopPropagation();
       userVault = removeVaultAllergy(userVault, allergy.allergenId);
       selectedFieldIds.delete(allergy.allergenId);
+      deselectedFieldIds.add(allergy.allergenId);
       saveUserPassportVault(userVault, dependencies.storage);
       renderVaultFields();
+      if (allergy.allergenId.startsWith("allergen.")) {
+        fetch("/api/passport/vault", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ removeAllergenId: allergy.allergenId }),
+        }).catch(() => {});
+      }
     });
 
     labelEl.append(input, textSpan, badgeGroup, removeBtn);
@@ -453,6 +470,11 @@ function showOutcome(kind, title, message, claim = null) {
   }
 
   if (kind === "approved") {
+    const dash = document.createElement("a");
+    dash.className = "button";
+    dash.href = "/recipient.html";
+    dash.textContent = "Continue to Dash";
+    outcomeView.append(dash);
     const revoke = document.createElement("button");
     revoke.className = "button revoke";
     revoke.type = "button";
@@ -817,34 +839,6 @@ window.addEventListener("storage", (event) => {
   showLocalDemoPreview(preview.handshakeId, preview.events);
 });
 
-// Egoist MCP Tool Call Handler
-const mcpInput = document.querySelector("#mcp-input");
-const mcpSubmitBtn = document.querySelector("#mcp-submit-btn");
-const mcpStatus = document.querySelector("#mcp-status");
-
-if (mcpSubmitBtn && mcpInput && mcpStatus) {
-  mcpSubmitBtn.addEventListener("click", () => {
-    const text = mcpInput.value.trim();
-    if (!text) return;
-
-    const res = handleEgoistMCPRequest(
-      "egoist_passport_parse_natural_language",
-      { text },
-      dependencies.storage
-    );
-
-    const toolMessage = res.content[0]?.text;
-    mcpStatus.textContent = toolMessage?.includes("Natural language parsed successfully")
-      ? "Your passport was updated from that sentence."
-      : toolMessage || "Your passport could not be updated from that sentence.";
-    mcpStatus.hidden = false;
-    mcpInput.value = "";
-
-    // Refresh Local Vault Fields rendering on Claimant App
-    renderVaultFields();
-  });
-}
-
 let lastVaultUpdatedAt = userVault.updatedAt || "";
 
 function setPollStatus(kind, message) {
@@ -865,7 +859,7 @@ async function pollEgoistPassportVault() {
   try {
     const res = await fetch("/api/passport/vault");
     if (!res.ok) {
-      setPollStatus("error", "Could not check ChatGPT memories. Is npm start running?");
+      setPollStatus("error", "Could not check NimGTP memories. Is npm start running?");
       return;
     }
     const serverVault = await res.json();
@@ -876,13 +870,18 @@ async function pollEgoistPassportVault() {
       if (egoist.length === 0) {
         setPollStatus(
           "waiting",
-          "Waiting for ChatGPT memories. This page checks every few seconds.",
+          "Waiting for NimGTP memories. This page checks every few seconds.",
         );
       }
       return;
     }
     lastVaultUpdatedAt = serverVault.updatedAt;
 
+    const previousEgoistIds = new Set(
+      userVault.allergies
+        .filter((allergy) => allergy.allergenId.startsWith("allergen."))
+        .map((allergy) => allergy.allergenId),
+    );
     const nonEgoist = userVault.allergies.filter(
       (allergy) => !allergy.allergenId.startsWith("allergen."),
     );
@@ -892,33 +891,34 @@ async function pollEgoistPassportVault() {
       updatedAt: serverVault.updatedAt,
     };
     saveUserPassportVault(userVault, dependencies.storage);
-    const egoistFamilies = new Set(egoist.map((allergy) => constraintFamily(allergy.allergenId)));
-    for (const allergy of [...selectedFieldIds]) {
-      if (
-        allergy.startsWith("order.constraint.") &&
-        egoistFamilies.has(constraintFamily(allergy))
-      ) {
-        selectedFieldIds.delete(allergy);
+    if (egoist.length > 0) {
+      for (const id of [...selectedFieldIds]) {
+        if (!id.startsWith("allergen.")) selectedFieldIds.delete(id);
       }
     }
     for (const allergy of egoist) {
-      selectedFieldIds.add(allergy.allergenId);
+      if (
+        !previousEgoistIds.has(allergy.allergenId) &&
+        !deselectedFieldIds.has(allergy.allergenId)
+      ) {
+        selectedFieldIds.add(allergy.allergenId);
+      }
     }
     if (egoist.length > 0) {
       const countLabel = egoist.length === 1 ? "memory" : "memories";
       setPollStatus(
         "ready",
-        `ChatGPT saved ${egoist.length} ${countLabel} to your passport. Select what Fieldline may see, then approve.`,
+        `NimGTP saved ${egoist.length} ${countLabel} to your passport. Select what Fieldline may see, then approve.`,
       );
     } else {
       setPollStatus(
         "waiting",
-        "Waiting for ChatGPT memories. This page checks every few seconds.",
+        "Waiting for NimGTP memories. This page checks every few seconds.",
       );
     }
     renderVaultFields();
   } catch {
-    setPollStatus("error", "Could not check ChatGPT memories. Is npm start running?");
+    setPollStatus("error", "Could not check NimGTP memories. Is npm start running?");
   }
 }
 

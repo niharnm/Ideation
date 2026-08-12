@@ -4,6 +4,9 @@ import { readFileSync } from "node:fs";
 
 import {
   extractMemoryJsonFromReply,
+  looksLikeDietaryTurn,
+  mergeMemoryStrings,
+  parseExtractorJson,
   resolveMemoriesFromTurn,
   stripMemoryJsonFromReply,
   syncMemoriesToVault,
@@ -62,11 +65,30 @@ test("Chat proxy: empty memories clear allergen.* constraints", () => {
   );
 });
 
+test("Chat proxy: keyword fallback merges instead of replacing prior memories", () => {
+  assert.deepEqual(
+    mergeMemoryStrings(["peanut allergy"], "I also don't like milk"),
+    ["peanut allergy", "I also don't like milk"],
+  );
+  assert.deepEqual(
+    mergeMemoryStrings(["peanut allergy"], "peanut allergy"),
+    ["peanut allergy"],
+  );
+});
+
+test("Chat proxy: extractor JSON and dietary-turn detection", () => {
+  assert.deepEqual(parseExtractorJson('{"memories":["peanut allergy"]}'), ["peanut allergy"]);
+  assert.equal(looksLikeDietaryTurn("I can't eat peanuts"), true);
+  assert.equal(looksLikeDietaryTurn("What is on the menu?"), false);
+});
+
 test("ChatGPT demo tab exposes a connected Egoist plugin", () => {
   const html = readFileSync(new URL("../public/chatgpt.html", import.meta.url), "utf8");
   const js = readFileSync(new URL("../public/chatgpt.js", import.meta.url), "utf8");
   const gitignore = readFileSync(new URL("../.gitignore", import.meta.url), "utf8");
-  assert.match(html, /Egoist AI Passport · Connected/);
+  assert.match(html, /NimGTP/);
+  assert.match(html, /data-thread/);
+  assert.match(js, /\bthreads\b/);
   assert.match(js, /fetch\("\/api\/chat"/);
   assert.match(js, /\/api\/chat\/status/);
   assert.match(gitignore, /^\.env$/m);

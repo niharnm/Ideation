@@ -14,7 +14,17 @@
       a { color: inherit; }
       button { font: inherit; cursor: pointer; }
       .wrap { width: min(100% - 48px, 1180px); margin: 0 auto; }
-      .nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 78px; }
+      .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; min-height: 78px; }
+      .nav .demo-flow { flex: 1 1 auto; justify-content: center; }
+      .demo-flow { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 10px 12px; min-width: 0; }
+      .demo-flow-kicker { margin: 0; color: #6d6d71; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+      .demo-steps { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+      .demo-steps > li { display: flex; list-style: none; }
+      .demo-steps a { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 11px; border-radius: 999px; color: #3e3e42; font-size: 12px; font-weight: 700; letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; }
+      .demo-steps a:hover { background: rgba(23, 23, 25, 0.06); }
+      .demo-steps a[aria-current="page"] { background: #1d1d20; color: #fff; }
+      .demo-steps .num { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(23, 23, 25, 0.08); font-size: 10px; font-weight: 800; }
+      .demo-steps a[aria-current="page"] .num { background: rgba(255, 255, 255, 0.18); color: #fff; }
       .brand { font-size: 15px; font-weight: 850; letter-spacing: -0.04em; text-transform: uppercase; text-decoration: none; }
       .nav-links { display: flex; gap: 21px; align-items: center; color: #6d6d71; font-size: 13px; font-weight: 650; }
       .nav-links a { text-decoration: none; }
@@ -114,12 +124,12 @@
       <nav class="demo-flow" aria-label="Demo path">
         <p class="demo-flow-kicker">Identity · Build</p>
         <ol class="demo-steps">
-          <li><a href="/chatgpt.html"><span class="num">1</span> Chat</a></li>
+          <li><a href="/chatgpt.html"><span class="num">1</span> NimGTP</a></li>
           <li><a href="/index.html"><span class="num">2</span> Handshake</a></li>
-          <li><a href="/recipient.html"><span class="num">3</span> Fieldline</a></li>
+          <li><a href="/recipient.html"><span class="num">3</span> Dash</a></li>
         </ol>
       </nav>
-      <a class="nav-cta" href="/chatgpt.html">Start with ChatGPT</a>
+      <a class="nav-cta" href="/chatgpt.html">Start in NimGTP</a>
     </header>
 
     <main>
@@ -127,29 +137,30 @@
         <div>
           <p class="eyebrow">AI Passport Ideathon · Identity track</p>
           <h1>Prove one fact. Keep the rest.</h1>
-          <p class="hero-copy">A diner should not paste a health profile into a restaurant, a delivery app, or a chat that outlives the meal. Egoist lets them carry dietary context, grant Fieldline access for one order, and take it back.</p>
+          <p class="hero-copy">Tell NimGTP your allergies. Then order on Dash. Handshake asks for one time-boxed fact before the kitchen can see it — and you can take it back.</p>
           <p class="entry-line">This entry is for a <strong>diner</strong>, who needs to prove a <strong>selected dietary constraint</strong> to a <strong>restaurant</strong> so they can <strong>safely fulfill one order</strong> without giving away more context than necessary.</p>
             <div class="hero-actions">
-            <a class="button" href="/chatgpt.html">Open ChatGPT</a>
-            <a class="button secondary" href="/index.html">Open Handshake</a>
+            <a class="button" href="/chatgpt.html">1. Open NimGTP</a>
+            <a class="button secondary" href="/index.html">2. Handshake</a>
+            <a class="button secondary" href="/recipient.html">3. Open Dash</a>
           </div>
         </div>
         <aside class="hero-card" aria-label="Example active permission">
           <div class="card-label"><span>The check moment</span><span class="pulse" aria-hidden="true"></span></div>
-          <div class="request-line"><div class="line-icon">1</div><div><strong>Diner tells ChatGPT</strong><span>“Thai food, but I have a peanut allergy.” The plugin writes that memory to the local passport.</span></div></div>
-          <div class="request-line"><div class="line-icon">2</div><div><strong>Handshake asks for one scope</strong><span>Peanut constraint, this order, a fixed end time. Deny, expire, or revoke anytime.</span></div></div>
-          <div class="request-line"><div class="line-icon">3</div><div><strong>Fieldline sees only that fact</strong><span>Enough to evaluate Pad Thai. Nothing else from the passport. Access ends when the diner says so.</span></div></div>
+          <div class="request-line"><div class="line-icon">1</div><div><strong>NimGTP</strong><span>Say you can’t eat peanuts. That memory saves locally to your passport.</span></div></div>
+          <div class="request-line"><div class="line-icon">2</div><div><strong>Dash</strong><span>Add Pad Thai. The store cannot see the allergy until you approve a share.</span></div></div>
+          <div class="request-line"><div class="line-icon">3</div><div><strong>Handshake, then revoke</strong><span>Share only that fact for this order. Take it back when you’re done.</span></div></div>
         </aside>
       </section>
 
       <section class="section" id="how-it-works">
         <div class="wrap">
-          <div class="section-heading"><h2>Three tabs. One passport claim.</h2><p class="section-note">Judges can follow this in about a minute. Chat writes memories. Handshake grants the minimum. Fieldline verifies, then loses access.</p></div>
+          <div class="section-heading"><h2>Landing → NimGTP → Dash.</h2><p class="section-note">Start in chat. Order on Dash. Handshake sits between them only when a constraint needs to travel.</p></div>
           <div class="flow">
-            <article class="flow-step"><span class="step-num">01</span><h3>Ask naturally</h3><p>Open ChatGPT and mention milk, peanuts, or another constraint. The Egoist plugin saves them locally as <code>allergen.*</code> memories.</p></article>
-            <article class="flow-step"><span class="step-num">02</span><h3>Approve a scope</h3><p>Handshake polls the vault, shows the new constraints, and asks you to share only the fields this order needs, until a stated time.</p></article>
-            <article class="flow-step"><span class="step-num">03</span><h3>Kitchen checks</h3><p>Fieldline unlocks the allergy card on Pad Thai · #A1024. Staff record one outcome. They never receive a standing profile.</p></article>
-            <article class="flow-step"><span class="step-num">04</span><h3>Revoke</h3><p>Return to Handshake and revoke. Future kitchen actions lock. The diner stays in control after the meal.</p></article>
+            <article class="flow-step"><span class="step-num">01</span><h3>Open NimGTP</h3><p>Talk like you would in any chat. Mention milk, peanuts, or another constraint. Those memories save locally.</p></article>
+            <article class="flow-step"><span class="step-num">02</span><h3>Continue to Dash</h3><p>The grocery storefront looks like checkout. Pad Thai is already in the cart. Allergy detail stays locked.</p></article>
+            <article class="flow-step"><span class="step-num">03</span><h3>Approve the share</h3><p>Handshake asks for the minimum fact, this order, a fixed end time. Dash then unlocks only that card.</p></article>
+            <article class="flow-step"><span class="step-num">04</span><h3>Revoke</h3><p>Return to Handshake and revoke. Future kitchen actions on Dash lock.</p></article>
           </div>
         </div>
       </section>
@@ -163,12 +174,12 @@
             <div class="state-list"><div class="state-item active">Granted, staff can evaluate the order</div><div class="state-item">Decision recorded, kitchen outcome is visible</div><div class="state-item locked">Revoked, future access is blocked</div></div>
           </div>
           <article class="console" aria-label="Restaurant order workspace preview">
-            <div class="console-top"><span class="console-brand">Fieldline · restaurant ops</span><span class="live-badge" id="preview-badge">Scope active</span></div>
+            <div class="console-top"><span class="console-brand">Dash · grocery checkout</span><span class="live-badge" id="preview-badge">Scope active</span></div>
             <div class="console-body">
               <div class="order-meta"><span>Order #A1024</span><span id="preview-time">15 min window</span></div>
               <h3 class="order-title">Pad Thai</h3>
               <div class="scope" id="scope-preview"><div class="scope-title"><span>Permitted order constraint</span><span>One field</span></div><strong id="preview-constraint">Peanut allergy</strong><p id="preview-copy">Use this one constraint to evaluate this order. Access expires automatically.</p></div>
-              <div class="console-action"><span id="preview-action">Kitchen review is ready.</span><a href="/recipient.html">Open staff workspace</a></div>
+              <div class="console-action"><span id="preview-action">Kitchen review is ready.</span><a href="/recipient.html">Open Dash</a></div>
             </div>
           </article>
         </div>
@@ -179,10 +190,10 @@
           <div class="demo-intro">
             <p class="eyebrow">Optional shortcut</p>
             <h2>Skip chat if you need a 15-second handshake.</h2>
-            <p>The judged path starts in ChatGPT. This button issues a local peanut scope so you can still show Fieldline lock and revoke if Groq is unavailable.</p>
+            <p>The judged path is NimGTP, then Dash. This button issues a local peanut scope so you can still show lock and revoke if Groq is unavailable.</p>
             <div class="demo-controls">
               <button class="button" id="start-handshake" type="button">Start a fresh handshake</button>
-              <a class="button secondary" href="/recipient.html">Open restaurant workspace</a>
+              <a class="button secondary" href="/recipient.html">Open Dash</a>
               <button class="button danger" id="revoke-handshake" type="button" hidden>Revoke restaurant access</button>
             </div>
             <p class="demo-error" id="demo-error" role="alert"></p>

@@ -183,12 +183,20 @@ function renderScope(workspace) {
   scopeBody.replaceChildren(element("div", "locked-body", message));
 }
 
-function actionCopy(action) {
+function scopeLabels(fields) {
+  return (fields || [])
+    .map((item) => String(item?.label || item?.value || "").trim())
+    .filter(Boolean);
+}
+
+function actionCopy(action, fields = []) {
+  const labels = scopeLabels(fields);
+  const constraint = labels.length > 0 ? labels.join(", ") : "the approved constraint";
   switch (action) {
-    case "accept": return ["Preparation confirmation", "Dedicated peanut-free prep surface confirmed. Peanuts omitted from this order.", "Confirm safe preparation"];
-    case "required_change": return ["Requested preparation change", "Omit peanuts and use the designated peanut-free preparation surface.", "Request preparation change"];
-    case "decline": return ["Kitchen note", "The kitchen cannot safely separate peanut handling for this order.", "Cannot safely fulfill"];
-    case "cannot_determine": return ["Supplier review note", "Supplier allergen documentation is unavailable for the selected ingredients.", "Cannot determine"];
+    case "accept": return ["Preparation confirmation", `Kitchen can fulfill this order within ${constraint}.`, "Confirm safe preparation"];
+    case "required_change": return ["Requested preparation change", `Adjust preparation so this order honors ${constraint}.`, "Request preparation change"];
+    case "decline": return ["Kitchen note", `The kitchen cannot safely honor ${constraint} for this order.`, "Cannot safely fulfill"];
+    case "cannot_determine": return ["Supplier review note", `Supplier documentation is unavailable for ${constraint}.`, "Cannot determine"];
     default: return ["Preparation detail", "", "Record kitchen decision"];
   }
 }
@@ -225,7 +233,8 @@ function renderKitchen(workspace) {
     return;
   }
 
-  const [label, note, buttonLabel] = actionCopy(selectedAction);
+  const fields = workspace.recipientRequest?.scopedFields || [];
+  const [label, note, buttonLabel] = actionCopy(selectedAction, fields);
   kitchenIntro.textContent = "Choose the kitchen outcome for the approved order scope.";
   decisionLabel.textContent = label;
   decisionNote.value = note;
@@ -271,6 +280,7 @@ function applyPolicyDefault(workspace) {
     { dedicatedPrepSurface: true },
   );
   selectedAction = evaluation.response;
+  workspace.policyEvaluation = evaluation;
 }
 
 function renderWorkspace() {
@@ -289,14 +299,20 @@ function renderWorkspace() {
 }
 
 function buildDecision(workspace) {
+  const fields = workspace.recipientRequest.scopedFields || [];
   const common = {
     handshakeId: workspace.recipientRequest.handshakeId,
     recipientId: workspace.recipientRequest.recipientId,
     dataScope: workspace.recipientRequest.dataScope,
   };
-  const note = decisionNote.value.trim() || actionCopy(selectedAction)[1];
+  const note = decisionNote.value.trim() || actionCopy(selectedAction, fields)[1];
   if (selectedAction === "accept") return createAcceptDecisionEvent({ ...common, rationale: note });
-  if (selectedAction === "required_change") return createRequiredChangeDecisionEvent({ ...common, rationale: note, requiredChanges: ["Omit peanuts from this Pad Thai.", "Use the designated peanut-free preparation surface."] });
+  if (selectedAction === "required_change") {
+    const requiredChanges = workspace.policyEvaluation?.requiredChanges?.length
+      ? workspace.policyEvaluation.requiredChanges
+      : fields.map((field) => `Honor ${field.label} for this order.`);
+    return createRequiredChangeDecisionEvent({ ...common, rationale: note, requiredChanges });
+  }
   if (selectedAction === "decline") return createDeclineDecisionEvent({ ...common, rationale: note });
   return createCannotDetermineDecisionEvent({ ...common, reason: note });
 }
@@ -340,4 +356,60 @@ window.addEventListener("storage", (event) => {
 window.addEventListener("handshake:event", (event) => {
   const detail = event instanceof CustomEvent ? event.detail : null;
   if (detail && ["request", "consent", "decision", "expiry", "revocation"].includes(detail.type)) renderWorkspace();
+});
+
+document.querySelectorAll(".mode button").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".mode button").forEach((item) => {
+      item.classList.toggle("is-on", item === button);
+    });
+  });
+});
+
+document.querySelectorAll("#filters .chip").forEach((button) => {
+  button.addEventListener("click", () => {
+    button.classList.toggle("is-on");
+  });
+});
+
+const placeButton = document.querySelector("#place");
+const placeMenu = document.querySelector("#place-menu");
+const placeLabel = document.querySelector("#place-label");
+const placeMeta = document.querySelector("#place-meta");
+placeButton?.addEventListener("click", (event) => {
+  if (event.target.closest("#place-menu")) return;
+  const open = placeMenu?.hidden;
+  if (placeMenu) placeMenu.hidden = !open;
+  placeButton.setAttribute("aria-expanded", String(Boolean(open)));
+});
+placeMenu?.querySelectorAll("button").forEach((option) => {
+  option.addEventListener("click", () => {
+    if (placeLabel) placeLabel.textContent = option.dataset.place || "Choose address";
+    if (placeMeta) placeMeta.textContent = option.dataset.meta || "ASAP · Convenience";
+    placeMenu.querySelectorAll("button").forEach((item) => {
+      item.classList.toggle("is-on", item === option);
+    });
+    placeMenu.hidden = true;
+    placeButton?.setAttribute("aria-expanded", "false");
+  });
+});
+document.addEventListener("click", (event) => {
+  if (!placeButton || placeButton.contains(event.target)) return;
+  if (placeMenu) placeMenu.hidden = true;
+  placeButton.setAttribute("aria-expanded", "false");
+});
+
+const cartLine = document.querySelector("#cart-line");
+document.querySelectorAll(".card .add").forEach((button) => {
+  button.addEventListener("click", () => {
+    const card = button.closest(".card");
+    const name = card?.querySelector(".name")?.textContent?.trim();
+    const price = card?.querySelector(".price")?.textContent?.trim();
+    if (!cartLine || !name || !price) return;
+    const item = document.createElement("strong");
+    item.textContent = name;
+    const cost = document.createElement("span");
+    cost.textContent = price;
+    cartLine.replaceChildren(item, cost);
+  });
 });
