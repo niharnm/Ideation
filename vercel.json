@@ -15,6 +15,9 @@
     },
     "api/chat/**/*.ts": {
       "includeFiles": "{api/**,src/**}"
+    },
+    "api/smart-prep.ts": {
+      "includeFiles": "{api/**,src/**}"
     }
   },
   "rewrites": [
