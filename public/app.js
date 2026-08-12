@@ -14,6 +14,7 @@ import {
   removeVaultAllergy,
   saveUserPassportVault,
 } from "/src/passport-vault.ts";
+import { handleEgoistMCPRequest } from "/src/egoist-mcp-server.ts";
 
 const recipient = { id: "recipient-1", displayName: "Recipient" };
 const purpose = "Prepare one restaurant order from the constraint you choose.";
@@ -565,3 +566,29 @@ window.addEventListener("storage", (event) => {
   }
   showLocalDemoPreview(preview.handshakeId, preview.events);
 });
+
+// Egoist MCP Tool Call Handler
+const mcpInput = document.querySelector("#mcp-input");
+const mcpSubmitBtn = document.querySelector("#mcp-submit-btn");
+const mcpStatus = document.querySelector("#mcp-status");
+
+if (mcpSubmitBtn && mcpInput && mcpStatus) {
+  mcpSubmitBtn.addEventListener("click", () => {
+    const text = mcpInput.value.trim();
+    if (!text) return;
+
+    const res = handleEgoistMCPRequest(
+      "egoist_passport_parse_natural_language",
+      { text },
+      dependencies.storage
+    );
+
+    mcpStatus.textContent = res.content[0]?.text || "MCP Tool Executed.";
+    mcpStatus.hidden = false;
+    mcpInput.value = "";
+
+    // Refresh Local Vault Fields rendering on Claimant App
+    renderVaultFields();
+  });
+}
+
