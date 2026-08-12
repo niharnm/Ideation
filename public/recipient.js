@@ -16,7 +16,7 @@ import {
 const RECIPIENT_ID = "recipient-1";
 const API_HANDSHAKE_STORAGE_KEY = "egoist.demo.handshake-id";
 const SAMPLE_RECIPIENT_DATA = {
-  "order.constraint.peanut": "Peanut allergy",
+  "order.constraint.peanut": "Peanut avoidance requirement",
   "order.constraint.dairy": "Dairy constraint",
   "order.preference.vegetarian": "Vegetarian preference",
   "allergen.peanut": "Peanut allergy",
@@ -157,19 +157,19 @@ function renderScope(workspace) {
     const fields = workspace.recipientRequest.scopedFields || [];
     const labels = fields.map((item) => item?.label || String(item?.value || field?.label || "Approved constraint"));
     setScopeState("active");
-    scopeTitle.textContent = "Allergy scope active";
+    scopeTitle.textContent = "Verified order fact active";
     scopeState.textContent = formatRemaining(workspace.recipientRequest.validUntil);
 
     const listWrapper = element("div", "scope-detail");
-    const countText = fields.length === 1 ? "One approved constraint" : `${fields.length} approved constraints`;
+    const countText = fields.length === 1 ? "One verified fact" : `${fields.length} verified facts`;
     const labelTitle = element("span", "scope-label", countText);
-    const allergyNames = element("strong", "", labels.join(", ") || "Peanut allergy");
+    const allergyNames = element("strong", "", labels.join(", ") || "Peanut avoidance requirement");
     allergyNames.style.fontSize = "15px";
     allergyNames.style.color = "#00824d";
     allergyNames.style.display = "block";
     allergyNames.style.marginTop = "4px";
 
-    listWrapper.append(labelTitle, allergyNames);
+    listWrapper.append(labelTitle, allergyNames, element("p", "", "Credential source: Cedar Health Clinic, demo issuer. Verified locally."));
     scopeBody.replaceChildren(listWrapper);
     return;
   }
@@ -180,7 +180,7 @@ function renderScope(workspace) {
   scopeState.textContent = revoked ? "Scope removed" : "Not shared";
   const message = revoked
     ? "The customer ended this order scope. Allergy detail has been removed and Fieldline cannot retrieve or use that permission for a future action."
-    : "Allergy details are unavailable. The customer has not granted a constraint for this order. Fieldline cannot view or act on allergy information without that temporary permission.";
+    : "No credential-backed fact has been shared. Fieldline cannot view or act on customer constraints without that temporary permission.";
   scopeBody.replaceChildren(element("div", "locked-body", message));
 }
 
@@ -376,77 +376,16 @@ window.addEventListener("handshake:event", (event) => {
   if (detail && ["request", "consent", "decision", "expiry", "revocation"].includes(detail.type)) renderWorkspace();
 });
 
-// Place Order & Fake Checkout Confirmation
+// Checkout keeps consent explicit: the order can only use a scope created in Handshake.
 const placeOrderBtn = document.querySelector("#place-order-btn");
 const orderConfirmedCard = document.querySelector("#order-confirmed-card");
-const drawerBodyContent = document.querySelector("#drawer-body-content");
 
 placeOrderBtn?.addEventListener("click", () => {
-  // Read current Passport Vault memories or create default peanut claim
-  let memories = [];
-  try {
-    const rawVault = window.localStorage.getItem("egoist.passport.vault.v1");
-    if (rawVault) {
-      const parsed = JSON.parse(rawVault);
-      memories = Object.values(parsed.allergies || {}).map((a) => a.label);
-    }
-  } catch {
-    memories = [];
+  if (currentWorkspace?.phase !== "active") {
+    window.location.href = "/index.html";
+    return;
   }
-  if (memories.length === 0) memories = ["Peanut allergy"];
-
-  // Emit N1 request & consent events automatically for this order
-  const handshakeId = `handshake-${Date.now()}`;
-  const now = new Date();
-  const validUntil = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
-
-  const requestEvent = {
-    version: 1,
-    type: "request",
-    handshakeId,
-    timestamp: now.toISOString(),
-    payload: {
-      recipient: { id: RECIPIENT_ID, name: "Fieldline" },
-      purpose: "Prepare Pad Thai order with allergy constraints",
-    },
-    dataScope: {
-      fields: memories.map((m) => `order.constraint.${m.toLowerCase().replace(/[^a-z]/g, "")}`),
-      validFrom: now.toISOString(),
-      validUntil,
-    },
-  };
-
-  const consentEvent = {
-    version: 1,
-    type: "consent",
-    handshakeId,
-    timestamp: now.toISOString(),
-    payload: {
-      choice: "approve",
-      recipientId: RECIPIENT_ID,
-    },
-    dataScope: requestEvent.dataScope,
-  };
-
-  const ledgerRaw = dependencies.storage.getItem(HANDSHAKE_EVENT_LEDGER_STORAGE_KEY);
-  let ledger = { version: 1, events: [] };
-  try {
-    if (ledgerRaw) ledger = JSON.parse(ledgerRaw);
-  } catch {}
-  ledger.events.push(requestEvent, consentEvent);
-  dependencies.storage.setItem(HANDSHAKE_EVENT_LEDGER_STORAGE_KEY, JSON.stringify(ledger));
-  dependencies.storage.setItem(HANDSHAKE_CLAIM_STORAGE_KEY, JSON.stringify({ handshakeId, recipientId: RECIPIENT_ID }));
-
-  // Notify listeners and re-render workspace
-  dependencies.emit(consentEvent);
-  renderWorkspace();
-
-  // Show Order Confirmed visual card
-  if (orderConfirmedCard) {
-    orderConfirmedCard.hidden = false;
-    const confirmedDetail = document.querySelector("#confirmed-allergy-detail");
-    if (confirmedDetail) confirmedDetail.textContent = memories.join(", ");
-  }
+  if (orderConfirmedCard) orderConfirmedCard.hidden = false;
 });
 
 // Drawer Toggle Handlers
@@ -468,34 +407,6 @@ function closeCartDrawer() {
 cartTrigger?.addEventListener("click", openCartDrawer);
 closeDrawerBtn?.addEventListener("click", closeCartDrawer);
 drawerOverlay?.addEventListener("click", closeCartDrawer);
-
-// Smart AI Chef Prep Suggestion via Groq API
-const smartAiBtn = document.querySelector("#smart-ai-suggest-btn");
-smartAiBtn?.addEventListener("click", async () => {
-  const fields = currentWorkspace?.recipientRequest?.scopedFields || [];
-  const decisionNote = document.querySelector("#decision-note");
-  if (!decisionNote) return;
-
-  smartAiBtn.textContent = "Asking AI Chef...";
-  try {
-    const res = await fetch("/api/smart-prep", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        item: "Pad Thai · #A1024",
-        constraints: fields.map((f) => f.label || f.value || f.id),
-      }),
-    });
-    const data = await res.json();
-    if (data.suggestion) {
-      decisionNote.value = data.suggestion;
-    }
-  } catch (err) {
-    // Fallback if API fails
-  } finally {
-    smartAiBtn.textContent = "AI Chef Smart Suggestion";
-  }
-});
 
 document.querySelectorAll(".mode-btn").forEach((button) => {
   button.addEventListener("click", () => {

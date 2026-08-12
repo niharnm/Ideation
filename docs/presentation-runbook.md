@@ -8,7 +8,7 @@ Track and lane: **Identity, Build**
 
 One-sentence entry:
 
-> Egoist Handshake lets a diner disclose one selected dietary constraint to one restaurant for one order, then see the restaurant's response and end access.
+> Egoist Handshake lets a diner disclose one credential-backed peanut avoidance requirement to one restaurant for one order, then see the restaurant's response and end access.
 
 The restaurant example is the proof case. The product idea is the Handshake: a reusable, consented exchange between a person and a verifier. Identity is the primary track because the judged moment is minimum disclosure of a fact about a person. Agent-style scope, expiry, revocation, and receipts support that identity exchange, but they are not a second product.
 
@@ -18,9 +18,9 @@ Use **Egoist Handshake** in the recording. Do not call the submitted product Nim
 
 These are not three competing websites. They are three roles in one local product flow:
 
-1. `/chatgpt.html`, **NimGTP**: a ChatGPT-like local test client. A local Egoist-style plugin extracts a dietary memory and writes it to the local passport vault.
-2. `/index.html`, **Handshake**: the diner reviews the exact field, recipient, purpose, and end time, then approves, denies, or later revokes access.
-3. `/recipient.html`, **Fieldline**: the restaurant sees only the approved scope, records its kitchen response, and loses the scope after revocation or expiry.
+1. `/chatgpt.html`, **NimGTP**: a ChatGPT-like local test client. It saves only private, self-reported notes and is not a credential source.
+2. `/index.html`, **Handshake**: the diner reviews the issuer, exact fact, recipient, purpose, never-shared data, correction path, and end time, then approves, denies, or later revokes access.
+3. `/recipient.html`, **Fieldline**: the restaurant sees only the approved fact and its demo issuer, records its kitchen response, and loses the scope after revocation or expiry.
 
 The `/demo.html` page is a landing page and backup shortcut. It explains the idea and can issue a local peanut scope if the chat service is unavailable. The root route, `/`, opens Handshake. The landing page is not a fourth product and should not replace the judged three-page path.
 
@@ -33,8 +33,8 @@ No weighted scorecard is present in this repository, and the original participan
 | Choose one track and lane | Identity, Build, stated in the first 15 seconds and in the Devpost entry |
 | Name the exact user | A diner with a serious dietary constraint |
 | State the problem | The restaurant needs one fact for one order, while the diner should not expose a permanent profile |
-| State the Passport claim | One selected dietary constraint, here a peanut constraint |
-| Explain how it works | Memory enters the passport, the diner approves a scoped grant, the restaurant responds, and access ends |
+| State the Passport claim | One credential-backed peanut avoidance requirement from a clearly labeled demo issuer |
+| Explain how it works | The issuer attests one fact, the diner approves a scoped grant, the restaurant responds, and access ends |
 | Show the AI Passport moment | Pause on Handshake before approval so the exact field, purpose, recipient, and expiry are readable |
 | Address privacy and misuse | Minimum disclosure, purpose limits, time limits, revocation, local-demo limits, and no claim of food-safety certification |
 | Provide supporting proof | Working video, repository link, live link only after its APIs pass, and current screenshots |
@@ -64,8 +64,7 @@ The recording is ready only when all of these are true:
 - The checkout is the current `develop` branch.
 - `npm test` passes.
 - `npm run build` passes.
-- `GET /api/chat/status` reports chat available, and NimGTP saves the peanut memory through the server-side Groq route.
-- A rehearsal completes chat, scope approval, kitchen response, revocation, and recipient lock.
+- A rehearsal completes scope approval, kitchen response, revocation, and recipient lock.
 - Only the peanut constraint is present and selected.
 - Browser notifications, bookmarks, password prompts, and unrelated tabs are hidden.
 
@@ -83,19 +82,13 @@ If port 4173 is occupied, stop only the known old demo process or use another ex
 
 Verified state on 2026-08-12:
 
-- Repository tests: 146 passed, 0 failed.
-- Build: passed.
-- Type check for the deployable API surface: passed.
-- Public landing, NimGTP, Handshake, and Fieldline pages: HTTP 200 with the expected page titles.
-- Public chat status: available. Live Groq request: HTTP 200 with one peanut constraint.
-- Public `POST /api/demo`: HTTP 201.
-- Public browser rehearsal: passed from peanut memory through approval, exact kitchen note, API response, revocation, scope removal, and locked kitchen actions.
+- Re-run the checks and public rehearsal after the final deployment before recording. Do not quote this file as live evidence.
 
 ## Final demonstration state
 
 Use one fact, one order, one time window, and one restaurant response:
 
-- Fact: severe peanut allergy or peanut constraint.
+- Fact: Peanut avoidance requirement, issued by Cedar Health Clinic as a local demo credential.
 - Order context: Pad Thai, order `#A1024`.
 - Recipient: Fieldline restaurant operations.
 - Purpose: prepare this restaurant order.
@@ -110,11 +103,9 @@ Do not add milk, vegetarian preference, or another allergy during the video. The
 Use this as a simple inserted frame for about 15 seconds:
 
 ```text
-NimGTP and server-side Groq chat
+Cedar Health Clinic demo issuer
       |
-local Egoist-style plugin and MCP tools
-      |
-local Passport vault
+credential-backed peanut avoidance requirement
       |
 Handshake consent and versioned /api/v1 service
       |
@@ -139,29 +130,29 @@ Record the screen demonstration once without talking. Then record Nihar and Vach
 
 > A restaurant needs to know about a serious dietary constraint, but it does not need a person's whole profile forever. Egoist Handshake lets a diner disclose one selected fact to one restaurant for one order, then take that access back.
 
-### 0:16 to 0:38, fact enters the passport
+### 0:16 to 0:38, credential source
 
-**Screen:** Switch to NimGTP. Type exactly: `I have a severe peanut allergy. Save that to my AI Passport.` Wait for the response and the passport-memory confirmation.
+**Screen:** Switch to Handshake. Pause on the credential-backed fact card, issuer, local demo status, and never-shared list.
 
 **Nihar:**
 
-> I tell our local ChatGPT-like client one fact: I have a severe peanut allergy. Our local Egoist-style plugin identifies that memory and writes it to the passport vault. The diner has not shared it with the restaurant yet.
+> Cedar Health Clinic is a clearly labeled demo issuer. It provides one peanut avoidance requirement, not a medical record. The card also says what will never travel: diagnosis, medical records, chat history, and other dietary notes.
 
 ### 0:38 to 1:02, the judged AI Passport moment
 
-**Screen:** Switch to Handshake. Let the peanut constraint appear. Keep only that field selected. Set the expiry to 15 minutes from now. Pause so the recipient, purpose, exact field, and expiry can be read. Click **Approve this exact scope**.
+**Screen:** Stay on Handshake. Set the expiry to 15 minutes from now. Pause so the issuer, recipient, purpose, exact field, and expiry can be read. Click **Approve this exact scope**.
 
 **Nihar:**
 
-> This is the AI Passport decision. Fieldline is asking for the peanut constraint only, for this order, until this exact time. Nothing else in the passport travels. I can deny the request, approve this scope, or revoke it later. I will approve it now.
+> This is the AI Passport decision. Fieldline is asking for the peanut avoidance requirement only, for this order, until this exact time. A private NimGTP note cannot become a credential. I can deny the request, approve this scope, or revoke it later. I will approve it now.
 
 ### 1:02 to 1:31, recipient response
 
-**Screen:** Switch to Fieldline. Pause on **Allergy scope active** and the one approved constraint. Select **Request preparation change**. Enter `Use a dedicated surface and replace the peanut garnish.` Click **Record kitchen decision**.
+**Screen:** Switch to Fieldline. Pause on **Verified order fact active**, the one approved fact, and the demo issuer. Select **Request preparation change**. Enter `Use a dedicated surface and replace the peanut garnish.` Click **Record kitchen decision**.
 
 **Vachan:**
 
-> Fieldline now sees one approved constraint, not a permanent customer profile. The permission is tied to Pad Thai order A1024 and its remaining time. The kitchen cannot silently treat disclosure as a guarantee. It records a response, here a required preparation change, and the diner can see that response.
+> Fieldline now sees one verified order fact, not a permanent customer profile. The permission is tied to Pad Thai order A1024 and its remaining time. The kitchen cannot silently treat disclosure as a guarantee. It records a response, here a required preparation change, and the diner can see that response.
 
 ### 1:31 to 1:50, revocation has an effect
 

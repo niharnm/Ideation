@@ -112,20 +112,9 @@ async function load() {
   render();
 }
 
-startButton.addEventListener("click", async () => {
-  clearError();
-  busy = true;
-  render();
-  try {
-    const data = await api({ action: "start" });
-    handshake = data.handshake;
-    localStorage.setItem(HANDSHAKE_STORAGE_KEY, handshake.id);
-  } catch (error) {
-    errorView.textContent = error instanceof Error ? error.message : "The API handshake could not be started.";
-  } finally {
-    busy = false;
-    render();
-  }
+startButton.addEventListener("click", (event) => {
+  event.preventDefault();
+  window.location.href = "/index.html";
 });
 
 revokeButton.addEventListener("click", async () => {

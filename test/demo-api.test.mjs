@@ -30,7 +30,7 @@ test("website demo adapter persists its lifecycle through the API service", asyn
   const recipient = await handler.fetch(request({ action: "recipient-status", handshakeId: handshake.id }));
   const recipientBody = await recipient.json();
   assert.equal(recipient.status, 200);
-  assert.deepEqual(recipientBody.grant.values, { "order.constraint.peanut": "Peanut allergy" });
+  assert.deepEqual(recipientBody.grant.values, { "order.constraint.peanut": "Peanut avoidance requirement" });
 
   const nextStarted = await handler.fetch(request({ action: "start" }));
   assert.equal(nextStarted.status, 201);

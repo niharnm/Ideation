@@ -3,6 +3,7 @@ export interface AllergyConstraint {
   label: string;
   severity: "severe" | "moderate" | "mild" | string;
   crossContaminationTolerance: boolean;
+  source?: "credential" | "self-reported";
 }
 
 export interface UserPassportVault {
@@ -21,21 +22,10 @@ export const LOCAL_PASSPORT_VAULT_STORAGE_KEY = "handshake.local_passport_vault.
 export const DEFAULT_VAULT_ALLERGIES: AllergyConstraint[] = [
   {
     allergenId: "order.constraint.peanut",
-    label: "Peanut constraint",
+    label: "Peanut avoidance requirement",
     severity: "severe",
     crossContaminationTolerance: false,
-  },
-  {
-    allergenId: "order.constraint.dairy",
-    label: "Dairy constraint",
-    severity: "moderate",
-    crossContaminationTolerance: false,
-  },
-  {
-    allergenId: "order.preference.vegetarian",
-    label: "Vegetarian preference",
-    severity: "mild",
-    crossContaminationTolerance: true,
+    source: "credential",
   },
 ];
 
@@ -69,6 +59,10 @@ export function loadUserPassportVault(storage: StorageLike | Storage): UserPassp
               typeof a.crossContaminationTolerance === "boolean"
                 ? a.crossContaminationTolerance
                 : Boolean(a.crossContaminationTolerance),
+            source:
+              a.source === "credential" || a.allergenId === "order.constraint.peanut"
+                ? "credential"
+                : "self-reported",
           }));
 
         return {
@@ -127,6 +121,7 @@ export function addCustomAllergyToVault(
     label: allergy.label,
     severity: allergy.severity || "moderate",
     crossContaminationTolerance: Boolean(allergy.crossContaminationTolerance),
+    source: allergy.source ?? "self-reported",
   };
 
   const existingIndex = vault.allergies.findIndex(
