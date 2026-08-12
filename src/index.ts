@@ -8,3 +8,4 @@ export * from "./passport-flow.ts";
 export * from "./proof-case/allergy-ordering.ts";
 export * from "./validate-handshake-event.ts";
 
+export * from "./proof-case/restaurant-fixtures.ts";
