@@ -13,3 +13,19 @@ test("claimant screen supports removable constraints, exact expiry, and a new re
   assert.match(app, /textContent = "Start a new request"/);
   assert.match(app, /The claimant started a new request and ended this access\./);
 });
+
+test("Handshake shows NimGTP poll status and an Approve shortcut", () => {
+  assert.match(html, /id="poll-status"/);
+  assert.match(html, /Waiting for NimGTP memories/);
+  assert.match(app, /event\.metaKey \|\| event\.ctrlKey/);
+  assert.match(app, /approveButton\.click\(\)/);
+  assert.match(app, /setPollStatus/);
+});
+
+test("approved Chat memories create and revoke the server-side restaurant handshake", () => {
+  assert.match(app, /order\.constraint\.\$\{constraintFamily\(allergenId\)\}/);
+  assert.match(app, /action: "passport-update"/);
+  assert.match(app, /action: "start", constraintId/);
+  assert.match(app, /setItem\(HANDSHAKE_STORAGE_KEY, handshake\.id\)/);
+  assert.match(app, /action: "revoke", handshakeId/);
+});

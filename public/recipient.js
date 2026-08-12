@@ -36,25 +36,35 @@ function formatRemaining(validUntil) {
 
 function decisionEvent(handshake) { return handshake.events.find((event) => event.type === "decision"); }
 
-function actionCopy(action) {
+function scopeLabels(fields) {
+  return (fields || [])
+    .map((item) => String(item?.label || item?.value || "").trim())
+    .filter(Boolean);
+}
+
+function actionCopy(action, fields = []) {
+  const labels = scopeLabels(fields);
+  const constraint = labels.length > 0 ? labels.join(", ") : "the approved constraint";
   switch (action) {
-    case "accept": return ["Preparation confirmation", "Dedicated peanut-free prep surface confirmed. Peanuts omitted from this order.", "Confirm safe preparation"];
-    case "required_change": return ["Requested preparation change", "Omit peanuts and use the designated peanut-free preparation surface.", "Request preparation change"];
-    case "decline": return ["Kitchen note", "The kitchen cannot safely separate peanut handling for this order.", "Cannot safely fulfill"];
-    case "cannot_determine": return ["Supplier review note", "Supplier allergen documentation is unavailable for the selected ingredients.", "Cannot determine"];
+    case "accept": return ["Preparation confirmation", `Kitchen can fulfill this order within ${constraint}.`, "Confirm safe preparation"];
+    case "required_change": return ["Requested preparation change", `Adjust preparation so this order honors ${constraint}.`, "Request preparation change"];
+    case "decline": return ["Kitchen note", `The kitchen cannot safely honor ${constraint} for this order.`, "Cannot safely fulfill"];
+    case "cannot_determine": return ["Supplier review note", `Supplier documentation is unavailable for ${constraint}.`, "Cannot determine"];
+    default: return ["Preparation detail", "", "Record kitchen decision"];
   }
 }
 
 function renderScope() {
   scopeCard.className = `scope-card ${workspace.phase}`;
   if (workspace.phase === "active") {
-    const field = workspace.handshake.dataScope.fields[0];
+    const fields = workspace.handshake.dataScope.fields;
+    const labels = fields.map((field) => String(workspace.grant.values[field.id] ?? field.label));
     scopeTitle.textContent = "Allergy scope active";
     scopeState.textContent = formatRemaining(workspace.handshake.dataScope.validUntil);
     const detail = element("div", "scope-detail");
-    detail.append(element("span", "scope-detail-icon", "✓"), (() => { const copy = document.createElement("div"); copy.append(element("span", "scope-label", "Approved constraint"), element("p", "", String(workspace.grant.values[field.id] ?? field.label))); return copy; })());
+    detail.append(element("span", "scope-detail-icon", "✓"), (() => { const copy = document.createElement("div"); copy.append(element("span", "scope-label", fields.length === 1 ? "Approved constraint" : "Approved constraints"), element("p", "", labels.join(", "))); return copy; })());
     const facts = element("div", "scope-facts");
-    for (const [label, value] of [["Purpose", workspace.handshake.dataScope.purpose], ["Order context", "Pad Thai · #A1024"], ["Access", formatRemaining(workspace.handshake.dataScope.validUntil)], ["Customer data", "One approved constraint"]]) { const fact = element("div", "scope-fact"); fact.append(element("span", "", label), element("strong", "", value)); facts.append(fact); }
+    for (const [label, value] of [["Purpose", workspace.handshake.dataScope.purpose], ["Order context", "Pad Thai · #A1024"], ["Access", formatRemaining(workspace.handshake.dataScope.validUntil)], ["Customer data", fields.length === 1 ? "One approved constraint" : `${fields.length} approved constraints`]]) { const fact = element("div", "scope-fact"); fact.append(element("span", "", label), element("strong", "", value)); facts.append(fact); }
     scopeBody.replaceChildren(detail, facts, element("p", "scope-note", "This permission is temporary and limited to this order. It is not a permanent customer profile."));
     return;
   }
@@ -78,7 +88,11 @@ function renderKitchen() {
     recordButton.textContent = decision ? "Decision recorded" : "Record kitchen decision";
     return;
   }
-  const [label, note, buttonLabel] = actionCopy(selectedAction);
+  const fields = workspace.handshake.dataScope.fields.map((field) => ({
+    ...field,
+    value: workspace.grant.values[field.id],
+  }));
+  const [label, note, buttonLabel] = actionCopy(selectedAction, fields);
   kitchenIntro.textContent = "Choose the kitchen outcome for the approved order scope.";
   decisionLabel.textContent = label;
   decisionNote.value = note;
@@ -93,7 +107,8 @@ function renderHistory() {
   appendHistory("Order received", "Pad Thai added to the lunch queue.");
   if (workspace.phase === "locked") return appendHistory("Customer constraint not shared", "Waiting for an order-specific permission.");
   if (workspace.phase === "revoked") return appendHistory("Access ended by customer", "The temporary order scope was removed. Allergy detail is no longer available.", true);
-  appendHistory("Permission active", "One customer-approved constraint was retrieved from the Handshake API.");
+  const fieldCount = workspace.handshake.dataScope.fields.length;
+  appendHistory("Permission active", fieldCount === 1 ? "One customer-approved constraint was retrieved from the Handshake API." : `${fieldCount} customer-approved constraints were retrieved from the Handshake API.`);
   if (decisionEvent(workspace.handshake)) appendHistory("Kitchen decision recorded", "The order team recorded its preparation response and acknowledgement.");
 }
 
@@ -115,7 +130,11 @@ recordButton.addEventListener("click", async () => {
   if (busy || workspace.phase !== "active" || decisionEvent(workspace.handshake)) return;
   busy = true; render(); decisionNotice.hidden = true;
   try {
-    await api({ action: "record-decision", handshakeId: workspace.handshake.id, response: selectedAction, rationale: decisionNote.value.trim() || actionCopy(selectedAction)[1] });
+    const fields = workspace.handshake.dataScope.fields.map((field) => ({
+      ...field,
+      value: workspace.grant.values[field.id],
+    }));
+    await api({ action: "record-decision", handshakeId: workspace.handshake.id, response: selectedAction, rationale: decisionNote.value.trim() || actionCopy(selectedAction, fields)[1] });
     decisionNotice.textContent = "Kitchen decision and acknowledgement recorded through the Handshake API.";
     decisionNotice.hidden = false;
     await load();
@@ -123,5 +142,60 @@ recordButton.addEventListener("click", async () => {
   finally { busy = false; render(); }
 });
 
+document.querySelectorAll(".mode button").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".mode button").forEach((item) => {
+      item.classList.toggle("is-on", item === button);
+    });
+  });
+});
+
+document.querySelectorAll("#filters .chip").forEach((button) => {
+  button.addEventListener("click", () => {
+    button.classList.toggle("is-on");
+  });
+});
+
+const placeButton = document.querySelector("#place");
+const placeMenu = document.querySelector("#place-menu");
+const placeLabel = document.querySelector("#place-label");
+const placeMeta = document.querySelector("#place-meta");
+placeButton?.addEventListener("click", (event) => {
+  if (event.target.closest("#place-menu")) return;
+  const open = placeMenu?.hidden;
+  if (placeMenu) placeMenu.hidden = !open;
+  placeButton.setAttribute("aria-expanded", String(Boolean(open)));
+});
+placeMenu?.querySelectorAll("button").forEach((option) => {
+  option.addEventListener("click", () => {
+    if (placeLabel) placeLabel.textContent = option.dataset.place || "Choose address";
+    if (placeMeta) placeMeta.textContent = option.dataset.meta || "ASAP · Convenience";
+    placeMenu.querySelectorAll("button").forEach((item) => {
+      item.classList.toggle("is-on", item === option);
+    });
+    placeMenu.hidden = true;
+    placeButton?.setAttribute("aria-expanded", "false");
+  });
+});
+document.addEventListener("click", (event) => {
+  if (!placeButton || placeButton.contains(event.target)) return;
+  if (placeMenu) placeMenu.hidden = true;
+  placeButton.setAttribute("aria-expanded", "false");
+});
+
+const cartLine = document.querySelector("#cart-line");
+document.querySelectorAll(".card .add").forEach((button) => {
+  button.addEventListener("click", () => {
+    const card = button.closest(".card");
+    const name = card?.querySelector(".name")?.textContent?.trim();
+    const price = card?.querySelector(".price")?.textContent?.trim();
+    if (!cartLine || !name || !price) return;
+    const item = document.createElement("strong");
+    item.textContent = name;
+    const cost = document.createElement("span");
+    cost.textContent = price;
+    cartLine.replaceChildren(item, cost);
+  });
+});
 window.addEventListener("storage", (event) => { if (event.key === HANDSHAKE_STORAGE_KEY) load(); });
 load();

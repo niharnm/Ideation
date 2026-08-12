@@ -24,6 +24,10 @@ test("claimant live demo defaults to one peanut constraint", () => {
     /id: "order\.constraint\.dairy", label: "Dairy constraint", selected: false/,
   );
   assert.match(app, /Prepare one restaurant order from the constraint you choose\./);
+  assert.match(app, /pollEgoistPassportVault/);
+  assert.match(app, /deselectedFieldIds/);
+  assert.match(app, /removeAllergenId/);
+  assert.doesNotMatch(app, /handleEgoistMCPRequest/);
 });
 
 test("revoking a local preview retains its unverified detail but updates access to revoked", () => {

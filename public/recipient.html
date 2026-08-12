@@ -4,157 +4,517 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>Fieldline Restaurant Ops</title>
+    <title>Fieldline</title>
     <style>
-      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #253126; background: #f4f6f1; }
+      :root {
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #191919;
+        background: #fff;
+        --green: #00824d;
+        --green-deep: #00663c;
+        --green-wash: #e7f6ee;
+        --dd: #00824d;
+      }
       * { box-sizing: border-box; }
-      body { min-width: 320px; margin: 0; background: #f4f6f1; }
-      a { color: inherit; }
-      button, textarea { font: inherit; }
+      body { margin: 0; min-width: 320px; background: #fff; }
+      a { color: inherit; text-decoration: none; }
+      button, textarea, input { font: inherit; }
       button { cursor: pointer; }
+      button:focus-visible, textarea:focus-visible, a:focus-visible {
+        outline: 2px solid #191919;
+        outline-offset: 2px;
+      }
       button:disabled { cursor: not-allowed; opacity: .48; }
       [hidden] { display: none !important; }
-      .app { display: grid; grid-template-columns: 230px minmax(0,1fr); min-height: 100vh; }
-      .sidebar { display: flex; flex-direction: column; padding: 24px 14px; color: #cbd7cc; background: #203126; }
-      .brand { display: flex; align-items: center; gap: 10px; padding: 2px 10px 28px; color: #fff; font-size: 16px; font-weight: 820; letter-spacing: -.04em; text-decoration: none; }
-      .mark { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; color: #223127; background: #d8fb59; font-size: 15px; }
-      .brand small { display: block; margin-top: 2px; color: #94a99a; font-size: 9px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
-      .location { display: flex; align-items: center; justify-content: space-between; margin: 0 5px 21px; padding: 11px 10px; border: 1px solid #405344; border-radius: 8px; color: #eef5ef; background: #293b2f; font-size: 12px; font-weight: 700; }
-      .location span { color: #9bb49e; font-size: 10px; }
-      .nav-label { margin: 13px 10px 7px; color: #7f9784; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-      .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 7px; color: #b9c9bb; font-size: 13px; font-weight: 650; text-decoration: none; }
-      .nav-item.active { color: #253126; background: #d8fb59; }
-      .nav-item .icon { width: 16px; color: currentColor; text-align: center; }
-      .side-footer { margin-top: auto; padding: 15px 10px 2px; border-top: 1px solid #3c4f40; color: #96a99a; font-size: 11px; line-height: 1.45; }
-      .side-footer strong { display: block; color: #e5efe6; font-size: 12px; }
-      .topbar { display: flex; align-items: center; justify-content: space-between; min-height: 68px; padding: 0 34px; border-bottom: 1px solid #dfe6dc; background: #fff; }
-      .crumb { color: #78817a; font-size: 12px; }
-      .crumb strong { color: #2f3b30; }
-      .top-actions { display: flex; align-items: center; gap: 17px; }
-      .customer-link { color: #48624d; font-size: 12px; font-weight: 760; text-decoration: none; }
-      .avatar { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 50%; color: #fff; background: #53755b; font-size: 11px; font-weight: 800; }
-      .main { max-width: 1560px; margin: 0 auto; padding: 30px 34px 45px; }
-      .heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 24px; }
-      h1 { margin: 0; color: #253126; font-size: 29px; letter-spacing: -.055em; }
-      .subheading { margin: 7px 0 0; color: #778077; font-size: 13px; }
-      .service-control { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #dbe5d9; border-radius: 7px; color: #3f6348; background: #f7fbf6; font-size: 11px; font-weight: 800; }
-      .service-control::before { width: 7px; height: 7px; border-radius: 50%; background: #61a26c; content: ""; }
-      .metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 13px; margin-bottom: 20px; }
-      .metric { padding: 16px 17px; border: 1px solid #dee5dc; border-radius: 9px; background: #fff; box-shadow: 0 3px 10px rgba(29,48,32,.025); }
-      .metric-label { color: #7f887f; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-      .metric-value { display: block; margin-top: 7px; color: #2d3c2f; font-size: 22px; font-weight: 800; letter-spacing: -.045em; }
-      .metric-note { margin-left: 5px; color: #4d8a58; font-size: 10px; font-weight: 750; }
-      .workspace { display: grid; grid-template-columns: minmax(540px,1.55fr) minmax(360px,.9fr); gap: 20px; align-items: start; }
-      .card { border: 1px solid #dce4da; border-radius: 10px; background: #fff; box-shadow: 0 6px 20px rgba(29,48,32,.035); }
-      .card-head { display: flex; align-items: center; justify-content: space-between; padding: 17px 19px; border-bottom: 1px solid #e9eee7; }
-      h2 { margin: 0; color: #2d3a2e; font-size: 15px; letter-spacing: -.02em; }
-      .head-meta { color: #788279; font-size: 11px; }
-      .filters { display: flex; gap: 8px; padding: 13px 18px; border-bottom: 1px solid #edf1eb; }
-      .filter { padding: 6px 9px; border: 1px solid #dde5db; border-radius: 6px; color: #657067; background: #fff; font-size: 11px; font-weight: 700; }
-      .filter.active { border-color: #486d50; color: #fff; background: #486d50; }
-      .orders-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-      .orders-table th { padding: 10px 18px; color: #89918a; background: #f8faf7; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
-      .orders-table td { padding: 15px 18px; border-top: 1px solid #edf1eb; color: #566057; }
-      .orders-table tr.selected td { background: #f4f8ef; }
-      .orders-table tr.selected td:first-child { box-shadow: inset 3px 0 #76a950; }
-      .orders-table strong { display: block; color: #2e3b30; font-size: 12px; }
-      .orders-table small { display: block; margin-top: 3px; color: #828b83; font-size: 11px; }
-      .status { display: inline-flex; padding: 4px 7px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-      .status.review { color: #7b5b16; background: #fff4d7; }.status.prep { color: #31633c; background: #e7f5e9; }.status.waiting { color: #617067; background: #eef1ee; }
-      .right-col { display: grid; gap: 18px; }
-      .ticket { overflow: hidden; }
-      .ticket-top { padding: 20px; border-bottom: 1px solid #e7ece5; }
-      .ticket-label { margin: 0 0 7px; color: #859087; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
-      .ticket-title { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
-      .ticket-title h2 { font-size: 19px; letter-spacing: -.04em; }.ticket-title p { margin: 4px 0 0; color: #778077; font-size: 12px; }
-      .ticket-badge { padding: 6px 7px; border-radius: 5px; color: #3e6c48; background: #e9f5e9; font-size: 9px; font-weight: 800; text-transform: uppercase; }
-      .ticket-lines { padding: 2px 20px 16px; }.ticket-line { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid #eef1ec; font-size: 12px; }.ticket-line strong { color: #354037; }.ticket-line span { color: #707a71; }
-      .scope-card { overflow: hidden; border: 1px solid #d7e5d5; border-radius: 9px; }
-      .scope-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; }.scope-card.active .scope-status { color: #2d713f; background: #eaf8eb; }.scope-card.locked .scope-status { color: #626c63; background: #f2f4f1; }.scope-card.revoked .scope-status { color: #a1443d; background: #fff0ee; }.scope-card.revoked { border-color: #f0d1cd; }
-      .scope-title { margin: 0; font-size: 12px; font-weight: 800; }.scope-title::before { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: currentColor; content: ""; }.scope-state { font-size: 10px; font-weight: 700; }
-      .scope-body { padding: 14px; }.scope-detail { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid #dcebdc; border-radius: 7px; background: #fbfefb; }.scope-detail-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 6px; color: #316d40; background: #dff2e1; font-size: 13px; }.scope-detail p { margin: 2px 0 0; color: #2d5637; font-size: 13px; font-weight: 800; }.scope-label { color: #7a897c; font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
-      .scope-facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 11px; margin-top: 12px; }.scope-fact span { display: block; color: #818c82; font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }.scope-fact strong { display: block; margin-top: 4px; color: #415044; font-size: 11px; line-height: 1.35; }.scope-note { margin: 12px 0 0; color: #6d786f; font-size: 11px; line-height: 1.45; }.locked-body { color: #69736b; font-size: 12px; line-height: 1.48; }.locked-body strong { color: #3c4a3e; }
-      .kitchen { padding: 18px; }.section-intro { margin: 5px 0 14px; color: #737c73; font-size: 12px; line-height: 1.4; }.action-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }.action { min-height: 54px; padding: 10px; border: 1px solid #dbe4d9; border-radius: 7px; color: #465147; background: #fff; text-align: left; font-size: 11px; font-weight: 800; }.action.active { border-color: #486d50; color: #fff; background: #486d50; }.action small { display: block; margin-top: 3px; font-size: 9px; font-weight: 500; opacity: .85; }.prep-box { margin-top: 12px; }.prep-box label { display: block; margin-bottom: 6px; color: #7b857c; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }textarea { width: 100%; min-height: 68px; padding: 9px; border: 1px solid #dbe3d9; border-radius: 7px; color: #354037; background: #fbfcfa; font-size: 12px; line-height: 1.4; resize: vertical; }.record-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }.record-note { color: #788179; font-size: 10px; line-height: 1.35; }.record { padding: 9px 11px; border: 0; border-radius: 6px; color: #fff; background: #314f38; font-size: 10px; font-weight: 800; white-space: nowrap; }.notice { margin: 11px 0 0; color: #2f7040; font-size: 11px; font-weight: 650; }
-      .history { padding: 18px; }.history-list { display: grid; gap: 13px; margin-top: 15px; }.history-item { display: grid; grid-template-columns: 9px 1fr; gap: 9px; color: #727c73; font-size: 11px; line-height: 1.38; }.history-dot { width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: #83ad88; }.history-item.ended .history-dot { background: #cf655d; }.history-item strong { display: block; color: #465248; font-size: 11px; }.history-item.ended strong { color: #a0443d; }
-      @media (max-width: 1080px) { .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }.workspace { grid-template-columns: 1fr; }.right-col { grid-template-columns: repeat(2,minmax(0,1fr)); }.right-col .ticket { grid-column: 1 / -1; } }
-      @media (max-width: 780px) { .app { grid-template-columns: 1fr; }.sidebar { display: none; }.topbar,.main { padding-left: 18px; padding-right: 18px; }.main { padding-top: 22px; }.orders-table th:nth-child(3),.orders-table td:nth-child(3) { display: none; } }
-      @media (max-width: 540px) { .metrics,.right-col,.scope-facts,.action-grid { grid-template-columns: 1fr; }.right-col .ticket { grid-column: auto; }.heading-row { align-items: start; flex-direction: column; }.service-control { display: none; }.topbar { min-height: 58px; }.customer-link { font-size: 11px; }.orders-table th,.orders-table td { padding-left: 11px; padding-right: 11px; }.record-row { align-items: stretch; flex-direction: column; }.record { width: 100%; } }
-
-      /* Shared Fieldline visual system. Green is reserved for permission and service states. */
-      :root { color: #171719; background: #f8f8f6; }
-      body { background: #f8f8f6; }
-      .sidebar { color: #b9b9bc; background: #1d1d20; }
-      .mark { color: #1d1d20; background: #f5f5f3; }
-      .brand small { color: #9a9a9e; }
-      .location { border-color: #424246; color: #f6f6f4; background: #28282b; }
-      .location span, .nav-label, .side-footer { color: #98989d; }
-      .nav-item { color: #c2c2c5; }
-      .nav-item.active { color: #1d1d20; background: #f5f5f3; }
-      .side-footer { border-color: #424246; }
-      .side-footer strong { color: #f5f5f3; }
-      .topbar { border-color: #e1e1de; }
-      .crumb, .subheading, .head-meta, .ticket-title p, .section-intro, .record-note, .history-item { color: #77777a; }
-      .crumb strong, h1, h2, .metric-value, .orders-table strong, .ticket-line strong, textarea { color: #202023; }
-      .customer-link { color: #3d3d40; }
-      .avatar, .filter.active, .action.active, .record { background: #1d1d20; }
-      .avatar { color: #fff; }
-      .service-control { border-color: #dce7dc; color: #456e4b; background: #f5f8f4; }
-      .metric, .card { border-color: #e1e1de; box-shadow: 0 5px 18px rgba(23,23,25,.035); }
-      .metric-label, .orders-table th, .ticket-label, .scope-label, .scope-fact span, .prep-box label { color: #85858a; }
-      .filters, .orders-table td, .ticket-top, .ticket-line, .card-head { border-color: #ececea; }
-      .filter, .action, textarea { border-color: #dededb; color: #444447; }
-      .filter.active, .action.active { border-color: #1d1d20; }
-      .orders-table th { background: #fafaf8; }
-      .orders-table td { color: #5f5f63; }
-      .orders-table tr.selected td { background: #f7f7f5; }
-      .orders-table tr.selected td:first-child { box-shadow: inset 3px 0 #1d1d20; }
-      .status.waiting { color: #626267; background: #f0f0ee; }
-      .ticket-badge { color: #3f6947; background: #e8f2e8; }
-      .scope-card { border-color: #dfe2de; }
-      .scope-card.active .scope-status { color: #456e4b; background: #e8f2e8; }
-      .scope-card.locked .scope-status { color: #68686d; background: #f1f1ef; }
-      .scope-detail { border-color: #dce7dc; background: #f9fcf9; }
-      .scope-detail-icon { color: #456e4b; background: #e3efe3; }
-      .scope-detail p { color: #36563b; }
-      .scope-fact strong, .locked-body strong { color: #3e3e42; }
-      .scope-note, .locked-body { color: #6c6c70; }
-      .action.active, .record { color: #fff; }
-      textarea { background: #fcfcfa; }
-      .notice { color: #456e4b; }
-      .history-item strong { color: #414145; }
+      .top {
+        position: sticky;
+        top: 0;
+        z-index: 8;
+        display: grid;
+        grid-template-columns: auto minmax(280px, 560px) auto auto auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 72px;
+        padding: 0 20px;
+        background: #fff;
+        border-bottom: 1px solid #eee;
+      }
+      .logo {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        color: var(--dd);
+        text-transform: uppercase;
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        justify-self: center;
+        padding: 0 16px;
+        height: 48px;
+        border: 0;
+        border-radius: 999px;
+        background: #f3f3f3;
+        color: #6b6b6b;
+        font-size: 16px;
+      }
+      .search, .search:focus, .search:focus-within,
+      .search input, .search input:focus, .search input:focus-visible {
+        outline: none;
+        box-shadow: none;
+      }
+      .search input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: #191919;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+      .place {
+        position: relative;
+        min-width: 148px;
+        padding: 6px 10px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        text-align: left;
+      }
+      .place:hover { background: #f6f6f6; }
+      .place b { display: block; font-size: 14px; font-weight: 700; }
+      .place small { display: block; color: #6b6b6b; font-size: 12px; font-weight: 400; }
+      .place-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 9;
+        min-width: 220px;
+        padding: 6px;
+        border: 1px solid #eee;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(0,0,0,.12);
+      }
+      .place-menu button {
+        display: block;
+        width: 100%;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        text-align: left;
+        font-size: 14px;
+      }
+      .place-menu button:hover, .place-menu button.is-on { background: #f6f6f6; }
+      .mode {
+        display: inline-flex;
+        padding: 3px;
+        border-radius: 999px;
+        background: #f3f3f3;
+      }
+      .mode button {
+        min-height: 34px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .mode button.is-on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+      .cart {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border: 0;
+        border-radius: 50%;
+        background: #191919;
+        color: #fff;
+        font-size: 18px;
+      }
+      .cart b {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--dd);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 18px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr) 340px;
+        min-height: calc(100vh - 72px);
+      }
+      .cats {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 12px 8px 24px;
+        border-right: 1px solid #f0f0f0;
+      }
+      .cat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 76px;
+        min-height: 64px;
+        padding: 8px 4px;
+        border-radius: 12px;
+        color: #3d3d3d;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: center;
+      }
+      .cat i {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: #f3f3f3;
+      }
+      .cat.is-on { background: var(--green-wash); color: var(--green-deep); }
+      .cat.is-on i { background: #cdeadc; }
+      .shop { padding: 20px 28px 48px; }
+      .store {
+        display: grid;
+        grid-template-columns: 88px 1fr;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+      .store img {
+        width: 88px;
+        height: 88px;
+        object-fit: cover;
+        border-radius: 12px;
+        background: #f3f3f3;
+      }
+      .store h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.04em; }
+      .store p { margin: 4px 0 0; color: #6b6b6b; font-size: 14px; }
+      .tabs { display: flex; gap: 18px; border-bottom: 1px solid #eee; margin-bottom: 14px; }
+      .tabs a {
+        padding: 8px 0 12px;
+        color: #6b6b6b;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .tabs a.is-on {
+        color: #191919;
+        box-shadow: inset 0 -2px 0 #191919;
+      }
+      .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+      .chip {
+        min-height: 36px;
+        padding: 0 14px;
+        border: 1px solid #e4e4e4;
+        border-radius: 999px;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .chip.is-on { border-color: #191919; background: #191919; color: #fff; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 22px 16px;
+      }
+      .card { display: grid; gap: 6px; }
+      .card.is-live { outline: 2px solid var(--dd); outline-offset: 4px; border-radius: 16px; padding: 4px; }
+      .thumb {
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #f6f6f6;
+      }
+      .thumb img { width: 100%; height: 100%; object-fit: cover; }
+      .add {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        width: 36px;
+        height: 36px;
+        border: 0;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.16);
+        font-size: 20px;
+        font-weight: 400;
+        line-height: 1;
+      }
+      .add.in { background: #191919; color: #fff; font-size: 12px; font-weight: 700; }
+      .price { font-size: 16px; font-weight: 700; }
+      .name { color: #3d3d3d; font-size: 14px; font-weight: 500; line-height: 1.35; }
+      .checkout {
+        padding: 16px;
+        border-left: 1px solid #eee;
+        background: #fff;
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+      .bag-head { display: flex; justify-content: space-between; align-items: baseline; }
+      .bag-head strong { font-size: 18px; font-weight: 800; }
+      .bag-head span { color: #6b6b6b; font-size: 13px; }
+      .bag, .scope-card, .ops {
+        border: 1px solid #eee;
+        border-radius: 16px;
+        background: #fff;
+      }
+      .bag { padding: 12px 14px; }
+      .line { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+      .line strong { font-weight: 600; }
+      .scope-status { display: flex; justify-content: space-between; gap: 8px; padding: 12px 14px; }
+      .scope-card.active .scope-status { color: var(--green-deep); background: var(--green-wash); }
+      .scope-card.locked .scope-status { color: #666; background: #f6f6f6; }
+      .scope-card.revoked .scope-status { color: #9c342e; background: #fff7f6; }
+      .scope-title { margin: 0; font-size: 13px; font-weight: 700; }
+      .scope-state { font-size: 12px; font-weight: 600; }
+      .scope-body { padding: 0 14px 14px; }
+      .scope-detail { display: flex; gap: 8px; align-items: center; padding: 10px; border: 1px solid #dceee3; border-radius: 10px; background: #f7fcf8; }
+      .scope-detail-icon { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: var(--green-wash); color: var(--green-deep); font-size: 12px; }
+      .scope-label { display: block; color: #6b6b6b; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+      .scope-detail p { margin: 2px 0 0; font-size: 13px; font-weight: 700; }
+      .scope-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+      .scope-fact span { display: block; color: #6b6b6b; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+      .scope-fact strong { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; }
+      .scope-note, .locked-body { margin: 8px 0 0; color: #5f5f5f; font-size: 13px; line-height: 1.4; }
+      .grant {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 48px;
+        padding: 0 16px;
+        border-radius: 999px;
+        background: var(--dd);
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .ops summary {
+        cursor: pointer;
+        padding: 12px 14px;
+        font-size: 13px;
+        font-weight: 700;
+        user-select: none;
+      }
+      .kitchen, .history { padding: 0 14px 14px; }
+      .history { border-top: 1px solid #eee; padding-top: 10px; }
+      .kitchen h2, .history h2 { margin: 0; font-size: 13px; font-weight: 700; }
+      .section-intro { margin: 0 0 8px; color: #6b6b6b; font-size: 12px; }
+      .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+      .action {
+        min-height: 44px;
+        padding: 8px;
+        border: 1px solid #e4e4e4;
+        border-radius: 10px;
+        background: #fff;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .action.active { border-color: #191919; background: #191919; color: #fff; }
+      .action small { display: block; margin-top: 2px; font-weight: 400; opacity: .8; }
+      .prep-box { margin-top: 8px; }
+      .prep-box label { display: block; margin-bottom: 4px; color: #6b6b6b; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+      textarea {
+        width: 100%;
+        min-height: 48px;
+        padding: 8px 10px;
+        border: 1px solid #e4e4e4;
+        border-radius: 10px;
+        resize: vertical;
+        font-size: 13px;
+      }
+      .record-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 8px; }
+      .record-note { color: #6b6b6b; font-size: 11px; }
+      .record {
+        border: 0;
+        border-radius: 999px;
+        background: #191919;
+        color: #fff;
+        min-height: 32px;
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .notice { margin: 8px 0 0; color: var(--green-deep); font-size: 12px; }
+      .history-list { display: grid; gap: 8px; margin-top: 8px; }
+      .history-item { display: grid; grid-template-columns: 8px 1fr; gap: 8px; color: #5f5f5f; font-size: 12px; }
+      .history-dot { width: 8px; height: 8px; margin-top: 4px; border-radius: 50%; background: var(--green); }
+      .history-item.ended .history-dot { background: #cf655d; }
+      .history-item strong { display: block; color: #191919; font-weight: 600; }
+      @media (max-width: 1100px) {
+        .layout { grid-template-columns: 1fr; }
+        .cats { display: none; }
+        .checkout { border-left: 0; border-top: 1px solid #eee; }
+      }
+      @media (max-width: 720px) {
+        .top { grid-template-columns: auto 1fr auto; }
+        .place, .mode { display: none; }
+        .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
     </style>
   </head>
   <body>
-    <div class="app">
-      <aside class="sidebar">
-        <a class="brand" href="/recipient.html"><span class="mark">F</span><span>Fieldline<small>Restaurant Ops</small></span></a>
-        <div class="location">Thai Kitchen <span>⌄</span></div>
-        <p class="nav-label">Restaurant</p>
-        <a class="nav-item" href="/recipient.html"><span class="icon">⌂</span>Dashboard</a>
-        <a class="nav-item active" href="/recipient.html"><span class="icon">▣</span>Orders</a>
-        <a class="nav-item" href="/recipient.html"><span class="icon">☷</span>Menus</a>
-        <a class="nav-item" href="/recipient.html"><span class="icon">◷</span>Reservations</a>
-        <p class="nav-label">Manage</p>
-        <a class="nav-item" href="/recipient.html"><span class="icon">◌</span>Customers</a>
-        <a class="nav-item" href="/recipient.html"><span class="icon">⚙</span>Settings</a>
-        <div class="side-footer"><strong>Lunch service</strong>Accepting orders until 2:30 PM</div>
+    <header class="top">
+      <a class="logo" href="/recipient.html">Fieldline</a>
+      <label class="search"><span aria-hidden="true">⌕</span><input value="Sandwiches & Wraps" readonly /></label>
+      <button class="place" id="place" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <b id="place-label">Choose address</b>
+        <small id="place-meta">ASAP · Convenience</small>
+        <div class="place-menu" id="place-menu" hidden>
+          <button type="button" data-place="Near you" data-meta="ASAP · Convenience">Near you</button>
+          <button type="button" data-place="Downtown" data-meta="25–35 min · Convenience">Downtown</button>
+          <button type="button" data-place="Campus" data-meta="15–25 min · Convenience">Campus</button>
+        </div>
+      </button>
+      <div class="mode"><button class="is-on" type="button">Delivery</button><button type="button">Pickup</button></div>
+      <button class="cart" type="button" aria-label="Cart">☰<b>1</b></button>
+    </header>
+    <div class="layout">
+      <aside class="cats" aria-label="Departments">
+        <a class="cat" href="/"><i></i>Home</a>
+        <a class="cat is-on" href="/recipient.html"><i></i>Grocery</a>
+        <a class="cat" href="/recipient.html"><i></i>Restaurant</a>
+        <a class="cat" href="/recipient.html"><i></i>Convenience</a>
+        <a class="cat" href="/recipient.html"><i></i>Retail</a>
+        <a class="cat" href="/recipient.html"><i></i>Late Night</a>
+        <a class="cat" href="/recipient.html"><i></i>Flowers</a>
+        <a class="cat" href="/recipient.html"><i></i>Beauty</a>
+        <a class="cat" href="/recipient.html"><i></i>Pets</a>
+        <a class="cat" href="/recipient.html"><i></i>Apparel</a>
       </aside>
-      <div>
-        <header class="topbar"><div class="crumb"><strong>Orders</strong> / Open orders</div><div class="top-actions"><a class="customer-link" href="/">View customer permission</a><span class="avatar">TK</span></div></header>
-        <main class="main">
-          <div class="heading-row"><div><h1>Order management</h1><p class="subheading">Wednesday lunch service, 4 open orders</p></div><span class="service-control">Accepting orders</span></div>
-          <section class="metrics" aria-label="Order summary"><article class="metric"><span class="metric-label">New orders</span><strong class="metric-value">04</strong></article><article class="metric"><span class="metric-label">In kitchen</span><strong class="metric-value">02 <em class="metric-note">On track</em></strong></article><article class="metric"><span class="metric-label">Ready for pickup</span><strong class="metric-value">01</strong></article><article class="metric"><span class="metric-label">Average prep time</span><strong class="metric-value">18 min</strong></article></section>
-          <div class="workspace">
-            <section class="card" aria-label="Restaurant order queue"><div class="card-head"><h2>Open orders</h2><span class="head-meta">Updated just now</span></div><div class="filters"><button class="filter active" type="button">All 4</button><button class="filter" type="button">New</button><button class="filter" type="button">Kitchen</button><button class="filter" type="button">Ready</button></div><table class="orders-table"><thead><tr><th>Order</th><th>Items</th><th>Service</th><th>Status</th></tr></thead><tbody><tr class="selected"><td><strong>#A1024</strong><small>12:14 PM</small></td><td><strong>Pad Thai</strong><small>1 item</small></td><td>Pickup</td><td><span class="status review">Kitchen review</span></td></tr><tr><td><strong>#A1025</strong><small>12:17 PM</small></td><td><strong>Green Curry</strong><small>2 items</small></td><td>Delivery</td><td><span class="status prep">Preparing</span></td></tr><tr><td><strong>#A1026</strong><small>12:21 PM</small></td><td><strong>Basil Chicken</strong><small>1 item</small></td><td>Pickup</td><td><span class="status waiting">New</span></td></tr><tr><td><strong>#A1027</strong><small>12:26 PM</small></td><td><strong>Tofu Fried Rice</strong><small>3 items</small></td><td>Delivery</td><td><span class="status waiting">New</span></td></tr></tbody></table></section>
-            <aside class="right-col">
-              <section class="card ticket"><div class="ticket-top"><p class="ticket-label">Selected order · Pickup</p><div class="ticket-title"><div><h2>Pad Thai · #A1024</h2><p>Place on pickup shelf after review</p></div><span class="ticket-badge">New</span></div></div><div class="ticket-lines"><div class="ticket-line"><strong>Pad Thai</strong><span>Qty 1</span></div><div class="ticket-line"><strong>Subtotal</strong><span>$15.00</span></div></div></section>
-              <section class="scope-card locked" id="scope-card" aria-live="polite"><div class="scope-status"><p class="scope-title" id="scope-title">Permission required</p><span class="scope-state" id="scope-state">Not shared</span></div><div class="scope-body" id="scope-body"><div class="locked-body"><strong>Allergy details are unavailable.</strong><br />Fieldline cannot view or act on a customer constraint until the customer grants temporary permission for this order.</div></div></section>
-              <section class="card kitchen" id="kitchen-panel"><h2>Kitchen decision</h2><p class="section-intro" id="kitchen-intro">Grant is required before a kitchen decision can use a customer constraint.</p><div class="action-grid"><button class="action" type="button" data-action="accept">Confirm safe<small>Safe preparation confirmed</small></button><button class="action" type="button" data-action="required_change">Request preparation change<small>Substitution or dedicated surface</small></button><button class="action" type="button" data-action="decline">Cannot safely fulfill<small>Do not prepare this order</small></button><button class="action" type="button" data-action="cannot_determine">Cannot determine<small>Supplier detail unavailable</small></button></div><div class="prep-box"><label for="decision-note" id="decision-label">Preparation detail</label><textarea id="decision-note" disabled></textarea></div><div class="record-row"><span class="record-note" id="record-note">Actions unlock only for an active order scope.</span><button class="record" id="record-decision" type="button" disabled>Record kitchen decision</button></div><p class="notice" id="decision-notice" hidden></p></section>
-              <section class="card history"><h2>Order activity</h2><div class="history-list" id="history-list"><div class="history-item"><span class="history-dot"></span><div><strong>Order received</strong>Pad Thai was added to the lunch queue.</div></div><div class="history-item"><span class="history-dot"></span><div><strong>Customer constraint not shared</strong>Waiting for an order-specific permission.</div></div></div></section>
-            </aside>
+      <main class="shop">
+        <div class="store">
+          <img alt="" src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=240&q=80" />
+          <div>
+            <h1>7-Eleven</h1>
+            <p>4.8 · 1.2 mi · 20 min · Convenience</p>
           </div>
-        </main>
-      </div>
+        </div>
+        <nav class="tabs" aria-label="Marketplace">
+          <a href="/">Home</a>
+          <a class="is-on" href="/recipient.html">Grocery</a>
+          <a href="/recipient.html">Restaurant</a>
+        </nav>
+        <div class="filters" id="filters">
+          <button class="chip" type="button">Deals</button>
+          <button class="chip" type="button">Fastest</button>
+          <button class="chip" type="button">Over 4.5</button>
+          <button class="chip" type="button">Price</button>
+          <button class="chip" type="button">DashPass</button>
+          <button class="chip" type="button">Delivery Fees: Under $3</button>
+        </div>
+        <section class="grid" aria-label="Sandwiches and wraps">
+          <article class="card is-live">
+            <div class="thumb">
+              <img alt="Pad Thai in a takeout box" src="https://images.unsplash.com/photo-1559314809-0d155014e29e?auto=format&fit=crop&w=640&q=80" />
+              <button class="add in" type="button">1x</button>
+            </div>
+            <div class="price">$15.00</div>
+            <div class="name">Pad Thai · #A1024</div>
+          </article>
+          <article class="card">
+            <div class="thumb">
+              <img alt="Tuna salad sandwich" src="https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=640&q=80" />
+              <button class="add" type="button">+</button>
+            </div>
+            <div class="price">$6.69</div>
+            <div class="name">7-Eleven Tuna Salad Sandwich (4 oz)</div>
+          </article>
+          <article class="card">
+            <div class="thumb">
+              <img alt="Turkey and cheese wrap" src="https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=640&q=80" />
+              <button class="add" type="button">+</button>
+            </div>
+            <div class="price">$7.29</div>
+            <div class="name">Turkey & Cheese Wrap</div>
+          </article>
+          <article class="card">
+            <div class="thumb">
+              <img alt="Chicken sandwich" src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=640&q=80" />
+              <button class="add" type="button">+</button>
+            </div>
+            <div class="price">$8.49</div>
+            <div class="name">Crispy Chicken Sandwich</div>
+          </article>
+          <article class="card">
+            <div class="thumb">
+              <img alt="Veggie wrap" src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=640&q=80" />
+              <button class="add" type="button">+</button>
+            </div>
+            <div class="price">$6.99</div>
+            <div class="name">Garden Veggie Wrap</div>
+          </article>
+          <article class="card">
+            <div class="thumb">
+              <img alt="Ham sandwich" src="https://images.unsplash.com/photo-1481070414801-51fd732d7184?auto=format&fit=crop&w=640&q=80" />
+              <button class="add" type="button">+</button>
+            </div>
+            <div class="price">$5.89</div>
+            <div class="name">Ham & Swiss on Wheat</div>
+          </article>
+        </section>
+      </main>
+      <aside class="checkout">
+        <div class="bag-head"><strong>Cart</strong><span>7-Eleven</span></div>
+        <section class="bag">
+          <div class="line" id="cart-line"><strong>Pad Thai · #A1024</strong><span>$15.00</span></div>
+        </section>
+        <section class="scope-card locked" id="scope-card" aria-live="polite">
+          <div class="scope-status">
+            <p class="scope-title" id="scope-title">Permission required</p>
+            <span class="scope-state" id="scope-state">Not shared</span>
+          </div>
+          <div class="scope-body" id="scope-body">
+            <div class="locked-body"><strong>Allergy details are unavailable.</strong><br />Fieldline cannot view or act on a customer constraint until the customer grants temporary permission for this order.</div>
+          </div>
+        </section>
+        <a class="grant" href="/index.html">Approve this order’s share</a>
+        <details class="ops" open>
+          <summary>Kitchen</summary>
+          <section class="kitchen" id="kitchen-panel">
+            <p class="section-intro" id="kitchen-intro">Grant is required before a kitchen decision can use a customer constraint.</p>
+            <div class="action-grid">
+              <button class="action" type="button" data-action="accept">Confirm safe<small>Safe preparation confirmed</small></button>
+              <button class="action" type="button" data-action="required_change">Request preparation change<small>Substitution or dedicated surface</small></button>
+              <button class="action" type="button" data-action="decline">Cannot safely fulfill<small>Do not prepare this order</small></button>
+              <button class="action" type="button" data-action="cannot_determine">Cannot determine<small>Supplier detail unavailable</small></button>
+            </div>
+            <div class="prep-box">
+              <label for="decision-note" id="decision-label">Preparation detail</label>
+              <textarea id="decision-note" disabled></textarea>
+            </div>
+            <div class="record-row">
+              <span class="record-note" id="record-note">Actions unlock only for an active order scope.</span>
+              <button class="record" id="record-decision" type="button" disabled>Record kitchen decision</button>
+            </div>
+            <p class="notice" id="decision-notice" hidden></p>
+          </section>
+          <section class="history">
+            <h2>Order activity</h2>
+            <div class="history-list" id="history-list">
+              <div class="history-item"><span class="history-dot"></span><div><strong>Order received</strong>Pad Thai was added to the lunch queue.</div></div>
+              <div class="history-item"><span class="history-dot"></span><div><strong>Customer constraint not shared</strong>Waiting for an order-specific permission.</div></div>
+            </div>
+          </section>
+        </details>
+      </aside>
     </div>
     <script type="module" src="/recipient.js"></script>
   </body>
