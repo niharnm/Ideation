@@ -21,6 +21,8 @@ if (!browserCrypto?.randomUUID) {
 
 export const randomUUID = () => browserCrypto.randomUUID();
 `;
+const apiV1 = await import("./api/v1/[...path].ts");
+const demoApi = await import("./api/demo.ts");
 
 function browserSpecifier(specifier) {
   if (specifier === "node:crypto") {
@@ -73,6 +75,46 @@ function resolveRequest(pathname) {
 
 createServer(async (request, response) => {
   const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  if (pathname === "/api/v1" || pathname.startsWith("/api/v1/")) {
+    const chunks = [];
+    for await (const chunk of request) {
+      chunks.push(chunk);
+    }
+    const origin = `http://${request.headers.host ?? "127.0.0.1"}`;
+    const apiRequest = new Request(`${origin}${request.url ?? "/api/v1"}`, {
+      method: request.method,
+      headers: request.headers,
+      ...(["GET", "HEAD"].includes(request.method ?? "GET")
+        ? {}
+        : { body: Buffer.concat(chunks) }),
+    });
+    const apiResponse = await apiV1.default.fetch(apiRequest);
+    const headers = Object.fromEntries(apiResponse.headers.entries());
+    response.writeHead(apiResponse.status, headers).end(
+      Buffer.from(await apiResponse.arrayBuffer()),
+    );
+    return;
+  }
+  if (pathname === "/api/demo") {
+    const chunks = [];
+    for await (const chunk of request) {
+      chunks.push(chunk);
+    }
+    const origin = `http://${request.headers.host ?? "127.0.0.1"}`;
+    const apiRequest = new Request(`${origin}${request.url ?? "/api/demo"}`, {
+      method: request.method,
+      headers: request.headers,
+      ...(["GET", "HEAD"].includes(request.method ?? "GET")
+        ? {}
+        : { body: Buffer.concat(chunks) }),
+    });
+    const apiResponse = await demoApi.default.fetch(apiRequest);
+    const headers = Object.fromEntries(apiResponse.headers.entries());
+    response.writeHead(apiResponse.status, headers).end(
+      Buffer.from(await apiResponse.arrayBuffer()),
+    );
+    return;
+  }
   const resolved = resolveRequest(pathname);
 
   if (!resolved) {

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const outputDirectory = join(root, "dist");
+const demoOnly = process.argv.includes("--demo-only");
 const browserCryptoModulePath = "/src/__browser-crypto.js";
 const browserCryptoModule = `
 const browserCrypto = globalThis.crypto;
@@ -41,11 +42,15 @@ async function buildSourceDirectory(directory) {
     const outputPath = join(outputDirectory, relative(root, sourcePath));
 
     if (entry.isDirectory()) {
+      if (relative(root, sourcePath) === "src/api") {
+        return;
+      }
       await buildSourceDirectory(sourcePath);
       return;
     }
 
-    if (!entry.isFile() || extname(entry.name) !== ".ts") {
+    const sourceRelativePath = relative(root, sourcePath);
+    if (!entry.isFile() || extname(entry.name) !== ".ts" || sourceRelativePath === "src/recipient-console.ts") {
       return;
     }
 
@@ -59,12 +64,14 @@ async function buildSourceDirectory(directory) {
 await mkdir(outputDirectory, { recursive: true });
 await cp(join(root, "public"), outputDirectory, { recursive: true });
 
-for (const fileName of ["app.js", "recipient.js"]) {
+for (const fileName of demoOnly ? ["recipient.js"] : ["app.js", "recipient.js"]) {
   const outputPath = join(outputDirectory, fileName);
   const source = await readFile(outputPath, "utf8");
   await writeFile(outputPath, rewriteBrowserImports(source));
 }
 
-await buildSourceDirectory(join(root, "src"));
-await mkdir(join(outputDirectory, "src"), { recursive: true });
-await writeFile(join(outputDirectory, browserCryptoModulePath), browserCryptoModule);
+if (!demoOnly) {
+  await buildSourceDirectory(join(root, "src"));
+  await mkdir(join(outputDirectory, "src"), { recursive: true });
+  await writeFile(join(outputDirectory, browserCryptoModulePath), browserCryptoModule);
+}

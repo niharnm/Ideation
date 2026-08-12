@@ -1,46 +1,4 @@
-import {
-  processRecipientRequest,
-  createAcceptDecisionEvent,
-  createRequiredChangeDecisionEvent,
-  createDeclineDecisionEvent,
-  createCannotDetermineDecisionEvent,
-  recordRecipientDecision,
-} from "/src/recipient-console.ts";
-import { evaluateUniversalAllergyPolicy } from "/src/universal-policy-engine.ts";
-import {
-  HANDSHAKE_CLAIM_STORAGE_KEY,
-  HANDSHAKE_EVENT_LEDGER_STORAGE_KEY,
-  readHandshakeEventLedger,
-} from "/src/passport-flow.ts";
-
-const RECIPIENT_ID = "recipient-1";
-const SAMPLE_RECIPIENT_DATA = { "order.constraint.peanut": "Peanut allergy" };
-const PAD_THAI = {
-  id: "pad-thai",
-  name: "Pad Thai",
-  ingredients: [
-    { id: "rice-noodles", name: "Rice noodles", allergens: [], isVerifiedSupplier: true },
-    { id: "peanuts", name: "Peanuts", allergens: ["allergen.peanut"], isVerifiedSupplier: true },
-  ],
-  allergens: ["allergen.peanut"],
-  substitutions: [{
-    id: "omit-peanuts",
-    originalIngredientId: "peanuts",
-    originalIngredientName: "peanuts",
-    replacementIngredientId: "none",
-    replacementIngredientName: "no peanuts",
-    removesAllergens: ["allergen.peanut"],
-  }],
-  hasUnverifiedSuppliers: false,
-};
-
-const dependencies = {
-  storage: window.localStorage,
-  emit(event) {
-    window.dispatchEvent(new CustomEvent("handshake:event", { detail: event }));
-  },
-};
-
+const HANDSHAKE_STORAGE_KEY = "egoist.demo.handshake-id";
 const scopeCard = document.querySelector("#scope-card");
 const scopeTitle = document.querySelector("#scope-title");
 const scopeState = document.querySelector("#scope-state");
@@ -54,54 +12,15 @@ const recordNote = document.querySelector("#record-note");
 const decisionNotice = document.querySelector("#decision-notice");
 const historyList = document.querySelector("#history-list");
 
-let currentWorkspace = null;
+let workspace = { phase: "locked", handshake: null, grant: null };
 let selectedAction = "required_change";
+let busy = false;
 
-function sameDataScope(left, right) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function findWorkspaceState() {
-  const events = readHandshakeEventLedger(dependencies.storage).events;
-  const requests = events
-    .filter((event) => event.type === "request" && event.payload.recipient.id === RECIPIENT_ID)
-    .reverse();
-
-  for (const request of requests) {
-    const consent = events.find((event) =>
-      event.type === "consent" &&
-      event.handshakeId === request.handshakeId &&
-      event.payload.choice === "approve" &&
-      event.payload.recipientId === RECIPIENT_ID &&
-      sameDataScope(event.dataScope, request.dataScope),
-    );
-    if (!consent) continue;
-
-    const terminal = events.find((event) =>
-      event.handshakeId === request.handshakeId &&
-      (event.type === "revocation" || event.type === "expiry"),
-    );
-    if (terminal) {
-      return { phase: terminal.type === "revocation" ? "revoked" : "expired", events, request, consent, terminal };
-    }
-
-    const now = Date.now();
-    if (now < Date.parse(request.dataScope.validFrom) || now >= Date.parse(request.dataScope.validUntil)) {
-      return { phase: "expired", events, request, consent };
-    }
-
-    const decision = events.find((event) => event.handshakeId === request.handshakeId && event.type === "decision");
-    return {
-      phase: "active",
-      events,
-      request,
-      consent,
-      decision,
-      recipientRequest: processRecipientRequest(request, consent, SAMPLE_RECIPIENT_DATA),
-    };
-  }
-
-  return { phase: "locked", events };
+async function api(body) {
+  const response = await fetch("/api/demo", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error?.message ?? "The Handshake API could not complete this action.");
+  return data;
 }
 
 function element(tag, className, text) {
@@ -112,53 +31,10 @@ function element(tag, className, text) {
 }
 
 function formatRemaining(validUntil) {
-  const minutes = Math.max(0, Math.ceil((Date.parse(validUntil) - Date.now()) / 60_000));
-  return `${minutes} min remaining`;
+  return `${Math.max(0, Math.ceil((Date.parse(validUntil) - Date.now()) / 60_000))} min remaining`;
 }
 
-function setScopeState(phase) {
-  scopeCard.className = `scope-card ${phase}`;
-}
-
-function renderScope(workspace) {
-  if (workspace.phase === "active") {
-    const field = workspace.recipientRequest.scopedFields[0];
-    setScopeState("active");
-    scopeTitle.textContent = "Allergy scope active";
-    scopeState.textContent = formatRemaining(workspace.recipientRequest.validUntil);
-    const detail = element("div", "scope-detail");
-    detail.append(
-      element("span", "scope-detail-icon", "✓"),
-      (() => {
-        const copy = document.createElement("div");
-        copy.append(element("span", "scope-label", "Approved constraint"), element("p", "", String(field?.value ?? field?.label ?? "Approved constraint")));
-        return copy;
-      })(),
-    );
-    const facts = element("div", "scope-facts");
-    for (const [label, value] of [
-      ["Purpose", workspace.recipientRequest.purpose],
-      ["Order context", "Pad Thai · #A1024"],
-      ["Access", formatRemaining(workspace.recipientRequest.validUntil)],
-      ["Customer data", "One approved constraint"],
-    ]) {
-      const fact = element("div", "scope-fact");
-      fact.append(element("span", "", label), element("strong", "", value));
-      facts.append(fact);
-    }
-    scopeBody.replaceChildren(detail, facts, element("p", "scope-note", "This permission is temporary and limited to this order. It is not a permanent customer profile."));
-    return;
-  }
-
-  const revoked = workspace.phase === "revoked";
-  setScopeState(revoked ? "revoked" : "locked");
-  scopeTitle.textContent = revoked ? "Access ended by customer" : "Permission required";
-  scopeState.textContent = revoked ? "Scope removed" : "Not shared";
-  const message = revoked
-    ? "The customer ended this order scope. Allergy detail has been removed and Fieldline cannot retrieve or use that permission for a future action."
-    : "Allergy details are unavailable. The customer has not granted a constraint for this order. Fieldline cannot view or act on allergy information without that temporary permission.";
-  scopeBody.replaceChildren(element("div", "locked-body", message));
-}
+function decisionEvent(handshake) { return handshake.events.find((event) => event.type === "decision"); }
 
 function actionCopy(action) {
   switch (action) {
@@ -166,138 +42,86 @@ function actionCopy(action) {
     case "required_change": return ["Requested preparation change", "Omit peanuts and use the designated peanut-free preparation surface.", "Request preparation change"];
     case "decline": return ["Kitchen note", "The kitchen cannot safely separate peanut handling for this order.", "Cannot safely fulfill"];
     case "cannot_determine": return ["Supplier review note", "Supplier allergen documentation is unavailable for the selected ingredients.", "Cannot determine"];
-    default: return ["Preparation detail", "", "Record kitchen decision"];
   }
 }
 
-function renderKitchen(workspace) {
-  const active = workspace.phase === "active";
-  const alreadyDecided = Boolean(workspace.decision);
-  const enabled = active && !alreadyDecided;
-  actionButtons.forEach((button) => {
-    button.disabled = !enabled;
-    button.classList.toggle("active", enabled && button.dataset.action === selectedAction);
-  });
+function renderScope() {
+  scopeCard.className = `scope-card ${workspace.phase}`;
+  if (workspace.phase === "active") {
+    const field = workspace.handshake.dataScope.fields[0];
+    scopeTitle.textContent = "Allergy scope active";
+    scopeState.textContent = formatRemaining(workspace.handshake.dataScope.validUntil);
+    const detail = element("div", "scope-detail");
+    detail.append(element("span", "scope-detail-icon", "✓"), (() => { const copy = document.createElement("div"); copy.append(element("span", "scope-label", "Approved constraint"), element("p", "", String(workspace.grant.values[field.id] ?? field.label))); return copy; })());
+    const facts = element("div", "scope-facts");
+    for (const [label, value] of [["Purpose", workspace.handshake.dataScope.purpose], ["Order context", "Pad Thai · #A1024"], ["Access", formatRemaining(workspace.handshake.dataScope.validUntil)], ["Customer data", "One approved constraint"]]) { const fact = element("div", "scope-fact"); fact.append(element("span", "", label), element("strong", "", value)); facts.append(fact); }
+    scopeBody.replaceChildren(detail, facts, element("p", "scope-note", "This permission is temporary and limited to this order. It is not a permanent customer profile."));
+    return;
+  }
+  const revoked = workspace.phase === "revoked";
+  scopeTitle.textContent = revoked ? "Access ended by customer" : "Permission required";
+  scopeState.textContent = revoked ? "Scope removed" : "Not shared";
+  scopeBody.replaceChildren(element("div", "locked-body", revoked ? "The customer ended this order scope. Allergy detail was removed by the Handshake API and cannot be retrieved for future action." : "Allergy details are unavailable. The customer has not granted a constraint for this order."));
+}
+
+function renderKitchen() {
+  const decision = workspace.handshake && decisionEvent(workspace.handshake);
+  const enabled = workspace.phase === "active" && !decision && !busy;
+  actionButtons.forEach((button) => { button.disabled = !enabled; button.classList.toggle("active", enabled && button.dataset.action === selectedAction); });
   decisionNote.disabled = !enabled;
   recordButton.disabled = !enabled;
-  decisionNotice.hidden = true;
-
-  if (!active) {
-    kitchenIntro.textContent = workspace.phase === "revoked"
-      ? "Future kitchen actions are locked because the customer ended access."
-      : "Grant is required before a kitchen decision can use a customer constraint.";
-    decisionLabel.textContent = "Preparation detail";
-    decisionNote.value = "";
-    recordNote.textContent = workspace.phase === "revoked" ? "Access ended by customer. No further action is permitted." : "Actions unlock only for an active order scope.";
-    recordButton.textContent = "Record kitchen decision";
+  if (!enabled) {
+    kitchenIntro.textContent = decision ? "A kitchen decision has been recorded in the Handshake API." : workspace.phase === "revoked" ? "Future kitchen actions are locked because the customer ended access." : "Grant is required before a kitchen decision can use a customer constraint.";
+    decisionLabel.textContent = decision ? "Recorded preparation detail" : "Preparation detail";
+    decisionNote.value = decision?.payload.rationale ?? "";
+    recordNote.textContent = decision ? "One kitchen decision is recorded for this order." : "Actions unlock only for an active order scope.";
+    recordButton.textContent = decision ? "Decision recorded" : "Record kitchen decision";
     return;
   }
-
-  if (alreadyDecided) {
-    kitchenIntro.textContent = "A kitchen decision has been recorded for this temporary order scope.";
-    decisionLabel.textContent = "Recorded preparation detail";
-    decisionNote.value = workspace.decision.payload.rationale;
-    recordNote.textContent = "One kitchen decision is recorded for this order.";
-    recordButton.textContent = "Decision recorded";
-    return;
-  }
-
   const [label, note, buttonLabel] = actionCopy(selectedAction);
   kitchenIntro.textContent = "Choose the kitchen outcome for the approved order scope.";
   decisionLabel.textContent = label;
   decisionNote.value = note;
-  recordNote.textContent = "This records a local kitchen decision for this order only.";
+  recordNote.textContent = "This records a signed kitchen decision and receipt for this order only.";
   recordButton.textContent = buttonLabel;
 }
 
-function appendHistory(title, detail, ended = false) {
-  const item = element("div", `history-item${ended ? " ended" : ""}`);
-  item.append(element("span", "history-dot"));
-  const copy = document.createElement("div");
-  copy.append(element("strong", "", title), document.createTextNode(detail));
-  item.append(copy);
-  historyList.append(item);
-}
+function appendHistory(title, detail, ended = false) { const item = element("div", `history-item${ended ? " ended" : ""}`); item.append(element("span", "history-dot")); const copy = document.createElement("div"); copy.append(element("strong", "", title), document.createTextNode(detail)); item.append(copy); historyList.append(item); }
 
-function renderHistory(workspace) {
+function renderHistory() {
   historyList.replaceChildren();
   appendHistory("Order received", "Pad Thai added to the lunch queue.");
-  if (workspace.phase === "locked") {
-    appendHistory("Customer constraint not shared", "Waiting for an order-specific permission.");
-    return;
-  }
-  if (workspace.phase === "active") {
-    appendHistory("Permission active", "One customer-approved constraint is available for this order.");
-    if (workspace.decision) appendHistory("Kitchen decision recorded", "The order team recorded its preparation response.");
-    return;
-  }
-  appendHistory("Access ended by customer", "The temporary order scope was removed. Allergy detail is no longer available.", true);
+  if (workspace.phase === "locked") return appendHistory("Customer constraint not shared", "Waiting for an order-specific permission.");
+  if (workspace.phase === "revoked") return appendHistory("Access ended by customer", "The temporary order scope was removed. Allergy detail is no longer available.", true);
+  appendHistory("Permission active", "One customer-approved constraint was retrieved from the Handshake API.");
+  if (decisionEvent(workspace.handshake)) appendHistory("Kitchen decision recorded", "The order team recorded its preparation response and acknowledgement.");
 }
 
-function applyPolicyDefault(workspace) {
-  if (workspace.phase !== "active" || workspace.decision) return;
-  const evaluation = evaluateUniversalAllergyPolicy(
-    PAD_THAI,
-    workspace.recipientRequest.scopedFields.map((field) => ({ id: field.id, label: field.label, requireDedicatedSurface: true })),
-    { dedicatedPrepSurface: true },
-  );
-  selectedAction = evaluation.response;
-}
+function render() { renderScope(); renderKitchen(); renderHistory(); }
 
-function renderWorkspace() {
+async function load() {
+  const id = localStorage.getItem(HANDSHAKE_STORAGE_KEY);
+  if (!id) { workspace = { phase: "locked", handshake: null, grant: null }; render(); return; }
   try {
-    currentWorkspace = findWorkspaceState();
-    applyPolicyDefault(currentWorkspace);
-    renderScope(currentWorkspace);
-    renderKitchen(currentWorkspace);
-    renderHistory(currentWorkspace);
-  } catch (error) {
-    currentWorkspace = { phase: "locked" };
-    renderScope(currentWorkspace);
-    renderKitchen(currentWorkspace);
-    renderHistory(currentWorkspace);
-  }
+    const data = await api({ action: "recipient-status", handshakeId: id });
+    workspace = { phase: data.handshake.status === "active" ? "active" : data.handshake.status, handshake: data.handshake, grant: data.grant };
+  } catch { workspace = { phase: "locked", handshake: null, grant: null }; }
+  render();
 }
 
-function buildDecision(workspace) {
-  const common = {
-    handshakeId: workspace.recipientRequest.handshakeId,
-    recipientId: workspace.recipientRequest.recipientId,
-    dataScope: workspace.recipientRequest.dataScope,
-  };
-  const note = decisionNote.value.trim() || actionCopy(selectedAction)[1];
-  if (selectedAction === "accept") return createAcceptDecisionEvent({ ...common, rationale: note });
-  if (selectedAction === "required_change") return createRequiredChangeDecisionEvent({ ...common, rationale: note, requiredChanges: ["Omit peanuts from this Pad Thai.", "Use the designated peanut-free preparation surface."] });
-  if (selectedAction === "decline") return createDeclineDecisionEvent({ ...common, rationale: note });
-  return createCannotDetermineDecisionEvent({ ...common, reason: note });
-}
+actionButtons.forEach((button) => button.addEventListener("click", () => { if (!busy && workspace.phase === "active" && !decisionEvent(workspace.handshake)) { selectedAction = button.dataset.action; renderKitchen(); } }));
 
-actionButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    if (!currentWorkspace || currentWorkspace.phase !== "active" || currentWorkspace.decision) return;
-    selectedAction = button.dataset.action;
-    renderKitchen(currentWorkspace);
-  });
-});
-
-recordButton.addEventListener("click", () => {
-  if (!currentWorkspace || currentWorkspace.phase !== "active" || currentWorkspace.decision) return;
+recordButton.addEventListener("click", async () => {
+  if (busy || workspace.phase !== "active" || decisionEvent(workspace.handshake)) return;
+  busy = true; render(); decisionNotice.hidden = true;
   try {
-    recordRecipientDecision(buildDecision(currentWorkspace), dependencies);
-    decisionNotice.textContent = "Kitchen decision recorded for this temporary order scope.";
+    await api({ action: "record-decision", handshakeId: workspace.handshake.id, response: selectedAction, rationale: decisionNote.value.trim() || actionCopy(selectedAction)[1] });
+    decisionNotice.textContent = "Kitchen decision and acknowledgement recorded through the Handshake API.";
     decisionNotice.hidden = false;
-    renderWorkspace();
-  } catch (error) {
-    decisionNotice.textContent = `Decision was not recorded: ${error instanceof Error ? error.message : String(error)}`;
-    decisionNotice.hidden = false;
-  }
+    await load();
+  } catch (error) { decisionNotice.textContent = error instanceof Error ? error.message : "Decision was not recorded."; decisionNotice.hidden = false; }
+  finally { busy = false; render(); }
 });
 
-renderWorkspace();
-window.addEventListener("storage", (event) => {
-  if (event.key === HANDSHAKE_CLAIM_STORAGE_KEY || event.key === HANDSHAKE_EVENT_LEDGER_STORAGE_KEY) renderWorkspace();
-});
-window.addEventListener("handshake:event", (event) => {
-  const detail = event instanceof CustomEvent ? event.detail : null;
-  if (detail && ["request", "consent", "decision", "expiry", "revocation"].includes(detail.type)) renderWorkspace();
-});
+window.addEventListener("storage", (event) => { if (event.key === HANDSHAKE_STORAGE_KEY) load(); });
+load();

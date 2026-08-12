@@ -14,30 +14,31 @@ test("Fieldline restaurant view starts with a locked scope and no rendered aller
   assert.match(html, /Fieldline Restaurant Ops/);
   assert.match(html, /id="scope-card"/);
   assert.match(html, /Allergy details are unavailable\./);
-  assert.match(app, /return \{ phase: "locked", events \}/);
+  assert.match(app, /fetch\("\/api\/demo"/);
+  assert.match(app, /localStorage\.getItem\(HANDSHAKE_STORAGE_KEY\)/);
   assert.match(app, /workspace\.phase === "locked"/);
 });
 
 test("approved restaurant scope is minimized to the customer-approved field", () => {
-  assert.match(app, /processRecipientRequest\(request, consent, SAMPLE_RECIPIENT_DATA\)/);
-  assert.match(app, /const field = workspace\.recipientRequest\.scopedFields\[0\]/);
+  assert.match(app, /const field = workspace\.handshake\.dataScope\.fields\[0\]/);
+  assert.match(app, /workspace\.grant\.values\[field\.id\]/);
   assert.match(app, /Customer data", "One approved constraint"/);
   assert.doesNotMatch(app, /user\.ssn|homeAddress|creditCard/i);
 });
 
 test("revocation removes scope detail and locks later restaurant actions", () => {
   assert.match(app, /Access ended by customer/);
-  assert.match(app, /Allergy detail has been removed/);
+  assert.match(app, /Allergy detail was removed by the Handshake API/);
   assert.match(app, /button\.disabled = !enabled/);
   assert.match(app, /Future kitchen actions are locked because the customer ended access/);
-  assert.match(app, /recordRecipientDecision\(buildDecision\(currentWorkspace\), dependencies\)/);
+  assert.match(app, /action: "record-decision"/);
 });
 
 test("business UI contains merchant queue, active scope, kitchen actions, and status history", () => {
   assert.match(html, /Open orders/);
   assert.match(html, /Order management/);
   assert.match(html, /<table class="orders-table">/);
-  assert.match(html, /Pad Thai · #A1024/);
+  assert.match(html, /Pad Thai/);
   assert.match(app, /Allergy scope active/);
   assert.match(html, /Confirm safe/);
   assert.match(html, /Request preparation change/);

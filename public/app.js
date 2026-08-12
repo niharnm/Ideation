@@ -68,6 +68,55 @@ const dependencies = {
 
 let userVault = loadUserPassportVault(dependencies.storage);
 
+async function demoApi(body) {
+  const response = await fetch("/api/demo", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error?.message ?? "The passport API could not complete this action.");
+  return data;
+}
+
+function apiConstraints(vault) {
+  return vault.allergies.map((allergy) => ({
+    id: allergy.allergenId,
+    label: allergy.label,
+    severity: allergy.severity,
+    crossContaminationTolerance: allergy.crossContaminationTolerance,
+  }));
+}
+
+async function savePassport(vault) {
+  return demoApi({ action: "passport-update", constraints: apiConstraints(vault) });
+}
+
+async function loadPassport() {
+  try {
+    const { passport } = await demoApi({ action: "passport-status" });
+    userVault = {
+      claimantId: passport.claimantId,
+      allergies: passport.constraints.map((constraint) => ({
+        allergenId: constraint.id,
+        label: constraint.label,
+        severity: constraint.severity,
+        crossContaminationTolerance: constraint.crossContaminationTolerance,
+      })),
+      updatedAt: passport.updatedAt,
+    };
+    saveUserPassportVault(userVault, dependencies.storage);
+    for (const selected of [...selectedFieldIds]) {
+      if (!userVault.allergies.some((allergy) => allergy.allergenId === selected)) selectedFieldIds.delete(selected);
+    }
+    if (selectedFieldIds.size === 0 && userVault.allergies[0]) selectedFieldIds.add(userVault.allergies[0].allergenId);
+    renderVaultFields();
+  } catch (error) {
+    errorView.textContent = error instanceof Error ? error.message : "The passport could not be loaded.";
+    errorView.hidden = false;
+  }
+}
+
 function renderVaultFields() {
   fieldsView.replaceChildren();
 
@@ -114,13 +163,20 @@ function renderVaultFields() {
     removeBtn.textContent = "×";
     removeBtn.title = `Remove ${allergy.label} from vault`;
     removeBtn.setAttribute("aria-label", `Remove ${allergy.label}`);
-    removeBtn.addEventListener("click", (e) => {
+    removeBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      userVault = removeVaultAllergy(userVault, allergy.allergenId);
-      selectedFieldIds.delete(allergy.allergenId);
-      saveUserPassportVault(userVault, dependencies.storage);
-      renderVaultFields();
+      const nextVault = removeVaultAllergy(userVault, allergy.allergenId);
+      try {
+        await savePassport(nextVault);
+        userVault = nextVault;
+        selectedFieldIds.delete(allergy.allergenId);
+        saveUserPassportVault(userVault, dependencies.storage);
+        renderVaultFields();
+      } catch (error) {
+        errorView.textContent = error instanceof Error ? error.message : "The passport was not updated.";
+        errorView.hidden = false;
+      }
     });
 
     labelEl.append(input, textSpan, badgeGroup, removeBtn);
@@ -131,6 +187,7 @@ function renderVaultFields() {
 }
 
 renderVaultFields();
+loadPassport();
 
 function closeModal() {
   if (addAllergyModal) {
@@ -167,7 +224,7 @@ addAllergyModal.addEventListener("click", (event) => {
 });
 
 if (addAllergyForm) {
-  addAllergyForm.addEventListener("submit", (e) => {
+  addAllergyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const label = allergyLabelInput.value.trim();
     if (!label) return;
@@ -189,13 +246,18 @@ if (addAllergyForm) {
       return;
     }
 
-    userVault = addCustomAllergyToVault(userVault, newConstraint);
-    if (shareNewAllergyCheck.checked) {
-      selectedFieldIds.add(newConstraint.allergenId);
+    const nextVault = addCustomAllergyToVault(userVault, newConstraint);
+    try {
+      await savePassport(nextVault);
+      userVault = nextVault;
+      if (shareNewAllergyCheck.checked) selectedFieldIds.add(newConstraint.allergenId);
+      saveUserPassportVault(userVault, dependencies.storage);
+      renderVaultFields();
+      closeModal();
+    } catch (error) {
+      allergyFormError.textContent = error instanceof Error ? error.message : "The passport was not updated.";
+      allergyFormError.hidden = false;
     }
-    saveUserPassportVault(userVault, dependencies.storage);
-    renderVaultFields();
-    closeModal();
   });
 }
 
