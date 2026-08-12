@@ -14,6 +14,9 @@ import {
   createRecipientDecisionEvent,
   recordRecipientDecision,
   getValueByPath,
+  approveScopedRequest,
+  denyScopedRequest,
+  revokeScopedClaim,
   validateHandshakeEvent,
   readHandshakeEventLedger,
 } from "../src/index.ts";
@@ -65,6 +68,37 @@ function createMockStorage() {
       store.set(key, String(value));
     },
   };
+}
+
+function createApprovedRecipientContext(now = "2026-08-12T00:05:00Z") {
+  const storage = createMockStorage();
+  const emittedEvents = [];
+  let id = 0;
+  const deps = {
+    storage,
+    emit(event) {
+      emittedEvents.push(event);
+    },
+    now: () => new Date(now),
+    createId: () => `recipient-test-${++id}`,
+  };
+  const approval = approveScopedRequest(
+    {
+      claimantId: "claimant-42",
+      recipient: { id: "recipient-99", displayName: "Fine Dining Restaurant" },
+      summary: "Scoped order constraints",
+      draft: {
+        purpose: sampleDataScope.purpose,
+        fields: sampleDataScope.fields.map((field) => ({ ...field, selected: true })),
+        validFrom: sampleDataScope.validFrom,
+        validUntil: sampleDataScope.validUntil,
+        choice: null,
+      },
+    },
+    deps,
+  );
+  assert.equal(approval.success, true);
+  return { storage, emittedEvents, deps, approval: approval.value };
 }
 
 test("getValueByPath retrieves direct and nested object values accurately", () => {
@@ -131,7 +165,7 @@ test("processRecipientRequest enforces field isolation and hides unrequested cla
   assert.equal(processed.scopedData["unrequested.medicalHistory"], undefined);
 });
 
-test("processRecipientRequest handles denied consent by exposing no fields", () => {
+test("processRecipientRequest rejects denied consent before exposing any fields", () => {
   const deniedConsentEvent = {
     ...sampleConsentEvent,
     payload: { recipientId: "recipient-99", choice: "deny" },
@@ -142,16 +176,10 @@ test("processRecipientRequest handles denied consent by exposing no fields", () 
     "user.ssn": "999-00-1234",
   };
 
-  const processed = processRecipientRequest(
-    sampleRequestEvent,
-    deniedConsentEvent,
-    rawRecipientData,
+  assert.throws(
+    () => processRecipientRequest(sampleRequestEvent, deniedConsentEvent, rawRecipientData),
+    /without approved claimant consent/,
   );
-
-  assert.equal(processed.consentGranted, false);
-  assert.equal(processed.consentChoice, "deny");
-  assert.equal(processed.scopedFields.length, 0);
-  assert.deepEqual(processed.scopedData, {});
 });
 
 test("processRecipientRequest validates event types and handshake ID matching", () => {
@@ -168,6 +196,46 @@ test("processRecipientRequest validates event types and handshake ID matching", 
   assert.throws(
     () => processRecipientRequest(sampleConsentEvent, sampleConsentEvent, {}),
     /Invalid requestEvent/,
+  );
+
+  const invalidRequest = { ...sampleRequestEvent, unexpected: true };
+  assert.throws(
+    () => processRecipientRequest(invalidRequest, sampleConsentEvent, {}),
+    /Invalid requestEvent/,
+  );
+});
+
+test("processRecipientRequest rejects forged consent scope, actors, recipients, and expired events", () => {
+  const substitutedScope = structuredClone(sampleConsentEvent);
+  substitutedScope.dataScope.fields = [
+    { id: "user.ssn", label: "Social Security number" },
+  ];
+  assert.throws(
+    () => processRecipientRequest(sampleRequestEvent, substitutedScope, { "user.ssn": "999-00-1234" }),
+    /exactly match the original request/,
+  );
+
+  const otherClaimant = structuredClone(sampleConsentEvent);
+  otherClaimant.actor.id = "claimant-other";
+  assert.throws(
+    () => processRecipientRequest(sampleRequestEvent, otherClaimant, {}),
+    /owned by the claimant/,
+  );
+
+  const otherRecipient = structuredClone(sampleConsentEvent);
+  otherRecipient.payload.recipientId = "recipient-other";
+  assert.throws(
+    () => processRecipientRequest(sampleRequestEvent, otherRecipient, {}),
+    /must match the requested recipient/,
+  );
+
+  const expiredRequest = structuredClone(sampleRequestEvent);
+  const expiredConsent = structuredClone(sampleConsentEvent);
+  expiredRequest.occurredAt = "2026-08-12T01:00:00Z";
+  expiredConsent.occurredAt = "2026-08-12T01:00:00Z";
+  assert.throws(
+    () => processRecipientRequest(expiredRequest, expiredConsent, {}),
+    /active validity range/,
   );
 });
 
@@ -301,15 +369,6 @@ test("Decision Response Path 4: cannot_determine", () => {
 });
 
 test("unified createRecipientDecisionEvent and recordRecipientDecision ledger integration", () => {
-  const storage = createMockStorage();
-  const emittedEvents = [];
-  const deps = {
-    storage,
-    emit(event) {
-      emittedEvents.push(event);
-    },
-  };
-
   const decisionInputs = [
     { response: "accept", rationale: "Accepted" },
     {
@@ -322,22 +381,114 @@ test("unified createRecipientDecisionEvent and recordRecipientDecision ledger in
   ];
 
   for (const input of decisionInputs) {
+    const context = createApprovedRecipientContext();
     const event = createRecipientDecisionEvent({
-      handshakeId: "handshake-unified",
+      handshakeId: context.approval.requestEvent.handshakeId,
       recipientId: "recipient-99",
-      dataScope: sampleDataScope,
+      dataScope: context.approval.requestEvent.dataScope,
       decisionInput: input,
+      occurredAt: "2026-08-12T00:10:00Z",
     });
 
-    const recorded = recordRecipientDecision(event, deps);
+    const recorded = recordRecipientDecision(event, context.deps);
     assert.equal(recorded.eventId, event.eventId);
+    assert.deepEqual(
+      readHandshakeEventLedger(context.storage).events.map((ledgerEvent) => ledgerEvent.type),
+      ["request", "consent", "decision"],
+    );
   }
+});
 
-  assert.equal(emittedEvents.length, 4);
-  const ledger = readHandshakeEventLedger(storage);
-  assert.equal(ledger.events.length, 4);
-  assert.equal(ledger.events[0].payload.response, "accept");
-  assert.equal(ledger.events[1].payload.response, "required_change");
-  assert.equal(ledger.events[2].payload.response, "decline");
-  assert.equal(ledger.events[3].payload.response, "cannot_determine");
+test("recordRecipientDecision fails closed for denied, expired, revoked, duplicate, and conflicting writes", () => {
+  const deniedStorage = createMockStorage();
+  const deniedEvents = [];
+  let deniedId = 0;
+  const deniedDeps = {
+    storage: deniedStorage,
+    emit(event) {
+      deniedEvents.push(event);
+    },
+    now: () => new Date("2026-08-12T00:05:00Z"),
+    createId: () => `denied-${++deniedId}`,
+  };
+  const denied = denyScopedRequest(
+    {
+      claimantId: "claimant-42",
+      recipient: { id: "recipient-99", displayName: "Fine Dining Restaurant" },
+      summary: "Scoped order constraints",
+      draft: {
+        purpose: sampleDataScope.purpose,
+        fields: sampleDataScope.fields.map((field) => ({ ...field, selected: true })),
+        validFrom: sampleDataScope.validFrom,
+        validUntil: sampleDataScope.validUntil,
+        choice: null,
+      },
+    },
+    deniedDeps,
+  );
+  assert.equal(denied.success, true);
+  const deniedDecision = createRecipientDecisionEvent({
+    handshakeId: denied.value.requestEvent.handshakeId,
+    recipientId: "recipient-99",
+    dataScope: denied.value.requestEvent.dataScope,
+    decisionInput: { response: "accept" },
+    occurredAt: "2026-08-12T00:10:00Z",
+  });
+  assert.throws(
+    () => recordRecipientDecision(deniedDecision, deniedDeps),
+    /active scoped grant/,
+  );
+
+  const expired = createApprovedRecipientContext("2026-08-12T01:01:00Z");
+  const expiredDecision = createRecipientDecisionEvent({
+    handshakeId: expired.approval.requestEvent.handshakeId,
+    recipientId: "recipient-99",
+    dataScope: expired.approval.requestEvent.dataScope,
+    decisionInput: { response: "accept" },
+    occurredAt: "2026-08-12T00:10:00Z",
+  });
+  assert.throws(
+    () => recordRecipientDecision(expiredDecision, expired.deps),
+    /active scoped grant/,
+  );
+  assert.ok(readHandshakeEventLedger(expired.storage).events.some((event) => event.type === "expiry"));
+
+  const revoked = createApprovedRecipientContext();
+  revokeScopedClaim("claimant-42", revoked.deps);
+  const revokedDecision = createRecipientDecisionEvent({
+    handshakeId: revoked.approval.requestEvent.handshakeId,
+    recipientId: "recipient-99",
+    dataScope: revoked.approval.requestEvent.dataScope,
+    decisionInput: { response: "accept" },
+    occurredAt: "2026-08-12T00:10:00Z",
+  });
+  assert.throws(
+    () => recordRecipientDecision(revokedDecision, revoked.deps),
+    /active scoped grant/,
+  );
+
+  const active = createApprovedRecipientContext();
+  const firstDecision = createRecipientDecisionEvent({
+    handshakeId: active.approval.requestEvent.handshakeId,
+    recipientId: "recipient-99",
+    dataScope: active.approval.requestEvent.dataScope,
+    decisionInput: { response: "accept" },
+    occurredAt: "2026-08-12T00:10:00Z",
+  });
+  recordRecipientDecision(firstDecision, active.deps);
+  assert.throws(
+    () => recordRecipientDecision(firstDecision, active.deps),
+    /eventId is already recorded/,
+  );
+  const conflictingDecision = createRecipientDecisionEvent({
+    handshakeId: active.approval.requestEvent.handshakeId,
+    recipientId: "recipient-99",
+    dataScope: active.approval.requestEvent.dataScope,
+    decisionInput: { response: "decline", rationale: "Conflicting replay" },
+    occurredAt: "2026-08-12T00:11:00Z",
+  });
+  assert.throws(
+    () => recordRecipientDecision(conflictingDecision, active.deps),
+    /decision is already recorded/,
+  );
 });

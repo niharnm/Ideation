@@ -8,7 +8,7 @@ specific purpose, approves or denies access, sets a fixed end time, can revoke,
 and can review a recorded recipient outcome. Restaurant allergy handling is one
 proof case only.
 
-## Live demo
+## Live demo, 45 to 60 seconds
 
 Prerequisite: Node.js 22.18 or newer.
 
@@ -17,69 +17,49 @@ npm test
 npm start
 ```
 
-1. Open `http://127.0.0.1:4173` in a fresh prototype session. Select only
-   `Peanut constraint`, choose `15 minutes`, and select **Approve selected
-   fields**.
-2. Point out the exact shared field and stated access end time. The page then
-   shows **Receipt pending**, because authenticated recipient decision and
-   acknowledgement transport is not implemented in this claimant app.
-3. Select **Revoke access now**. The page reports that future recipient use is
-   blocked. This demonstrates claimant control after approval.
-4. Run the test-backed receipt proof:
+1. Open the claimant view at `http://127.0.0.1:4173/` and the staff view at
+   `http://127.0.0.1:4173/recipient.html` in separate tabs. Use a fresh local
+   session.
+2. In the claimant tab, keep the single default constraint, `Peanut
+   constraint`, select `15 minutes`, and choose **Approve selected fields**.
+   Point out the one shared field, stated purpose, and access end time.
+3. In the staff tab, show that only the approved peanut constraint appears.
+   Choose **Required change**, enter the preparation or substitution detail,
+   enter a named acknowledgement role such as `Kitchen manager`, and submit.
+4. Return to the claimant tab. Show the required change, named role, access
+   end, and the labels **Unverified receipt preview** and **Delivery pending.
+   No recipient delivery is confirmed.**
+5. Select **Revoke access now** in the claimant tab. Return to the staff tab
+   and show there is no active request. This demonstrates that later staff
+   actions are blocked after claimant revocation.
+6. Keep automated tests as fallback evidence, not the main demo:
 
    ```sh
-   node --test test/claimant-receipt.test.mjs test/initiator-e2e.test.mjs
+   npm test
    ```
 
-   These tests cover selected-field minimization, denial, expiry, claimant-only
-   revocation, all four recipient outcomes, required changes, and the local
-   receipt-preview boundary.
-5. To render the local `required_change` preview in a browser, use a fresh
-   browser profile or a local origin with no existing prototype events. With
-   the app open, run this in that page's developer console:
-
-   ```js
-   const { runAllergyOrderingFlow } = await import("/src/index.ts");
-   const validFrom = new Date().toISOString();
-   const validUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-   const { events } = runAllergyOrderingFlow({
-     handshakeId: "local-required-change-demo",
-     restaurantName: "Demo recipient",
-     validFrom,
-     validUntil,
-     decisionResponse: "required_change",
-     decisionRationale: "A separate preparation surface must be confirmed.",
-     requiredChanges: ["Confirm a separate preparation surface."],
-     acknowledgerRoleName: "Kitchen manager",
-   });
-   window.dispatchEvent(
-     new CustomEvent("handshake:demo-linked-events", { detail: events }),
-   );
-   ```
-
-   Show the exact shared fields, recipient outcome, required change, reported
-   acknowledgement role, timestamps, current access state, and intended receipt
-   recipients. The page must say **Unverified receipt preview** and **Delivery
-   pending. No recipient delivery is confirmed.**
+   The test suite covers selected-field minimization, denial, expiry,
+   claimant-only revocation, all four recipient outcomes, required changes,
+   acknowledgement, and the local receipt-preview boundary.
 
 ## What not to claim
 
-The console event in step 5 is local demo input, not authenticated recipient
-action. It is not persisted as recipient proof, does not confirm delivery to a
-recipient, and cannot establish a real acknowledgement. Do not describe the
-preview as a signed receipt, a recipient-authenticated decision, or delivered
-evidence. A production version would require authenticated recipient identity
-and transport before making those claims.
+The two-tab demo bridge is local demo input, not authenticated recipient action.
+It does not confirm delivery to a recipient or establish a real acknowledgement.
+Do not describe the preview as a signed receipt, recipient-authenticated
+decision, delivered evidence, or a DoorDash integration. A production version
+would require authenticated recipient identity and transport before making
+those claims.
 
 ## 45 to 60 second pitch
 
-“Identity data is often shared as a standing profile, even when someone only
-needs one fact for one moment. This prototype makes disclosure claimant-led:
-you choose the exact fields, why they are needed, and when access ends. You can
-approve or deny the request, and you can revoke it after approval. The
-recipient's decision is recorded as an outcome such as accept, required change,
-decline, or cannot determine, with the named acknowledgement role shown in a
-claimant preview. The restaurant flow is only a proof case. The underlying idea
-is identity that is minimal, purpose-bound, time-bounded, revocable, and
-auditable. We are also explicit about the current boundary: local browser demo
-events are not recipient-authenticated proof and delivery remains pending.”
+“Food ordering often asks people to expose more health information than a
+restaurant needs, and special-request boxes are inconsistent. Here, the
+claimant shares one fact, a peanut constraint, for one order and 15 minutes.
+The staff view receives only that field, records a required preparation change,
+and adds a named acknowledgement role. Back on the claimant side, the person
+can see that outcome and revoke access immediately. Restaurant ordering is the
+proof case. The Identity idea is minimal, purpose-bound, time-bounded,
+revocable disclosure with an auditable outcome. This two-tab bridge is an
+explicitly unverified local preview, not recipient-authenticated delivery or a
+DoorDash integration.”

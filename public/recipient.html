@@ -26,6 +26,7 @@
       .intro { margin: 12px 0 0; color: #65645c; line-height: 1.55; }
       .isolation-banner { margin: 20px 30px 0; padding: 14px 16px; border: 1px solid #bce3c9; border-radius: 12px; background: #f0fdf4; color: #166534; font-size: 14px; line-height: 1.45; font-weight: 500; }
       .isolation-banner strong { font-weight: 700; color: #14532d; }
+      .empty-state { margin: 24px 30px 30px; padding: 18px; border: 1px dashed #c8c2af; border-radius: 12px; background: #faf8f1; color: #555249; line-height: 1.5; }
       .details { display: grid; gap: 0; padding: 4px 30px; }
       .detail { padding: 20px 0; border-bottom: 1px solid #ebe8df; }
       .detail:last-child { border-bottom: 0; }
@@ -69,6 +70,9 @@
       .submit-btn.decline-btn { background: #991b1b; }
       .submit-btn.cannot_determine-btn { background: #4b5563; }
       .outcome-card { padding: 30px; }
+      .acknowledgement-section { padding: 30px; border-top: 1px solid #ebe8df; }
+      .preview-notice { margin: 16px 0 0; padding: 14px 16px; border: 1px dashed #c8c2af; border-radius: 12px; background: #faf8f1; color: #555249; font-size: 14px; line-height: 1.5; }
+      .error { margin: 16px 0 0; color: #991b1b; font-size: 14px; line-height: 1.45; }
       .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
       .status-badge.accept { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
       .status-badge.required_change { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
@@ -89,12 +93,15 @@
         <!-- Universal Policy Evaluation Card -->
         <section class="card">
           <div class="hero">
-            <p class="eyebrow">Universal Allergen Taxonomy Policy Engine</p>
-            <h1 id="req-title">Universal Policy Evaluation</h1>
-            <p class="intro">Automated set-intersection matching across FDA Big 9, EU 14 & custom allergen URIs with fail-closed safety defaults.</p>
+            <p class="eyebrow">Incoming Scoped Handshake Request</p>
+            <h1 id="req-title">Scoped Request Received</h1>
+            <p class="intro">Review the active request and its exact approved scope before responding. The policy evaluation supports the built-in allergen taxonomy and custom allergen identifiers.</p>
           </div>
           <div class="isolation-banner" id="isolation-notice">
-            <strong>🔒 Scope Field Isolation Enforced:</strong> Displaying strictly requested data fields. Unrequested claimant profile data (SSN, home address, credit card, etc.) is strictly filtered out and inaccessible to staff.
+            <strong>Scope field isolation:</strong> This screen displays only fields in the active approved request. Other claimant information is not part of this review.
+          </div>
+          <div class="empty-state" id="empty-state" hidden>
+            No active approved request is available in this browser. Start the claimant flow, approve the single peanut-constraint request, then return here to review it.
           </div>
           <div class="details">
             <div class="detail">
@@ -108,6 +115,10 @@
             <div class="detail">
               <p class="label">Purpose</p>
               <p class="value" id="purpose">-</p>
+            </div>
+            <div class="detail">
+              <p class="label">Claimant consent</p>
+              <p class="value" id="consent-choice">-</p>
             </div>
             <div class="detail">
               <p class="label">Target Dish Profile</p>
@@ -138,7 +149,7 @@
         </section>
 
         <!-- Decision Response Panel -->
-        <section class="card">
+        <section class="card" id="decision-card">
           <div class="decision-section">
             <h2 style="margin: 0 0 16px; font-size: 22px; letter-spacing: -0.02em;">Select Recipient Decision Response</h2>
             <div class="decision-tabs" role="tablist">
@@ -153,7 +164,7 @@
               <div id="tab-panel-accept" class="tab-panel">
                 <div class="form-group">
                   <label for="accept-rationale">Acceptance Rationale</label>
-                  <textarea id="accept-rationale" placeholder="Enter rationale for accepting request...">All requested allergy constraints are satisfied and confirmed by recipient kitchen staff.</textarea>
+                  <textarea id="accept-rationale" placeholder="Enter rationale for accepting request...">Peanut constraint confirmed for this order.</textarea>
                 </div>
                 <button type="submit" class="submit-btn accept-btn">Emit Accept Decision Event</button>
               </div>
@@ -162,12 +173,12 @@
               <div id="tab-panel-required_change" class="tab-panel" hidden>
                 <div class="form-group">
                   <label for="req-change-rationale">Rationale</label>
-                  <input type="text" id="req-change-rationale" value="Kitchen policy requires constraint specification." placeholder="Enter rationale..." />
+                  <input type="text" id="req-change-rationale" value="A preparation change is needed before the order can proceed." placeholder="Enter rationale..." />
                 </div>
                 <div class="form-group">
                   <label for="req-change-list">Required Changes (one per line)</label>
-                  <textarea id="req-change-list" placeholder="Enter required changes...">Specify cross-contamination tolerance threshold for peanut allergy.
-Provide updated allergy clearance date from healthcare provider.</textarea>
+                  <textarea id="req-change-list" placeholder="Enter required changes...">Use the designated peanut-free preparation surface.
+Confirm the approved ingredient substitution.</textarea>
                 </div>
                 <button type="submit" class="submit-btn required_change-btn">Emit Required Change Decision Event</button>
               </div>
@@ -190,6 +201,7 @@ Provide updated allergy clearance date from healthcare provider.</textarea>
                 <button type="submit" class="submit-btn cannot_determine-btn">Emit Cannot Determine Decision Event</button>
               </div>
             </form>
+            <p id="recipient-error" class="error" role="alert" hidden></p>
           </div>
         </section>
 
@@ -205,6 +217,29 @@ Provide updated allergy clearance date from healthcare provider.</textarea>
             </div>
             <h4 style="margin: 16px 0 8px; font-size: 14px; text-transform: uppercase; color: #77756c;">Broadcasted N1 Decision Event Payload</h4>
             <pre id="event-json"></pre>
+          </div>
+          <div class="acknowledgement-section" id="acknowledgement-section" hidden>
+            <h3 style="margin: 0 0 8px; font-size: 20px;">Named staff acknowledgement</h3>
+            <p class="intro" style="margin: 0 0 20px;">Record the staff role that reviewed this local proof-case response.</p>
+            <form id="acknowledgement-form">
+              <div class="form-group">
+                <label for="acknowledger-role">Staff role name</label>
+                <input id="acknowledger-role" type="text" required placeholder="For example, shift manager" />
+              </div>
+              <div class="form-group">
+                <label for="acknowledgement-outcome">Acknowledgement outcome</label>
+                <select id="acknowledgement-outcome">
+                  <option value="acknowledged" selected>Acknowledged</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="acknowledgement-note">Acknowledgement note</label>
+                <textarea id="acknowledgement-note" placeholder="Optional local staff note"></textarea>
+              </div>
+              <button type="submit" class="submit-btn">Record local acknowledgement</button>
+            </form>
+            <div class="preview-notice" id="preview-notice" hidden></div>
           </div>
         </section>
       </main>

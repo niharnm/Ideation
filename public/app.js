@@ -16,8 +16,14 @@ import {
 } from "/src/passport-vault.ts";
 
 const recipient = { id: "recipient-1", displayName: "Recipient" };
-const purpose = "Prepare one restaurant order from the constraints you choose.";
-const summary = "Use the selected scoped fields for one restaurant order.";
+const purpose = "Prepare one restaurant order from the constraint you choose.";
+const summary = "Use the selected scoped field for one restaurant order.";
+const fieldOptions = [
+  { id: "order.constraint.peanut", label: "Peanut constraint", selected: true },
+  { id: "order.constraint.dairy", label: "Dairy constraint", selected: false },
+  { id: "order.preference.vegetarian", label: "Vegetarian preference", selected: false },
+];
+const LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY = "handshake:demo-linked-events:v1";
 
 const requestView = document.querySelector("#request-view");
 const outcomeView = document.querySelector("#outcome-view");
@@ -62,7 +68,7 @@ function renderVaultFields() {
     input.type = "checkbox";
     input.className = "field-checkbox";
     input.value = allergy.allergenId;
-    input.checked = true;
+    input.checked = fieldOptions.find((field) => field.id === allergy.allergenId)?.selected ?? false;
     input.dataset.label = allergy.label;
 
     const textSpan = document.createElement("span");
@@ -374,11 +380,12 @@ function showReceipt(receipt) {
     revoke.type = "button";
     revoke.textContent = "Revoke access now";
     revoke.addEventListener("click", () => {
-      revokeScopedClaim(localClaim.claimantId, dependencies);
-      const updated = previewClaimantReceipt(receipt.handshakeId, dependencies);
-      if (updated.success) {
-        showReceipt(updated.value.receipt);
-      }
+      const revocation = revokeScopedClaim(localClaim.claimantId, dependencies);
+      showReceipt({
+        ...receipt,
+        access: { ...receipt.access, status: "revoked" },
+        timestamps: { ...receipt.timestamps, terminalAt: revocation.occurredAt },
+      });
     });
     outcomeView.append(revoke);
   }
@@ -478,18 +485,28 @@ if (storedClaim?.status === "active") {
   updateEndTime();
 }
 
-window.addEventListener("handshake:demo-linked-events", (event) => {
+function showPreviewError(message) {
+  const error = document.createElement("p");
+  error.className = "error receipt-error";
+  error.textContent = `Preview not available. ${message}`;
+  outcomeView.append(error);
+}
+
+function showLocalDemoPreview(handshakeId, incomingEvents) {
   const claim = expireScopedClaimIfNeeded(dependencies);
-  const incomingEvents = event instanceof CustomEvent ? event.detail : null;
   if (!Array.isArray(incomingEvents) || incomingEvents.length === 0) {
     return;
   }
-  const handshakeId = incomingEvents[0]?.handshakeId ?? claim?.handshakeId;
-  if (typeof handshakeId !== "string" || handshakeId.length === 0) {
+  const linkedHandshakeId = handshakeId ?? incomingEvents[0]?.handshakeId;
+  if (
+    typeof linkedHandshakeId !== "string" ||
+    linkedHandshakeId.length === 0 ||
+    claim?.handshakeId !== linkedHandshakeId
+  ) {
     return;
   }
   const result = previewDemoLinkedEvents(
-    handshakeId,
+    linkedHandshakeId,
     incomingEvents,
     dependencies,
   );
@@ -497,10 +514,54 @@ window.addEventListener("handshake:demo-linked-events", (event) => {
     showReceipt(result.value.receipt);
     return;
   }
-  const message = document.createElement("p");
-  message.className = "error receipt-error";
-  message.textContent = `Preview not available. ${result.issues
+  showPreviewError(result.issues
     .map((issue) => issue.message)
-    .join(" ")}`;
-  outcomeView.append(message);
+    .join(" "));
+}
+
+function readLocalDemoLinkedEvents(value) {
+  let payload;
+  try {
+    payload = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    typeof payload.handshakeId !== "string" ||
+    payload.handshakeId.length === 0 ||
+    !Array.isArray(payload.events) ||
+    payload.events.length === 0
+  ) {
+    return null;
+  }
+  const hasMismatchedEvent = payload.events.some(
+    (event) =>
+      !event ||
+      typeof event !== "object" ||
+      Array.isArray(event) ||
+      typeof event.eventId !== "string" ||
+      typeof event.type !== "string" ||
+      event.handshakeId !== payload.handshakeId,
+  );
+  return hasMismatchedEvent ? null : payload;
+}
+
+window.addEventListener("handshake:demo-linked-events", (event) => {
+  showLocalDemoPreview(null, event instanceof CustomEvent ? event.detail : null);
+});
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY || !event.newValue) {
+    return;
+  }
+  const preview = readLocalDemoLinkedEvents(event.newValue);
+  window.localStorage.removeItem(LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY);
+  if (!preview) {
+    showPreviewError("Local demo data was invalid.");
+    return;
+  }
+  showLocalDemoPreview(preview.handshakeId, preview.events);
 });

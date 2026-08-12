@@ -1,17 +1,10 @@
-import {
-  processRecipientRequest,
-  createAcceptDecisionEvent,
-  createRequiredChangeDecisionEvent,
-  createDeclineDecisionEvent,
-  createCannotDetermineDecisionEvent,
-  recordRecipientDecision,
-} from "/src/recipient-console.ts";
+import { processRecipientRequest } from "/src/recipient-console.ts";
 import {
   evaluateUniversalAllergyPolicy,
-  UNIVERSAL_ALLERGEN_TAXONOMY,
-  getAllergenMetadata,
 } from "/src/universal-policy-engine.ts";
 import {
+  HANDSHAKE_CLAIM_STORAGE_KEY,
+  HANDSHAKE_EVENT_LEDGER_STORAGE_KEY,
   readHandshakeEventLedger,
 } from "/src/passport-flow.ts";
 
@@ -111,97 +104,97 @@ const SAMPLE_DISH_PROFILES = {
 // Sample recipient database data
 const sampleRecipientData = {
   "order.constraint.peanut": "Severe Peanut Allergy (No Peanuts)",
-  "order.constraint.dairy": "Dairy Free (No Lactose)",
   "allergen.peanut": "Peanut Allergy",
   "allergen.gluten": "Gluten Sensitivity",
   "allergen.mustard": "Mustard Allergy",
   "allergen.alpha_gal": "Alpha-Gal Allergy",
-  "user.ssn": "999-00-1234 (UNREQUESTED PRIVACY FIELD)",
-  "user.homeAddress": "123 Private St, Cityville (UNREQUESTED PRIVACY FIELD)",
 };
+const LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY = "handshake:demo-linked-events:v1";
 
 const dependencies = {
   storage: window.localStorage,
   emit(event) {
-    window.dispatchEvent(
-      new CustomEvent("handshake:event", { detail: event }),
-    );
+    window.dispatchEvent(new CustomEvent("handshake:event", { detail: event }));
   },
 };
 
-function getOrCreateSampleEvents() {
-  const ledger = readHandshakeEventLedger(dependencies.storage);
-  let requestEvent = ledger.events.find((e) => e.type === "request");
-  let consentEvent = ledger.events.find((e) => e.type === "consent");
-
-  if (!requestEvent || !consentEvent) {
-    const handshakeId = `handshake-${Date.now()}`;
-    const validFrom = new Date().toISOString();
-    const validUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-
-    requestEvent = {
-      schemaVersion: "1.0.0",
-      eventId: `event-req-${Date.now()}`,
-      handshakeId,
-      type: "request",
-      occurredAt: validFrom,
-      actor: { id: "claimant-1", role: "claimant" },
-      dataScope: {
-        purpose: "Prepare one restaurant order from requested dietary constraints.",
-        fields: [
-          { id: "allergen.peanut", label: "Peanut Constraint" },
-          { id: "allergen.gluten", label: "Gluten Constraint" },
-          { id: "allergen.alpha_gal", label: "Alpha-Gal Constraint" },
-        ],
-        validFrom,
-        validUntil,
-      },
-      result: { status: "succeeded", failureCondition: null },
-      payload: {
-        recipient: { id: "recipient-1", displayName: "Bistro 42" },
-        summary: "Universal allergen policy evaluation for dining order.",
-      },
-    };
-
-    consentEvent = {
-      schemaVersion: "1.0.0",
-      eventId: `event-cons-${Date.now()}`,
-      handshakeId,
-      type: "consent",
-      occurredAt: validFrom,
-      actor: { id: "claimant-1", role: "claimant" },
-      dataScope: {
-        purpose: "Prepare one restaurant order from requested dietary constraints.",
-        fields: [
-          { id: "allergen.peanut", label: "Peanut Constraint" },
-          { id: "allergen.gluten", label: "Gluten Constraint" },
-          { id: "allergen.alpha_gal", label: "Alpha-Gal Constraint" },
-        ],
-        validFrom,
-        validUntil,
-      },
-      result: { status: "succeeded", failureCondition: null },
-      payload: { recipientId: "recipient-1", choice: "approve" },
-    };
-  }
-
-  return { requestEvent, consentEvent };
-}
+const details = document.querySelector(".details");
+const emptyState = document.querySelector("#empty-state");
+const decisionCard = document.querySelector("#decision-card");
+const outcomeCard = document.querySelector("#outcome-card");
+const acknowledgementSection = document.querySelector("#acknowledgement-section");
+const acknowledgementForm = document.querySelector("#acknowledgement-form");
+const previewNotice = document.querySelector("#preview-notice");
+const decisionForm = document.querySelector("#decision-form");
+const errorView = document.querySelector("#recipient-error");
 
 let activeRequest = null;
+let activeDecision = null;
 let currentTab = "accept";
 let selectedDishId = "pad-thai";
 
-// Tab Switching Logic
-const tabButtons = document.querySelectorAll(".tab-button");
-const tabPanels = document.querySelectorAll(".tab-panel");
+function showError(message) {
+  errorView.textContent = message;
+  errorView.hidden = false;
+}
 
-tabButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const tabName = btn.dataset.tab;
-    selectTab(tabName);
+function hasActiveGrant(events, request) {
+  const now = Date.now();
+  const startsAt = Date.parse(request.dataScope.validFrom);
+  const endsAt = Date.parse(request.dataScope.validUntil);
+  const hasTerminalEvent = events.some(
+    (event) =>
+      event.handshakeId === request.handshakeId &&
+      (event.type === "expiry" || event.type === "revocation"),
+  );
+  return now >= startsAt && now < endsAt && !hasTerminalEvent;
+}
+
+function findActiveRequest() {
+  const events = readHandshakeEventLedger(dependencies.storage).events;
+  const requests = events.filter((event) => event.type === "request").reverse();
+
+  for (const requestEvent of requests) {
+    const consentEvent = events.find(
+      (event) =>
+        event.type === "consent" &&
+        event.handshakeId === requestEvent.handshakeId &&
+        event.payload.choice === "approve" &&
+        event.payload.recipientId === requestEvent.payload.recipient.id,
+    );
+    if (!consentEvent || !hasActiveGrant(events, requestEvent)) {
+      continue;
+    }
+    if (JSON.stringify(requestEvent.dataScope) !== JSON.stringify(consentEvent.dataScope)) {
+      continue;
+    }
+    return processRecipientRequest(requestEvent, consentEvent, sampleRecipientData);
+  }
+  return null;
+}
+
+function resetResponseState() {
+  activeDecision = null;
+  outcomeCard.hidden = true;
+  acknowledgementSection.hidden = true;
+  previewNotice.hidden = true;
+  decisionForm.querySelectorAll("button").forEach((button) => {
+    button.disabled = false;
   });
-});
+  acknowledgementForm.reset();
+  acknowledgementForm.querySelectorAll("input, select, textarea, button").forEach((control) => {
+    control.disabled = false;
+  });
+  errorView.hidden = true;
+}
+
+function renderEmptyState() {
+  activeRequest = null;
+  details.hidden = true;
+  emptyState.hidden = false;
+  decisionCard.hidden = true;
+  resetResponseState();
+}
 
 function selectTab(tabName) {
   currentTab = tabName;
@@ -228,8 +221,17 @@ if (dishSelect) {
 }
 
 function renderRequest() {
-  const { requestEvent, consentEvent } = getOrCreateSampleEvents();
-  activeRequest = processRecipientRequest(requestEvent, consentEvent, sampleRecipientData);
+  const request = findActiveRequest();
+  if (!request) {
+    renderEmptyState();
+    return;
+  }
+
+  activeRequest = request;
+  details.hidden = false;
+  emptyState.hidden = true;
+  decisionCard.hidden = false;
+  resetResponseState();
 
   document.querySelector("#handshake-id").textContent = activeRequest.handshakeId;
   document.querySelector("#claimant-id").textContent = activeRequest.claimantId;
@@ -325,112 +327,177 @@ function renderRequest() {
   }
 }
 
-// Decision Form Submission
-const form = document.querySelector("#decision-form");
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  if (!activeRequest) return;
-
-  let decisionEvent;
-  const handshakeId = activeRequest.handshakeId;
-  const recipientId = activeRequest.recipientId;
-  const dataScope = activeRequest.dataScope;
-
-  try {
-    switch (currentTab) {
-      case "accept": {
-        const rationale = document.querySelector("#accept-rationale").value.trim();
-        decisionEvent = createAcceptDecisionEvent({
-          handshakeId,
-          recipientId,
-          dataScope,
-          rationale: rationale || "Request accepted. Scoped fields verified.",
-        });
-        break;
-      }
-      case "required_change": {
-        const rationale = document.querySelector("#req-change-rationale").value.trim();
-        const rawChanges = document.querySelector("#req-change-list").value;
-        const requiredChanges = rawChanges
-          .split("\n")
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-
-        decisionEvent = createRequiredChangeDecisionEvent({
-          handshakeId,
-          recipientId,
-          dataScope,
-          rationale: rationale || "Required changes must be made before proceeding.",
-          requiredChanges: requiredChanges.length > 0 ? requiredChanges : ["Specify constraint threshold."],
-        });
-        break;
-      }
-      case "decline": {
-        const rationale = document.querySelector("#decline-rationale").value.trim();
-        decisionEvent = createDeclineDecisionEvent({
-          handshakeId,
-          recipientId,
-          dataScope,
-          rationale: rationale || "Request declined by recipient policy.",
-        });
-        break;
-      }
-      case "cannot_determine": {
-        const reason = document.querySelector("#cannot-determine-reason").value.trim();
-        decisionEvent = createCannotDetermineDecisionEvent({
-          handshakeId,
-          recipientId,
-          dataScope,
-          reason: reason || "Unable to determine decision due to missing data.",
-        });
-        break;
-      }
-      default:
-        throw new Error(`Unknown tab: ${currentTab}`);
-    }
-
-    recordRecipientDecision(decisionEvent, dependencies);
-    showOutcome(decisionEvent);
-  } catch (error) {
-    alert(`Error generating decision event: ${error instanceof Error ? error.message : String(error)}`);
-  }
+const tabButtons = document.querySelectorAll(".tab-button");
+const tabPanels = document.querySelectorAll(".tab-panel");
+tabButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const tabName = button.dataset.tab;
+    currentTab = tabName;
+    tabButtons.forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    tabPanels.forEach((panel) => {
+      panel.hidden = panel.id !== `tab-panel-${tabName}`;
+    });
+  });
 });
 
-function showOutcome(decisionEvent) {
-  const card = document.querySelector("#outcome-card");
-  card.hidden = false;
+async function decisionForCurrentTab() {
+  const {
+    createAcceptDecisionEvent,
+    createRequiredChangeDecisionEvent,
+    createDeclineDecisionEvent,
+    createCannotDetermineDecisionEvent,
+  } = await import("/src/recipient-console.ts");
+  const common = {
+    handshakeId: activeRequest.handshakeId,
+    recipientId: activeRequest.recipientId,
+    dataScope: activeRequest.dataScope,
+  };
+  switch (currentTab) {
+    case "accept":
+      return createAcceptDecisionEvent({
+        ...common,
+        rationale: document.querySelector("#accept-rationale").value.trim() || "Peanut constraint confirmed for this order.",
+      });
+    case "required_change": {
+      const requiredChanges = document.querySelector("#req-change-list").value
+        .split("\n")
+        .map((value) => value.trim())
+        .filter(Boolean);
+      return createRequiredChangeDecisionEvent({
+        ...common,
+        rationale: document.querySelector("#req-change-rationale").value.trim() || "A preparation change is needed before the order can proceed.",
+        requiredChanges: requiredChanges.length > 0
+          ? requiredChanges
+          : ["Confirm the approved ingredient substitution."],
+      });
+    }
+    case "decline":
+      return createDeclineDecisionEvent({
+        ...common,
+        rationale: document.querySelector("#decline-rationale").value.trim() || "The kitchen cannot safely meet the peanut constraint for this order.",
+      });
+    case "cannot_determine":
+      return createCannotDetermineDecisionEvent({
+        ...common,
+        reason: document.querySelector("#cannot-determine-reason").value.trim() || "Ingredient information is unavailable for this order.",
+      });
+    default:
+      throw new Error("Unsupported decision response.");
+  }
+}
 
+function showOutcome(decisionEvent) {
+  outcomeCard.hidden = false;
   const badge = document.querySelector("#status-badge");
   badge.className = `status-badge ${decisionEvent.payload.response}`;
-  badge.textContent = `RESPONSE: ${decisionEvent.payload.response.toUpperCase().replaceAll("_", " ")}`;
-
+  badge.textContent = `RESPONSE: ${decisionEvent.payload.response.replaceAll("_", " ")}`;
   document.querySelector("#outcome-heading").textContent = `Decision: ${decisionEvent.payload.response.replaceAll("_", " ")}`;
   document.querySelector("#outcome-rationale").textContent = `Rationale: ${decisionEvent.payload.rationale}`;
 
-  const reqBox = document.querySelector("#required-changes-box");
-  const reqList = document.querySelector("#required-changes-list");
-  if (decisionEvent.payload.response === "required_change" && decisionEvent.payload.requiredChanges) {
-    reqList.replaceChildren();
-    for (const change of decisionEvent.payload.requiredChanges) {
-      const li = document.createElement("li");
-      li.textContent = change;
-      reqList.append(li);
-    }
-    reqBox.hidden = false;
+  const changesBox = document.querySelector("#required-changes-box");
+  const changesList = document.querySelector("#required-changes-list");
+  if (decisionEvent.payload.requiredChanges) {
+    changesList.replaceChildren(...decisionEvent.payload.requiredChanges.map((change) => {
+      const item = document.createElement("li");
+      item.textContent = change;
+      return item;
+    }));
+    changesBox.hidden = false;
   } else {
-    reqBox.hidden = true;
+    changesBox.hidden = true;
   }
-
   document.querySelector("#event-json").textContent = JSON.stringify(decisionEvent, null, 2);
-  card.scrollIntoView({ behavior: "smooth" });
+  acknowledgementSection.hidden = false;
+  outcomeCard.scrollIntoView({ behavior: "smooth" });
 }
 
-// Initial render
-renderRequest();
+decisionForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  errorView.hidden = true;
+  if (!activeRequest) {
+    renderEmptyState();
+    return;
+  }
+  try {
+    activeDecision = await decisionForCurrentTab();
+    const { recordRecipientDecision } = await import("/src/recipient-console.ts");
+    recordRecipientDecision(activeDecision, dependencies);
+    decisionForm.querySelectorAll("button").forEach((button) => {
+      button.disabled = true;
+    });
+    showOutcome(activeDecision);
+  } catch (error) {
+    showError(`Decision was not recorded: ${error instanceof Error ? error.message : String(error)}`);
+  }
+});
 
-// Listen to handshake:event for live updates
-window.addEventListener("handshake:event", (e) => {
-  if (e instanceof CustomEvent && e.detail && e.detail.type === "consent") {
+acknowledgementForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  errorView.hidden = true;
+  if (!activeRequest || !activeDecision) {
+    return;
+  }
+  const roleName = document.querySelector("#acknowledger-role").value.trim();
+  if (!roleName) {
+    return;
+  }
+  try {
+    const { buildAcknowledgementEvent } = await import("/src/acknowledgement-event.ts");
+    const acknowledgement = buildAcknowledgementEvent({
+      handshakeId: activeRequest.handshakeId,
+      actorId: activeRequest.recipientId,
+      roleName,
+      decisionEventId: activeDecision.eventId,
+      outcome: document.querySelector("#acknowledgement-outcome").value,
+      note: document.querySelector("#acknowledgement-note").value.trim() || undefined,
+      dataScope: activeRequest.dataScope,
+    });
+    const { assertAcknowledgementCanBeRecorded } = await import("/src/recipient-console.ts");
+    assertAcknowledgementCanBeRecorded(
+      acknowledgement,
+      activeDecision,
+      activeRequest.recipientId,
+      dependencies,
+    );
+    const localPreview = {
+      handshakeId: activeRequest.handshakeId,
+      events: [activeDecision, acknowledgement],
+    };
+    window.localStorage.setItem(
+      LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY,
+      JSON.stringify(localPreview),
+    );
+    window.dispatchEvent(
+      new CustomEvent("handshake:demo-linked-events", {
+        detail: localPreview.events,
+      }),
+    );
+    acknowledgementForm.querySelectorAll("input, select, textarea, button").forEach((control) => {
+      control.disabled = true;
+    });
+    previewNotice.textContent = "Local acknowledgement recorded. Any claimant result is an unverified local preview, and delivery is pending authenticated recipient transport.";
+    previewNotice.hidden = false;
+  } catch (error) {
+    showError(`Acknowledgement was not recorded: ${error instanceof Error ? error.message : String(error)}`);
+  }
+});
+
+renderRequest();
+window.addEventListener("storage", (event) => {
+  if (
+    event.key === HANDSHAKE_CLAIM_STORAGE_KEY ||
+    event.key === HANDSHAKE_EVENT_LEDGER_STORAGE_KEY
+  ) {
+    renderRequest();
+  }
+});
+window.addEventListener("handshake:event", (event) => {
+  const detail = event instanceof CustomEvent ? event.detail : null;
+  if (
+    detail &&
+    ["request", "consent", "expiry", "revocation"].includes(detail.type)
+  ) {
     renderRequest();
   }
 });

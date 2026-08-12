@@ -6,6 +6,10 @@ import {
   type ClaimantReceiptPreviewResult,
 } from "./claimant-receipt.ts";
 import { buildDecisionEvent } from "./decision-event.ts";
+import {
+  assertAcknowledgementCanBeRecorded,
+  assertRecipientDecisionCanBeRecorded,
+} from "./recipient-console.ts";
 import type { PolicyDecision } from "./decision-policy.ts";
 import type {
   AcknowledgementEvent,
@@ -14,8 +18,8 @@ import type {
   HandshakeEvent,
 } from "./handshake-event.ts";
 import {
-  appendHandshakeEvents,
   approveScopedRequest,
+  appendHandshakeEvents,
   readHandshakeEventLedger,
   type ScopedRequestDependencies,
   type StorageLike,
@@ -75,6 +79,13 @@ export function recordStaffAcknowledgement(
     occurredAt: ackOccurredAt,
   });
 
+  assertRecipientDecisionCanBeRecorded(decisionEvent, dependencies);
+  assertAcknowledgementCanBeRecorded(
+    acknowledgementEvent,
+    decisionEvent,
+    params.recipientId,
+    dependencies,
+  );
   appendHandshakeEvents(dependencies.storage, [decisionEvent, acknowledgementEvent]);
   dependencies.emit(decisionEvent);
   dependencies.emit(acknowledgementEvent);
@@ -122,13 +133,19 @@ export function runOperatorDemo(
         : options.now
       : new Date("2026-08-12T18:00:00Z");
 
-  let idCounter = 1;
-  const defaultCreateId = () =>
-    options.handshakeId
-      ? options.handshakeId.startsWith("handshake-")
-        ? options.handshakeId.slice(10)
-        : options.handshakeId
-      : `operator-${scenario}-${idCounter++}`;
+  let idCounter = 0;
+  const customHandshakeId = options.handshakeId?.startsWith("handshake-")
+    ? options.handshakeId.slice(10)
+    : options.handshakeId;
+  const defaultCreateId = () => {
+    idCounter += 1;
+    if (customHandshakeId) {
+      return idCounter === 1
+        ? customHandshakeId
+        : `${customHandshakeId}-${idCounter}`;
+    }
+    return `operator-${scenario}-${idCounter}`;
+  };
 
   const deps: ScopedRequestDependencies = options.dependencies ?? {
     storage,
