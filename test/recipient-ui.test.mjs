@@ -4,6 +4,11 @@ import test from "node:test";
 
 const html = readFileSync(new URL("../public/recipient.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../public/recipient.js", import.meta.url), "utf8");
+const customerHtml = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+
+test("customer permission screen links to Fieldline Restaurant Ops", () => {
+  assert.match(customerHtml, /href="\/recipient\.html">Fieldline restaurant ops<\/a>/);
+});
 
 test("Fieldline restaurant view starts with a locked scope and no rendered allergy detail", () => {
   assert.match(html, /Fieldline Restaurant Ops/);
