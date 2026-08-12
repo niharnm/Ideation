@@ -136,9 +136,9 @@
       <section class="wrap hero">
         <div>
           <p class="eyebrow">AI Passport Ideathon · Identity track</p>
-          <h1>Prove one fact. Keep the rest.</h1>
-          <p class="hero-copy">Tell NimGTP your allergies. Then order on Dash. Handshake asks for one time-boxed fact before the kitchen can see it — and you can take it back.</p>
-          <p class="entry-line">This entry is for a <strong>diner</strong>, who needs to prove a <strong>selected dietary constraint</strong> to a <strong>restaurant</strong> so they can <strong>safely fulfill one order</strong> without giving away more context than necessary.</p>
+          <h1>Present one fact. Keep the rest.</h1>
+          <p class="hero-copy">NimGTP can keep private, self-reported notes. Handshake presents one credential-backed fact to Fieldline for one order, then lets the diner take it back.</p>
+          <p class="entry-line">This entry is for a <strong>diner</strong>, who needs to present a <strong>credential-backed peanut avoidance requirement</strong> from a <strong>demo health issuer</strong> to a <strong>restaurant verifier</strong> so they can <strong>prepare one order</strong> without giving away more context than necessary.</p>
             <div class="hero-actions">
             <a class="button" href="/chatgpt.html">1. Open NimGTP</a>
             <a class="button secondary" href="/index.html">2. Handshake</a>
@@ -147,20 +147,20 @@
         </div>
         <aside class="hero-card" aria-label="Example active permission">
           <div class="card-label"><span>The check moment</span><span class="pulse" aria-hidden="true"></span></div>
-          <div class="request-line"><div class="line-icon">1</div><div><strong>NimGTP</strong><span>Say you can’t eat peanuts. That memory saves locally to your passport.</span></div></div>
-          <div class="request-line"><div class="line-icon">2</div><div><strong>Dash</strong><span>Add Pad Thai. The store cannot see the allergy until you approve a share.</span></div></div>
-          <div class="request-line"><div class="line-icon">3</div><div><strong>Handshake, then revoke</strong><span>Share only that fact for this order. Take it back when you’re done.</span></div></div>
+          <div class="request-line"><div class="line-icon">1</div><div><strong>Cedar Health Clinic</strong><span>Issues the demo credential for one peanut avoidance requirement.</span></div></div>
+          <div class="request-line"><div class="line-icon">2</div><div><strong>Handshake</strong><span>Shows the issuer, valid status, purpose, expiry, and what will never travel.</span></div></div>
+          <div class="request-line"><div class="line-icon">3</div><div><strong>Fieldline, then revoke</strong><span>Verifies only that fact for this order. Take it back when you are done.</span></div></div>
         </aside>
       </section>
 
       <section class="section" id="how-it-works">
         <div class="wrap">
-          <div class="section-heading"><h2>Landing → NimGTP → Dash.</h2><p class="section-note">Start in chat. Order on Dash. Handshake sits between them only when a constraint needs to travel.</p></div>
+          <div class="section-heading"><h2>Issuer → Handshake → Fieldline.</h2><p class="section-note">NimGTP notes remain private. Handshake sits between the credential holder and verifier when one fact needs to travel.</p></div>
           <div class="flow">
-            <article class="flow-step"><span class="step-num">01</span><h3>Open NimGTP</h3><p>Talk like you would in any chat. Mention milk, peanuts, or another constraint. Those memories save locally.</p></article>
-            <article class="flow-step"><span class="step-num">02</span><h3>AI asks Egoist</h3><p>Egoist returns the saved constraint to the server-side passport. Continue to Dash with allergy detail still locked.</p></article>
-            <article class="flow-step"><span class="step-num">03</span><h3>Approve the share</h3><p>Handshake asks for the minimum fact, this order, a fixed end time. Dash then unlocks only that card.</p></article>
-            <article class="flow-step"><span class="step-num">04</span><h3>Revoke</h3><p>Return to Handshake and revoke. Future kitchen actions on Dash lock.</p></article>
+            <article class="flow-step"><span class="step-num">01</span><h3>Issuer attests one fact</h3><p>Cedar Health Clinic is a clearly labeled local demo issuer. It attests only that peanut avoidance is required.</p></article>
+            <article class="flow-step"><span class="step-num">02</span><h3>Holder selects disclosure</h3><p>Handshake shows issuer, status, purpose, expiry, and the exact fact Fieldline will receive.</p></article>
+            <article class="flow-step"><span class="step-num">03</span><h3>Fieldline verifies</h3><p>Dash unlocks only the current fact for one Pad Thai order. It never receives the underlying medical context.</p></article>
+            <article class="flow-step"><span class="step-num">04</span><h3>Correct or revoke</h3><p>The diner can revoke immediately. A wrong fact must be corrected by the issuer, then reissued.</p></article>
           </div>
         </div>
       </section>
@@ -178,7 +178,7 @@
             <div class="console-body">
               <div class="order-meta"><span>Order #A1024</span><span id="preview-time">15 min window</span></div>
               <h3 class="order-title">Pad Thai</h3>
-              <div class="scope" id="scope-preview"><div class="scope-title"><span>Permitted order constraint</span><span>One field</span></div><strong id="preview-constraint">Peanut allergy</strong><p id="preview-copy">Use this one constraint to evaluate this order. Access expires automatically.</p></div>
+              <div class="scope" id="scope-preview"><div class="scope-title"><span>Verified order fact</span><span>One field</span></div><strong id="preview-constraint">Peanut avoidance requirement</strong><p id="preview-copy">Issuer: Cedar Health Clinic, demo issuer. Use this one fact for the order. Access expires automatically.</p></div>
               <div class="console-action"><span id="preview-action">Kitchen review is ready.</span><a href="/recipient.html">Open Fieldline restaurant ops</a></div>
             </div>
           </article>
@@ -188,11 +188,11 @@
       <section class="section" id="demo">
         <div class="wrap demo">
           <div class="demo-intro">
-            <p class="eyebrow">Optional shortcut</p>
-            <h2>Skip chat if you need a 15-second handshake.</h2>
-            <p>The judged path is NimGTP, then Dash. This button issues a local peanut scope so you can still show lock and revoke if Groq is unavailable.</p>
+            <p class="eyebrow">Judged flow</p>
+            <h2>Start with explicit consent.</h2>
+            <p>Open Handshake to review the credential-backed fact before any restaurant access exists.</p>
             <div class="demo-controls">
-              <button class="button" id="start-handshake" type="button">Start a fresh handshake</button>
+              <a class="button" id="start-handshake" href="/index.html">Review in Handshake</a>
               <a class="button secondary" href="/recipient.html">Open Fieldline restaurant ops</a>
               <button class="button danger" id="revoke-handshake" type="button" hidden>Revoke restaurant access</button>
             </div>
@@ -207,7 +207,7 @@
         </div>
       </section>
     </main>
-    <footer class="wrap">Restaurant ordering is a live Handshake API proof case for Egoist. It is not a live delivery-platform integration. API keys stay in <code>.env</code>, never in the browser.</footer>
+    <footer class="wrap">Restaurant ordering is a local Handshake proof case for Egoist. It is not a live delivery-platform integration. API keys stay in <code>.env</code>, never in the browser.</footer>
     <script type="module" src="/demo.js"></script>
   </body>
 </html>

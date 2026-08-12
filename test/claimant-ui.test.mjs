@@ -16,7 +16,7 @@ test("claimant screen supports removable constraints, exact expiry, and a new re
 
 test("Handshake shows NimGTP poll status and an Approve shortcut", () => {
   assert.match(html, /id="poll-status"/);
-  assert.match(html, /Waiting for NimGTP memories/);
+  assert.match(html, /NimGTP notes remain private and are not Identity proofs/);
   assert.match(app, /event\.metaKey \|\| event\.ctrlKey/);
   assert.match(app, /approveButton\.click\(\)/);
   assert.match(app, /setPollStatus/);
@@ -33,4 +33,12 @@ test("approved Chat memories create and revoke the server-side restaurant handsh
   assert.match(app, /function refreshApiDecision\(\)/);
   assert.match(app, /Handshake API response/);
   assert.match(app, /handshake\.events\.some\(\(event\) => event\.type === "decision"\)/);
+});
+
+test("Identity screen separates credential-backed facts from self-reported notes", () => {
+  assert.match(html, /Credential-backed fact/);
+  assert.match(html, /NimGTP notes remain private and are not Identity proofs/);
+  assert.match(app, /input\.disabled = !credentialBacked/);
+  assert.match(app, /Credential backed/);
+  assert.match(app, /Self-reported, not proof eligible/);
 });

@@ -17,12 +17,9 @@ test("claimant demo bridge accepts only named local preview payloads and consume
 test("claimant live demo defaults to one peanut constraint", () => {
   assert.match(
     app,
-    /id: "order\.constraint\.peanut", label: "Peanut constraint", selected: true/,
+    /id: CREDENTIAL_BACKED_FIELD_ID, label: DEMO_DIETARY_CREDENTIAL\.label, selected: true/,
   );
-  assert.match(
-    app,
-    /id: "order\.constraint\.dairy", label: "Dairy constraint", selected: false/,
-  );
+  assert.doesNotMatch(app, /order\.constraint\.dairy/);
   assert.match(app, /Prepare one restaurant order from the constraint you choose\./);
   assert.match(app, /pollEgoistPassportVault/);
   assert.match(app, /deselectedFieldIds/);

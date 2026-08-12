@@ -33,8 +33,7 @@ test("Vault initialization and default seeding", () => {
   assert.strictEqual(vault.claimantId, "claimant-1");
   assert.strictEqual(vault.allergies.length, DEFAULT_VAULT_ALLERGIES.length);
   assert.strictEqual(vault.allergies[0].allergenId, "order.constraint.peanut");
-  assert.strictEqual(vault.allergies[1].allergenId, "order.constraint.dairy");
-  assert.strictEqual(vault.allergies[2].allergenId, "order.preference.vegetarian");
+  assert.strictEqual(vault.allergies[0].source, "credential");
   assert.ok(typeof vault.updatedAt === "string");
 
   const rawStored = storage.getItem(LOCAL_PASSPORT_VAULT_STORAGE_KEY);

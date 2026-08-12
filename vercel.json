@@ -18,7 +18,6 @@
     }
   },
   "rewrites": [
-    { "source": "/api/smart-prep", "destination": "/api/chat?mode=smart-prep" },
     { "source": "/", "destination": "/demo.html" }
   ]
 }

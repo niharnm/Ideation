@@ -1,6 +1,6 @@
 # Ideation prototype
 
-Browser-local AI Passport demo for the Egoist Machines Identity track: a diner proves a selected dietary constraint to a restaurant for one order, then can take it back.
+Local AI Passport demo for the Egoist Machines Identity track: a diner presents one credential-backed peanut avoidance requirement to a restaurant for one order, then can take it back.
 
 The public proof is at `https://ideation-handshake.vercel.app/demo.html`. Its judged path is:
 
@@ -22,11 +22,12 @@ Open `http://127.0.0.1:4173/demo.html` for the demo hub, then use these three ta
 2. `http://127.0.0.1:4173/index.html`, Handshake consent
 3. `http://127.0.0.1:4173/recipient.html`, Fieldline restaurant ops
 
-Tell NimGTP about one peanut allergy. The local adapter writes that dietary memory to the
-browser-local demo passport. Handshake reads that passport, creates an
-order-scoped grant when you approve, and Fieldline retrieves only the approved
-constraint for Pad Thai · #A1024. Revoke from Handshake to lock later kitchen
-actions.
+NimGTP can save private, self-reported dietary notes. The judged Identity flow
+does not treat those notes as proof. Handshake presents a locally verified demo
+credential from Cedar Health Clinic for one peanut avoidance requirement,
+creates an order-scoped grant only after explicit approval, and Fieldline
+retrieves only that fact for Pad Thai · #A1024. Revoke from Handshake to lock
+later kitchen actions.
 
 `handshake:demo-linked-events` accepts local demo data only. The claimant view labels it unverified. Local browser events are not authenticated recipient actions and are never persisted as recipient proof.
 

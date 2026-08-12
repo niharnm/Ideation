@@ -92,6 +92,11 @@
       select { width: 100%; padding: 9px 30px 9px 10px; border: 1px solid #dededb; border-radius: 999px; background: #fff; color: #29292d; font-size: 12px; }
       .end-time { margin: 10px 0 0 !important; color: #77777a; font-size: 11px; line-height: 1.4; }
       .vault-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+      .identity-proof { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; margin: 26px 0; padding: 17px 19px; border: 1px solid #dce8de; border-radius: 16px; background: #f5faf5; }
+      .identity-proof h2 { margin: 4px 0 6px; font-size: 19px; letter-spacing: -.04em; }
+      .identity-proof p { margin: 0; color: #5c6d5f; font-size: 13px; line-height: 1.45; }
+      .identity-proof .proof-kicker { color: #4f6753; font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+      .identity-proof .correction-copy { margin-top: 10px; }
       .button-link { padding: 0; border: 0; color: #28282b; background: transparent; font-size: 12px; font-weight: 720; text-decoration: underline; text-underline-offset: 3px; }
       .vault-editor { margin-top: 16px; }
       .mcp-row { display: flex; gap: 9px; }
@@ -145,7 +150,7 @@
       @keyframes word-arrival { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes poll-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
-      @media (max-width: 760px) { .site-header, main, footer { width: min(100% - 32px, 1360px); } .site-header { min-height: 66px; } .brand::after { display: none; } .private { font-size: 9px; } .experience { padding-top: 34px; } h1 { font-size: clamp(55px, 14.5vw, 104px); } .scope-tray { grid-template-columns: 1fr; gap: 11px; margin-top: 39px; } .passport-stage { min-height: 0; margin-top: 18px; border-top: 0; } .passport-intro { position: static; max-width: none; } .ingredient-strip { display: none; } .passport-card { position: static; width: auto; margin-top: 12px; } .details { grid-template-columns: 1fr 1fr; } .detail:last-child { grid-column: 1 / -1; } }
+      @media (max-width: 760px) { .site-header, main, footer { width: min(100% - 32px, 1360px); } .site-header { min-height: 66px; } .brand::after { display: none; } .private { font-size: 9px; } .experience { padding-top: 34px; } h1 { font-size: clamp(55px, 14.5vw, 104px); } .scope-tray, .identity-proof { grid-template-columns: 1fr; gap: 11px; margin-top: 39px; } .passport-stage { min-height: 0; margin-top: 18px; border-top: 0; } .passport-intro { position: static; max-width: none; } .ingredient-strip { display: none; } .passport-card { position: static; width: auto; margin-top: 12px; } .details { grid-template-columns: 1fr 1fr; } .detail:last-child { grid-column: 1 / -1; } }
       @media (max-width: 520px) { .hero-action { width: 100%; min-width: 0; } .intro { font-size: 15px; } .scope-tray { padding: 15px; border-radius: 17px; } .passport-stage { display: none; } .details { grid-template-columns: 1fr; } .detail:last-child { grid-column: auto; } .mcp-row { display: grid; } .mcp-submit { min-height: 39px; } .summary-grid, .receipt-grid { grid-template-columns: 1fr; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
     </style>
@@ -171,7 +176,7 @@
         <section id="request-view" class="experience">
           <div class="hero">
             <h1><span class="motion-line"><span class="motion-word">You decide</span></span><span class="motion-line"><span class="motion-word">what travels.</span></span></h1>
-            <p class="intro">Prove only the dietary fact Fieldline needs for this order. Nothing else in your passport travels with it, and you can revoke access at any time.</p>
+            <p class="intro">Present one credential-backed dietary fact to Fieldline for this order. Nothing else in your passport travels with it, and you can revoke access at any time.</p>
             <p class="scope-signal"><strong id="scope-count">One selected field</strong><span class="signal-divider" aria-hidden="true"></span><span>Access ends <span id="signal-end-time">soon</span></span></p>
             <div class="consent-actions">
               <button class="hero-action" id="approve" type="button" aria-keyshortcuts="Meta+Enter Control+Enter" title="Approve this exact scope (⌘ Enter or Ctrl Enter)">Approve this exact scope</button>
@@ -180,11 +185,22 @@
             <p class="error" id="error" role="alert" hidden></p>
           </div>
 
+          <section class="identity-proof" aria-labelledby="identity-proof-title">
+            <div>
+              <p class="proof-kicker">Credential-backed fact</p>
+              <h2 id="identity-proof-title">Peanut avoidance requirement</h2>
+              <p>Issued by <strong>Cedar Health Clinic</strong>, a demo issuer. Status is valid and checked locally for this demonstration.</p>
+              <p class="correction-copy">Fieldline receives only this fact. Diagnosis, medical records, chat history, and other dietary notes never travel.</p>
+              <p class="correction-copy" id="correction-copy" hidden>Need a correction? Ask the issuer to correct and reissue the credential. This demo does not change an issuer record.</p>
+            </div>
+            <button class="secondary-action" id="show-correction" type="button">How do I correct this?</button>
+          </section>
+
           <section class="scope-tray" aria-labelledby="scope-title">
             <div class="tray-copy">
               <span class="tray-label" id="scope-title">Your constraints</span>
-              <p>Only selected rules will be shared.</p>
-              <p class="poll-status is-waiting" id="poll-status" aria-live="polite">Waiting for NimGTP memories. This page checks every few seconds.</p>
+              <p>Only credential-backed facts can be shared in this Identity demo.</p>
+              <p class="poll-status is-waiting" id="poll-status" aria-live="polite">NimGTP notes remain private and are not Identity proofs.</p>
             </div>
             <div class="field-list" id="fields" aria-label="Constraints to share"></div>
           </section>
@@ -197,13 +213,13 @@
 
           <section class="detail vault-editor" aria-labelledby="vault-title">
             <div class="vault-header"><span class="label" id="vault-title">Add to your passport</span><button type="button" id="open-add-allergy-btn" class="button-link">Add a custom constraint</button></div>
-            <p class="mcp-status" id="chat-hint">Waiting for NimGTP memories. Mention an allergy in <a href="/chatgpt.html">NimGTP</a> and it appears here within a few seconds.</p>
+            <p class="mcp-status" id="chat-hint">NimGTP can save private, self-reported notes. They stay out of this credential presentation.</p>
           </section>
 
           <button class="secondary-action" id="deny" type="button">Keep my data private</button>
 
           <section class="passport-stage" aria-labelledby="passport-title">
-            <div class="passport-intro"><h2 id="passport-title">This order’s scope</h2><p>Fieldline can use only the constraints you select, until the end time.</p></div>
+            <div class="passport-intro"><h2 id="passport-title">This order’s scope</h2><p>Fieldline can verify and use only the credential-backed fact you select, until the end time.</p></div>
             <img class="ingredient-strip" src="/assets/ingredient-passport-strip.png" alt="" />
             <article class="passport-card"><p class="card-kicker">Scoped for this order</p><strong id="passport-card-title">Restaurant review</strong><p class="card-detail" id="passport-card-detail">The kitchen can use only your selected constraints to evaluate this order.</p><p class="card-expiry" id="passport-card-expiry">Temporary access</p></article>
           </section>

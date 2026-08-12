@@ -8,7 +8,7 @@ Track and lane: **Identity, Build**
 
 One-sentence entry:
 
-> Egoist Handshake lets a diner disclose one selected dietary constraint to one restaurant for one order, then see the restaurant's response and end access.
+> Egoist Handshake lets a diner disclose one credential-backed peanut avoidance requirement to one restaurant for one order, then see the restaurant's response and end access.
 
 The restaurant example is the proof case. The product idea is the Handshake: a reusable, consented exchange between a person and a verifier. Identity is the primary track because the judged moment is minimum disclosure of a fact about a person. Agent-style scope, expiry, revocation, and receipts support that identity exchange, but they are not a second product.
 
@@ -18,9 +18,9 @@ Use **Egoist Handshake** in the recording. Do not call the submitted product Nim
 
 These are not three competing websites. They are three roles in one local product flow:
 
-1. `/chatgpt.html`, **NimGTP**: a ChatGPT-like local test client. A local Egoist-style plugin extracts a dietary memory and writes it to the local passport vault.
-2. `/index.html`, **Handshake**: the diner reviews the exact field, recipient, purpose, and end time, then approves, denies, or later revokes access.
-3. `/recipient.html`, **Fieldline**: the restaurant sees only the approved scope, records its kitchen response, and loses the scope after revocation or expiry.
+1. `/chatgpt.html`, **NimGTP**: a ChatGPT-like local test client. It saves only private, self-reported notes and is not a credential source.
+2. `/index.html`, **Handshake**: the diner reviews the issuer, exact fact, recipient, purpose, never-shared data, correction path, and end time, then approves, denies, or later revokes access.
+3. `/recipient.html`, **Fieldline**: the restaurant sees only the approved fact and its demo issuer, records its kitchen response, and loses the scope after revocation or expiry.
 
 The `/demo.html` page is a landing page and backup shortcut. It explains the idea and can issue a local peanut scope if the chat service is unavailable. The root route, `/`, opens Handshake. The landing page is not a fourth product and should not replace the judged three-page path.
 
@@ -33,8 +33,8 @@ No weighted scorecard is present in this repository, and the original participan
 | Choose one track and lane | Identity, Build, stated in the first 15 seconds and in the Devpost entry |
 | Name the exact user | A diner with a serious dietary constraint |
 | State the problem | The restaurant needs one fact for one order, while the diner should not expose a permanent profile |
-| State the Passport claim | One selected dietary constraint, here a peanut constraint |
-| Explain how it works | Memory enters the passport, the diner approves a scoped grant, the restaurant responds, and access ends |
+| State the Passport claim | One credential-backed peanut avoidance requirement from a clearly labeled demo issuer |
+| Explain how it works | The issuer attests one fact, the diner approves a scoped grant, the restaurant responds, and access ends |
 | Show the AI Passport moment | Pause on Handshake before approval so the exact field, purpose, recipient, and expiry are readable |
 | Address privacy and misuse | Minimum disclosure, purpose limits, time limits, revocation, local-demo limits, and no claim of food-safety certification |
 | Provide supporting proof | Working video, repository link, live link only after its APIs pass, and current screenshots |
@@ -49,11 +49,10 @@ The event description also stresses product thinking, clear communication, and a
 Open one browser window with these tabs in this order:
 
 1. `https://ideation-handshake.vercel.app/demo.html`
-2. `https://ideation-handshake.vercel.app/chatgpt.html`
-3. `https://ideation-handshake.vercel.app/index.html`
-4. `https://ideation-handshake.vercel.app/recipient.html`
+2. `https://ideation-handshake.vercel.app/index.html`
+3. `https://ideation-handshake.vercel.app/recipient.html`
 
-The first tab is used only for the opening frame. Tabs 2 through 4 are the actual product demonstration.
+The first tab is used only for the opening frame. Tabs 2 and 3 are the judged product demonstration. Keep `https://ideation-handshake.vercel.app/chatgpt.html` closed during the final take. NimGTP is an optional private-note surface, not the source of the credential shown in this Identity flow.
 
 Do not keep Devpost, GitHub, the terminal, Vercel, email, or private API settings open in the recorded browser. If an architecture frame is needed, insert the diagram below during editing rather than changing to source code mid-demo.
 
@@ -64,8 +63,7 @@ The recording is ready only when all of these are true:
 - The checkout is the current `develop` branch.
 - `npm test` passes.
 - `npm run build` passes.
-- `GET /api/chat/status` reports chat available, and NimGTP saves the peanut memory through the server-side Groq route.
-- A rehearsal completes chat, scope approval, kitchen response, revocation, and recipient lock.
+- A rehearsal completes scope approval, kitchen response, revocation, and recipient lock.
 - Only the peanut constraint is present and selected.
 - Browser notifications, bookmarks, password prompts, and unrelated tabs are hidden.
 
@@ -79,23 +77,17 @@ lsof -i:4173
 npm start
 ```
 
-If port 4173 is occupied, stop only the known old demo process or use another explicit port. Restarting the local server clears its in-memory demo state. Reload all four tabs after the restart.
+If port 4173 is occupied, stop only the known old demo process or use another explicit port. Restarting the local server clears its in-memory demo state. Reload all three tabs after the restart.
 
 Verified state on 2026-08-12:
 
-- Repository tests: 148 passed, 0 failed.
-- Build: passed.
-- Type check for the deployable API surface: passed.
-- Public landing, NimGTP, Handshake, and Fieldline pages: HTTP 200 with the expected page titles.
-- Public chat status: available. Live Groq request: HTTP 200 with one peanut constraint.
-- Public `POST /api/demo`: HTTP 201.
-- A complete public browser rehearsal passed before the latest Fieldline interface merge. The merged production build now serves the Fieldline browser module correctly, but the final automated headless run stalled in the browser runner during recipient navigation. Run the manual rehearsal in the hard preflight gates once before recording.
+- Re-run the checks and public rehearsal after the final deployment before recording. Do not quote this file as live evidence.
 
 ## Final demonstration state
 
 Use one fact, one order, one time window, and one restaurant response:
 
-- Fact: severe peanut allergy or peanut constraint.
+- Fact: Peanut avoidance requirement, issued by Cedar Health Clinic as a local demo credential.
 - Order context: Pad Thai, order `#A1024`.
 - Recipient: Fieldline restaurant operations.
 - Purpose: prepare this restaurant order.
@@ -110,11 +102,9 @@ Do not add milk, vegetarian preference, or another allergy during the video. The
 Use this as a simple inserted frame for about 15 seconds:
 
 ```text
-NimGTP and server-side Groq chat
+Cedar Health Clinic demo issuer
       |
-local Egoist-style plugin and MCP tools
-      |
-local Passport vault
+credential-backed peanut avoidance requirement
       |
 Handshake consent and versioned /api/v1 service
       |
@@ -123,7 +113,7 @@ Fieldline restaurant verifier
 
 The API implementation includes an authenticated `/api/v1` boundary for passports, handshakes, grants, decisions, acknowledgements, receipts, and revocations. The browser proof also has local demo routes. Production configuration is designed for Neon Postgres and AWS KMS through Vercel OIDC, and it fails closed when required production settings are absent.
 
-Groq is active for the public proof, and its key stays in Vercel's sensitive environment storage. If the provider is unavailable, NimGTP uses the explicitly local dietary-memory adapter so the judged consent flow still runs. No secret may appear in the browser, recording, repository, or Devpost text. Rotate the current key after recording because it was shared in chat during setup.
+Groq is configured only for the optional NimGTP private-note surface, and its key stays in Vercel's sensitive environment storage. Self-reported NimGTP notes are not accepted as the credential shown in the judged flow. No secret may appear in the browser, recording, repository, or Devpost text. Rotate the current key after recording because it was shared in chat during setup.
 
 ## Exact video plan
 
@@ -133,35 +123,35 @@ Record the screen demonstration once without talking. Then record Nihar and Vach
 
 ### 0:00 to 0:16, problem and entry
 
-**Screen:** Root landing page. Keep the headline and Identity track label visible. Do not click yet.
+**Screen:** Demo landing page. Keep the headline and Identity track label visible. Do not click yet.
 
 **Nihar:**
 
 > A restaurant needs to know about a serious dietary constraint, but it does not need a person's whole profile forever. Egoist Handshake lets a diner disclose one selected fact to one restaurant for one order, then take that access back.
 
-### 0:16 to 0:38, fact enters the passport
+### 0:16 to 0:38, credential source
 
-**Screen:** Switch to NimGTP. Type exactly: `I have a severe peanut allergy. Save that to my AI Passport.` Wait for the response and the passport-memory confirmation.
+**Screen:** Switch to Handshake. Pause on the credential-backed fact card, issuer, local demo status, and never-shared list.
 
 **Nihar:**
 
-> I tell our local ChatGPT-like client one fact: I have a severe peanut allergy. Our local Egoist-style plugin identifies that memory and writes it to the passport vault. The diner has not shared it with the restaurant yet.
+> Cedar Health Clinic is a clearly labeled demo issuer. It provides one peanut avoidance requirement, not a medical record. The card also says what will never travel: diagnosis, medical records, chat history, and other dietary notes.
 
 ### 0:38 to 1:02, the judged AI Passport moment
 
-**Screen:** Switch to Handshake. Let the peanut constraint appear. Keep only that field selected. Set the expiry to 15 minutes from now. Pause so the recipient, purpose, exact field, and expiry can be read. Click **Approve this exact scope**.
+**Screen:** Stay on Handshake. Set the expiry to 15 minutes from now. Pause so the issuer, recipient, purpose, exact field, and expiry can be read. Click **Approve this exact scope**.
 
 **Nihar:**
 
-> This is the AI Passport decision. Fieldline is asking for the peanut constraint only, for this order, until this exact time. Nothing else in the passport travels. I can deny the request, approve this scope, or revoke it later. I will approve it now.
+> This is the AI Passport decision. Fieldline is asking for the peanut avoidance requirement only, for this order, until this exact time. A private NimGTP note cannot become a credential. I can deny the request, approve this scope, or revoke it later. I will approve it now.
 
 ### 1:02 to 1:31, recipient response
 
-**Screen:** Switch to Fieldline. Pause on **Allergy scope active** and the one approved constraint. Select **Request preparation change**. Enter `Use a dedicated surface and replace the peanut garnish.` Click **Record kitchen decision**.
+**Screen:** Switch to Fieldline. Pause on **Verified order fact active**, the one approved fact, and the demo issuer. Select **Request preparation change**. Enter `Use a dedicated surface and replace the peanut garnish.` Click **Record kitchen decision**.
 
 **Vachan:**
 
-> Fieldline now sees one approved constraint, not a permanent customer profile. The permission is tied to Pad Thai order A1024 and its remaining time. The kitchen cannot silently treat disclosure as a guarantee. It records a response, here a required preparation change, and the diner can see that response.
+> Fieldline now sees one verified order fact, not a permanent customer profile. The permission is tied to Pad Thai order A1024 and its remaining time. The kitchen cannot silently treat disclosure as a guarantee. It records a response, here a required preparation change, and the diner can see that response.
 
 ### 1:31 to 1:50, revocation has an effect
 
@@ -177,7 +167,7 @@ Record the screen demonstration once without talking. Then record Nihar and Vach
 
 **Nihar:**
 
-> NimGTP calls Groq through our server-side chat API, so the key never reaches the browser. Our versioned Handshake API handles passports, scoped grants, decisions, acknowledgements, expiry, and revocation. We did not have access to a documented Egoist production API, so our local Egoist-style adapter stands in for that connection. With hosted access, only that adapter changes.
+> The judged fact comes from our clearly labeled local demo issuer, not from chat memory. Our versioned Handshake API handles passports, scoped grants, decisions, acknowledgements, expiry, and revocation. We did not have access to a documented Egoist production API, so our local AI Passport adapter stands in for that connection. Groq powers only the optional private-note client through a server-side route, so its key never reaches the browser.
 
 ### 2:13 to 2:25, close
 
@@ -192,7 +182,7 @@ Record the screen demonstration once without talking. Then record Nihar and Vach
 ### Nihar
 
 - Open with the user problem and track fit.
-- Drive NimGTP and the Handshake consent screen.
+- Drive the Handshake consent screen.
 - Explain minimum disclosure, purpose, expiry, and revocation choices.
 - Give the honest API and Egoist-access explanation.
 - Control the recorded browser so Vachan can focus on delivery.
@@ -210,7 +200,7 @@ Both presenters should say **Fieldline**, **one order**, and **one approved cons
 
 Use this answer in the video or judge questions:
 
-> We did not have access to a documented Egoist production API during the build. We therefore created the boundary we would need: a local Egoist-style memory plugin, MCP tools for reading and writing selected passport constraints, and a versioned Handshake API for grants and recipient responses. We are demonstrating that adapter in this browser-local proof, not claiming an Egoist-hosted connection. With production access, the hosted passport provider replaces the local adapter while the consent, scoping, decision, expiry, and revocation rules remain.
+> We did not have access to a documented Egoist production API during the build. We therefore created the boundary we would need: a clearly labeled local demo issuer, a local AI Passport adapter, MCP tools for private notes, and a versioned Handshake API for grants and recipient responses. We are demonstrating that adapter in this browser-local proof, not claiming an Egoist-hosted connection. With production access, the hosted passport provider replaces the local adapter while the consent, scoping, decision, expiry, and revocation rules remain.
 
 Do not say, `We could not finish because Egoist gave us no API.` The product is still a complete local Build-lane proof. The missing hosted connector is a named integration boundary, not a hidden failure.
 
@@ -281,4 +271,4 @@ Do not say, `We could not finish because Egoist gave us no API.` The product is 
 
 ## Final readiness decision
 
-The product links and script are ready for the judged recording. Live routes, Groq chat, the Handshake API, the production browser modules, tests, type checking, and the build pass. Start the final take with cleared site data, reload all four tabs, and run one manual rehearsal immediately before recording. Rotate the Groq key after the final take.
+The product links and script are ready for the judged recording after the hard preflight gates pass on the final deployment. Start the final take with cleared site data, reload all three tabs, and run one rehearsal immediately before recording. Rotate the Groq key after the final take.
