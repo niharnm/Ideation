@@ -3,6 +3,7 @@ export * from "./claim-composer.ts";
 export * from "./claimant-receipt.ts";
 export * from "./decision-event.ts";
 export * from "./decision-policy.ts";
+export * from "./egoist-mcp-server.ts";
 export * from "./handshake-event.ts";
 export * from "./operator-demo.ts";
 export * from "./passport-flow.ts";

@@ -101,6 +101,19 @@
               <h1>A recipient is asking to use selected claimant fields.</h1>
               <p class="intro">Review the requester, purpose, fields, and exact end time before you choose.</p>
             </div>
+            <!-- Egoist MCP Server Hub Inspector -->
+            <div class="mcp-card" style="margin: 20px 30px 0; padding: 16px 18px; border: 1px solid #cce3f5; border-radius: 14px; background: #f0f7ff;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <strong style="color: #1a4971; font-size: 13px; text-transform: uppercase; letter-spacing: .05em;">🤖 Egoist MCP Server Hub (ChatGPT Tool Call)</strong>
+                <span style="font-size: 11px; background: #dbebfa; color: #1a4971; padding: 2px 8px; border-radius: 6px; font-weight: 600;">MCP Connected</span>
+              </div>
+              <p style="margin: 0 0 10px; font-size: 13px; color: #335c81; line-height: 1.4;">ChatGPT sends tool calls to Egoist MCP to update your Passport Vault. DoorDash reads from Egoist automatically with zero direct connection.</p>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="mcp-input" class="input-text" placeholder="Type prompt to ChatGPT: 'I am severely allergic to peanuts and gluten'..." style="font-size: 13px; padding: 8px 10px;" />
+                <button type="button" id="mcp-submit-btn" class="button" style="min-height: 38px; padding: 0 14px; font-size: 13px; background: #1a4971; color: white; border: none; border-radius: 8px; white-space: nowrap;">Send MCP Tool Call</button>
+              </div>
+              <div id="mcp-status" style="margin-top: 8px; font-size: 12px; color: #2e6d4d; font-weight: 600;" hidden></div>
+            </div>
             <div class="details">
               <div class="detail">
                 <p class="label">Who is asking</p>
