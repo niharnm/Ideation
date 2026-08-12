@@ -1,115 +1,38 @@
-import { processRecipientRequest } from "/src/recipient-console.ts";
 import {
-  evaluateUniversalAllergyPolicy,
-} from "/src/universal-policy-engine.ts";
+  processRecipientRequest,
+  createAcceptDecisionEvent,
+  createRequiredChangeDecisionEvent,
+  createDeclineDecisionEvent,
+  createCannotDetermineDecisionEvent,
+  recordRecipientDecision,
+} from "/src/recipient-console.ts";
+import { evaluateUniversalAllergyPolicy } from "/src/universal-policy-engine.ts";
 import {
   HANDSHAKE_CLAIM_STORAGE_KEY,
   HANDSHAKE_EVENT_LEDGER_STORAGE_KEY,
   readHandshakeEventLedger,
 } from "/src/passport-flow.ts";
 
-const SAMPLE_DISH_PROFILES = {
-  "pad-thai": {
-    id: "pad-thai",
-    name: "Pad Thai",
-    ingredients: [
-      { id: "ing-rice-noodles", name: "Rice Noodles", allergens: [], isVerifiedSupplier: true },
-      { id: "ing-tofu", name: "Tofu", allergens: [], isVerifiedSupplier: true },
-      { id: "ing-peanuts", name: "Peanuts", allergens: ["allergen.peanut"], isVerifiedSupplier: true },
-      { id: "ing-soy-sauce", name: "Soy Sauce", allergens: ["allergen.gluten", "allergen.soy"], isVerifiedSupplier: true },
-    ],
-    allergens: ["allergen.peanut", "allergen.gluten", "allergen.soy"],
-    substitutions: [
-      {
-        id: "sub-tamari",
-        originalIngredientId: "ing-soy-sauce",
-        originalIngredientName: "Soy Sauce",
-        replacementIngredientId: "ing-tamari",
-        replacementIngredientName: "Tamari GF Soy Sauce",
-        description: "Substitute soy sauce with Tamari GF Soy Sauce",
-        removesAllergens: ["allergen.gluten"],
-      },
-      {
-        id: "sub-no-peanuts",
-        originalIngredientId: "ing-peanuts",
-        originalIngredientName: "Peanuts",
-        replacementIngredientId: "ing-none",
-        replacementIngredientName: "Omit Peanuts",
-        description: "Omit peanuts from dish preparation",
-        removesAllergens: ["allergen.peanut"],
-      },
-    ],
-    hasUnverifiedSuppliers: false,
-  },
-  "green-curry": {
-    id: "green-curry",
-    name: "Green Curry",
-    ingredients: [
-      { id: "ing-coconut-milk", name: "Coconut Milk", allergens: ["allergen.tree_nut"], isVerifiedSupplier: true },
-      { id: "ing-curry-paste", name: "Uncertified Special Curry Paste", allergens: [], isVerifiedSupplier: false },
-      { id: "ing-bamboo", name: "Bamboo Shoots", allergens: [], isVerifiedSupplier: true },
-    ],
-    allergens: ["allergen.tree_nut"],
-    substitutions: [],
-    hasUnverifiedSuppliers: true,
-  },
-  "peanut-noodle-bowl": {
-    id: "peanut-noodle-bowl",
-    name: "Peanut Noodle Bowl",
-    ingredients: [
-      { id: "ing-egg-noodles", name: "Egg Noodles", allergens: ["allergen.gluten", "allergen.egg"], isVerifiedSupplier: true },
-      { id: "ing-peanut-sauce", name: "Peanut Sauce", allergens: ["allergen.peanut"], isVerifiedSupplier: true },
-    ],
-    allergens: ["allergen.peanut", "allergen.gluten", "allergen.egg"],
-    substitutions: [],
-    hasUnverifiedSuppliers: false,
-  },
-  "gf-noodle-bowl": {
-    id: "gf-noodle-bowl",
-    name: "Gluten-Free Noodle Bowl",
-    ingredients: [
-      { id: "ing-rice-noodles", name: "Rice Noodles", allergens: [], isVerifiedSupplier: true },
-      { id: "ing-tamari", name: "Tamari GF Soy Sauce", allergens: [], isVerifiedSupplier: true },
-    ],
-    allergens: [],
-    substitutions: [],
-    hasUnverifiedSuppliers: false,
-  },
-  "eu-14-sampler": {
-    id: "eu-14-sampler",
-    name: "EU 14 & Custom Sampler",
-    ingredients: [
-      { id: "ing-mustard-seed", name: "Mustard Seeds", allergens: ["allergen.mustard"], isVerifiedSupplier: true },
-      { id: "ing-celery-root", name: "Celery Root", allergens: ["allergen.celery"], isVerifiedSupplier: true },
-      { id: "ing-lupin-flour", name: "Lupin Flour", allergens: ["allergen.lupin"], isVerifiedSupplier: true },
-      { id: "ing-beef-stock", name: "Beef Stock", allergens: ["allergen.alpha_gal"], isVerifiedSupplier: true },
-      { id: "ing-wine-reduction", name: "Wine Reduction", allergens: ["allergen.sulfite"], isVerifiedSupplier: true },
-    ],
-    allergens: ["allergen.mustard", "allergen.celery", "allergen.lupin", "allergen.alpha_gal", "allergen.sulfite"],
-    substitutions: [
-      {
-        id: "sub-veggie-stock",
-        originalIngredientId: "ing-beef-stock",
-        originalIngredientName: "Beef Stock",
-        replacementIngredientId: "ing-veggie-stock",
-        replacementIngredientName: "Organic Vegetable Broth",
-        description: "Substitute beef stock with vegetable broth to eliminate Alpha-Gal",
-        removesAllergens: ["allergen.alpha_gal"],
-      },
-    ],
-    hasUnverifiedSuppliers: false,
-  },
+const RECIPIENT_ID = "recipient-1";
+const SAMPLE_RECIPIENT_DATA = { "order.constraint.peanut": "Peanut allergy" };
+const PAD_THAI = {
+  id: "pad-thai",
+  name: "Pad Thai",
+  ingredients: [
+    { id: "rice-noodles", name: "Rice noodles", allergens: [], isVerifiedSupplier: true },
+    { id: "peanuts", name: "Peanuts", allergens: ["allergen.peanut"], isVerifiedSupplier: true },
+  ],
+  allergens: ["allergen.peanut"],
+  substitutions: [{
+    id: "omit-peanuts",
+    originalIngredientId: "peanuts",
+    originalIngredientName: "peanuts",
+    replacementIngredientId: "none",
+    replacementIngredientName: "no peanuts",
+    removesAllergens: ["allergen.peanut"],
+  }],
+  hasUnverifiedSuppliers: false,
 };
-
-// Sample recipient database data
-const sampleRecipientData = {
-  "order.constraint.peanut": "Severe Peanut Allergy (No Peanuts)",
-  "allergen.peanut": "Peanut Allergy",
-  "allergen.gluten": "Gluten Sensitivity",
-  "allergen.mustard": "Mustard Allergy",
-  "allergen.alpha_gal": "Alpha-Gal Allergy",
-};
-const LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY = "handshake:demo-linked-events:v1";
 
 const dependencies = {
   storage: window.localStorage,
@@ -118,386 +41,263 @@ const dependencies = {
   },
 };
 
-const details = document.querySelector(".details");
-const emptyState = document.querySelector("#empty-state");
-const decisionCard = document.querySelector("#decision-card");
-const outcomeCard = document.querySelector("#outcome-card");
-const acknowledgementSection = document.querySelector("#acknowledgement-section");
-const acknowledgementForm = document.querySelector("#acknowledgement-form");
-const previewNotice = document.querySelector("#preview-notice");
-const decisionForm = document.querySelector("#decision-form");
-const errorView = document.querySelector("#recipient-error");
+const scopeCard = document.querySelector("#scope-card");
+const scopeTitle = document.querySelector("#scope-title");
+const scopeState = document.querySelector("#scope-state");
+const scopeBody = document.querySelector("#scope-body");
+const kitchenIntro = document.querySelector("#kitchen-intro");
+const actionButtons = [...document.querySelectorAll(".action")];
+const decisionLabel = document.querySelector("#decision-label");
+const decisionNote = document.querySelector("#decision-note");
+const recordButton = document.querySelector("#record-decision");
+const recordNote = document.querySelector("#record-note");
+const decisionNotice = document.querySelector("#decision-notice");
+const historyList = document.querySelector("#history-list");
 
-let activeRequest = null;
-let activeDecision = null;
-let currentTab = "accept";
-let selectedDishId = "pad-thai";
+let currentWorkspace = null;
+let selectedAction = "required_change";
 
-function showError(message) {
-  errorView.textContent = message;
-  errorView.hidden = false;
+function sameDataScope(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function hasActiveGrant(events, request) {
-  const now = Date.now();
-  const startsAt = Date.parse(request.dataScope.validFrom);
-  const endsAt = Date.parse(request.dataScope.validUntil);
-  const hasTerminalEvent = events.some(
-    (event) =>
-      event.handshakeId === request.handshakeId &&
-      (event.type === "expiry" || event.type === "revocation"),
-  );
-  return now >= startsAt && now < endsAt && !hasTerminalEvent;
-}
-
-function findActiveRequest() {
+function findWorkspaceState() {
   const events = readHandshakeEventLedger(dependencies.storage).events;
-  const requests = events.filter((event) => event.type === "request").reverse();
+  const requests = events
+    .filter((event) => event.type === "request" && event.payload.recipient.id === RECIPIENT_ID)
+    .reverse();
 
-  for (const requestEvent of requests) {
-    const consentEvent = events.find(
-      (event) =>
-        event.type === "consent" &&
-        event.handshakeId === requestEvent.handshakeId &&
-        event.payload.choice === "approve" &&
-        event.payload.recipientId === requestEvent.payload.recipient.id,
+  for (const request of requests) {
+    const consent = events.find((event) =>
+      event.type === "consent" &&
+      event.handshakeId === request.handshakeId &&
+      event.payload.choice === "approve" &&
+      event.payload.recipientId === RECIPIENT_ID &&
+      sameDataScope(event.dataScope, request.dataScope),
     );
-    if (!consentEvent || !hasActiveGrant(events, requestEvent)) {
-      continue;
-    }
-    if (JSON.stringify(requestEvent.dataScope) !== JSON.stringify(consentEvent.dataScope)) {
-      continue;
-    }
-    return processRecipientRequest(requestEvent, consentEvent, sampleRecipientData);
-  }
-  return null;
-}
+    if (!consent) continue;
 
-function resetResponseState() {
-  activeDecision = null;
-  outcomeCard.hidden = true;
-  acknowledgementSection.hidden = true;
-  previewNotice.hidden = true;
-  decisionForm.querySelectorAll("button").forEach((button) => {
-    button.disabled = false;
-  });
-  acknowledgementForm.reset();
-  acknowledgementForm.querySelectorAll("input, select, textarea, button").forEach((control) => {
-    control.disabled = false;
-  });
-  errorView.hidden = true;
-}
-
-function renderEmptyState() {
-  activeRequest = null;
-  details.hidden = true;
-  emptyState.hidden = false;
-  decisionCard.hidden = true;
-  resetResponseState();
-}
-
-function selectTab(tabName) {
-  currentTab = tabName;
-  tabButtons.forEach((b) => {
-    if (b.dataset.tab === tabName) {
-      b.classList.add("active");
-    } else {
-      b.classList.remove("active");
-    }
-  });
-
-  tabPanels.forEach((panel) => {
-    panel.hidden = panel.id !== `tab-panel-${tabName}`;
-  });
-}
-
-// Dish Selector Switcher
-const dishSelect = document.querySelector("#dish-select");
-if (dishSelect) {
-  dishSelect.addEventListener("change", (e) => {
-    selectedDishId = e.target.value;
-    renderRequest();
-  });
-}
-
-function renderRequest() {
-  const request = findActiveRequest();
-  if (!request) {
-    renderEmptyState();
-    return;
-  }
-
-  activeRequest = request;
-  details.hidden = false;
-  emptyState.hidden = true;
-  decisionCard.hidden = false;
-  resetResponseState();
-
-  document.querySelector("#handshake-id").textContent = activeRequest.handshakeId;
-  document.querySelector("#claimant-id").textContent = activeRequest.claimantId;
-  document.querySelector("#purpose").textContent = activeRequest.purpose;
-  document.querySelector("#consent-choice").textContent = activeRequest.consentChoice.toUpperCase();
-  document.querySelector("#field-count").textContent = String(activeRequest.scopedFields.length);
-
-  // Render Scoped Fields Card List
-  const container = document.querySelector("#scoped-fields-container");
-  container.replaceChildren();
-
-  if (activeRequest.scopedFields.length === 0) {
-    const emptyMsg = document.createElement("p");
-    emptyMsg.style.color = "#65645c";
-    emptyMsg.textContent = "No scoped fields available (consent denied or empty scope).";
-    container.append(emptyMsg);
-  } else {
-    for (const field of activeRequest.scopedFields) {
-      const card = document.createElement("div");
-      card.className = "field-card";
-
-      const header = document.createElement("div");
-      header.className = "field-card-header";
-
-      const label = document.createElement("span");
-      label.className = "field-label";
-      label.textContent = field.label;
-
-      const idTag = document.createElement("span");
-      idTag.className = "field-id";
-      idTag.textContent = field.id;
-
-      header.append(label, idTag);
-
-      const val = document.createElement("div");
-      val.className = "field-val";
-      val.textContent = field.value !== undefined ? String(field.value) : "(No value provided)";
-
-      card.append(header, val);
-      container.append(card);
-    }
-  }
-
-  // Universal Policy Engine Evaluation Logic
-  const dish = SAMPLE_DISH_PROFILES[selectedDishId] || SAMPLE_DISH_PROFILES["pad-thai"];
-  const requestedAllergies = activeRequest.scopedFields.map((f) => ({
-    id: f.id,
-    label: f.label,
-    requireDedicatedSurface: true,
-  }));
-
-  const kitchenCapabilities = { dedicatedPrepSurface: true };
-  const evalResult = evaluateUniversalAllergyPolicy(dish, requestedAllergies, kitchenCapabilities);
-
-  // Render Severity Badges
-  const badgesContainer = document.querySelector("#severity-badges-container");
-  if (badgesContainer) {
-    badgesContainer.replaceChildren();
-    for (const badge of evalResult.severityBadges) {
-      const el = document.createElement("span");
-      el.className = `severity-badge ${badge.severity}`;
-      el.textContent = badge.badgeLabel;
-      badgesContainer.append(el);
-    }
-  }
-
-  // Render Universal Policy Evaluation Rationale & Outcome
-  const titleEl = document.querySelector("#policy-eval-title");
-  const rationaleEl = document.querySelector("#policy-eval-rationale");
-
-  if (titleEl && rationaleEl) {
-    titleEl.textContent = `Policy Outcome: ${evalResult.response.toUpperCase().replace("_", " ")} (Dish: ${dish.name})`;
-    rationaleEl.textContent = evalResult.rationale;
-  }
-
-  // Auto-switch decision tabs & prefill rationale based on policy evaluation
-  selectTab(evalResult.response);
-
-  if (evalResult.response === "accept") {
-    const acceptInput = document.querySelector("#accept-rationale");
-    if (acceptInput) acceptInput.value = evalResult.rationale;
-  } else if (evalResult.response === "required_change") {
-    const reqRationaleInput = document.querySelector("#req-change-rationale");
-    const reqListInput = document.querySelector("#req-change-list");
-    if (reqRationaleInput) reqRationaleInput.value = evalResult.rationale;
-    if (reqListInput) reqListInput.value = evalResult.requiredChanges.join("\n");
-  } else if (evalResult.response === "decline") {
-    const declineInput = document.querySelector("#decline-rationale");
-    if (declineInput) declineInput.value = evalResult.rationale;
-  } else if (evalResult.response === "cannot_determine") {
-    const cannotDetInput = document.querySelector("#cannot-determine-reason");
-    if (cannotDetInput) cannotDetInput.value = evalResult.rationale;
-  }
-}
-
-const tabButtons = document.querySelectorAll(".tab-button");
-const tabPanels = document.querySelectorAll(".tab-panel");
-tabButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const tabName = button.dataset.tab;
-    currentTab = tabName;
-    tabButtons.forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
-    tabPanels.forEach((panel) => {
-      panel.hidden = panel.id !== `tab-panel-${tabName}`;
-    });
-  });
-});
-
-async function decisionForCurrentTab() {
-  const {
-    createAcceptDecisionEvent,
-    createRequiredChangeDecisionEvent,
-    createDeclineDecisionEvent,
-    createCannotDetermineDecisionEvent,
-  } = await import("/src/recipient-console.ts");
-  const common = {
-    handshakeId: activeRequest.handshakeId,
-    recipientId: activeRequest.recipientId,
-    dataScope: activeRequest.dataScope,
-  };
-  switch (currentTab) {
-    case "accept":
-      return createAcceptDecisionEvent({
-        ...common,
-        rationale: document.querySelector("#accept-rationale").value.trim() || "Peanut constraint confirmed for this order.",
-      });
-    case "required_change": {
-      const requiredChanges = document.querySelector("#req-change-list").value
-        .split("\n")
-        .map((value) => value.trim())
-        .filter(Boolean);
-      return createRequiredChangeDecisionEvent({
-        ...common,
-        rationale: document.querySelector("#req-change-rationale").value.trim() || "A preparation change is needed before the order can proceed.",
-        requiredChanges: requiredChanges.length > 0
-          ? requiredChanges
-          : ["Confirm the approved ingredient substitution."],
-      });
-    }
-    case "decline":
-      return createDeclineDecisionEvent({
-        ...common,
-        rationale: document.querySelector("#decline-rationale").value.trim() || "The kitchen cannot safely meet the peanut constraint for this order.",
-      });
-    case "cannot_determine":
-      return createCannotDetermineDecisionEvent({
-        ...common,
-        reason: document.querySelector("#cannot-determine-reason").value.trim() || "Ingredient information is unavailable for this order.",
-      });
-    default:
-      throw new Error("Unsupported decision response.");
-  }
-}
-
-function showOutcome(decisionEvent) {
-  outcomeCard.hidden = false;
-  const badge = document.querySelector("#status-badge");
-  badge.className = `status-badge ${decisionEvent.payload.response}`;
-  badge.textContent = `RESPONSE: ${decisionEvent.payload.response.replaceAll("_", " ")}`;
-  document.querySelector("#outcome-heading").textContent = `Decision: ${decisionEvent.payload.response.replaceAll("_", " ")}`;
-  document.querySelector("#outcome-rationale").textContent = `Rationale: ${decisionEvent.payload.rationale}`;
-
-  const changesBox = document.querySelector("#required-changes-box");
-  const changesList = document.querySelector("#required-changes-list");
-  if (decisionEvent.payload.requiredChanges) {
-    changesList.replaceChildren(...decisionEvent.payload.requiredChanges.map((change) => {
-      const item = document.createElement("li");
-      item.textContent = change;
-      return item;
-    }));
-    changesBox.hidden = false;
-  } else {
-    changesBox.hidden = true;
-  }
-  document.querySelector("#event-json").textContent = JSON.stringify(decisionEvent, null, 2);
-  acknowledgementSection.hidden = false;
-  outcomeCard.scrollIntoView({ behavior: "smooth" });
-}
-
-decisionForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  errorView.hidden = true;
-  if (!activeRequest) {
-    renderEmptyState();
-    return;
-  }
-  try {
-    activeDecision = await decisionForCurrentTab();
-    const { recordRecipientDecision } = await import("/src/recipient-console.ts");
-    recordRecipientDecision(activeDecision, dependencies);
-    decisionForm.querySelectorAll("button").forEach((button) => {
-      button.disabled = true;
-    });
-    showOutcome(activeDecision);
-  } catch (error) {
-    showError(`Decision was not recorded: ${error instanceof Error ? error.message : String(error)}`);
-  }
-});
-
-acknowledgementForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  errorView.hidden = true;
-  if (!activeRequest || !activeDecision) {
-    return;
-  }
-  const roleName = document.querySelector("#acknowledger-role").value.trim();
-  if (!roleName) {
-    return;
-  }
-  try {
-    const { buildAcknowledgementEvent } = await import("/src/acknowledgement-event.ts");
-    const acknowledgement = buildAcknowledgementEvent({
-      handshakeId: activeRequest.handshakeId,
-      actorId: activeRequest.recipientId,
-      roleName,
-      decisionEventId: activeDecision.eventId,
-      outcome: document.querySelector("#acknowledgement-outcome").value,
-      note: document.querySelector("#acknowledgement-note").value.trim() || undefined,
-      dataScope: activeRequest.dataScope,
-    });
-    const { assertAcknowledgementCanBeRecorded } = await import("/src/recipient-console.ts");
-    assertAcknowledgementCanBeRecorded(
-      acknowledgement,
-      activeDecision,
-      activeRequest.recipientId,
-      dependencies,
+    const terminal = events.find((event) =>
+      event.handshakeId === request.handshakeId &&
+      (event.type === "revocation" || event.type === "expiry"),
     );
-    const localPreview = {
-      handshakeId: activeRequest.handshakeId,
-      events: [activeDecision, acknowledgement],
+    if (terminal) {
+      return { phase: terminal.type === "revocation" ? "revoked" : "expired", events, request, consent, terminal };
+    }
+
+    const now = Date.now();
+    if (now < Date.parse(request.dataScope.validFrom) || now >= Date.parse(request.dataScope.validUntil)) {
+      return { phase: "expired", events, request, consent };
+    }
+
+    const decision = events.find((event) => event.handshakeId === request.handshakeId && event.type === "decision");
+    return {
+      phase: "active",
+      events,
+      request,
+      consent,
+      decision,
+      recipientRequest: processRecipientRequest(request, consent, SAMPLE_RECIPIENT_DATA),
     };
-    window.localStorage.setItem(
-      LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY,
-      JSON.stringify(localPreview),
+  }
+
+  return { phase: "locked", events };
+}
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function formatRemaining(validUntil) {
+  const minutes = Math.max(0, Math.ceil((Date.parse(validUntil) - Date.now()) / 60_000));
+  return `${minutes} min remaining`;
+}
+
+function setScopeState(phase) {
+  scopeCard.className = `scope-card ${phase}`;
+}
+
+function renderScope(workspace) {
+  if (workspace.phase === "active") {
+    const field = workspace.recipientRequest.scopedFields[0];
+    setScopeState("active");
+    scopeTitle.textContent = "Allergy scope active";
+    scopeState.textContent = formatRemaining(workspace.recipientRequest.validUntil);
+    const detail = element("div", "scope-detail");
+    detail.append(
+      element("span", "scope-detail-icon", "✓"),
+      (() => {
+        const copy = document.createElement("div");
+        copy.append(element("span", "scope-label", "Approved constraint"), element("p", "", String(field?.value ?? field?.label ?? "Approved constraint")));
+        return copy;
+      })(),
     );
-    window.dispatchEvent(
-      new CustomEvent("handshake:demo-linked-events", {
-        detail: localPreview.events,
-      }),
-    );
-    acknowledgementForm.querySelectorAll("input, select, textarea, button").forEach((control) => {
-      control.disabled = true;
-    });
-    previewNotice.textContent = "Local acknowledgement recorded. Any claimant result is an unverified local preview, and delivery is pending authenticated recipient transport.";
-    previewNotice.hidden = false;
+    const facts = element("div", "scope-facts");
+    for (const [label, value] of [
+      ["Purpose", workspace.recipientRequest.purpose],
+      ["Order context", "Pad Thai · #A1024"],
+      ["Access", formatRemaining(workspace.recipientRequest.validUntil)],
+      ["Customer data", "One approved constraint"],
+    ]) {
+      const fact = element("div", "scope-fact");
+      fact.append(element("span", "", label), element("strong", "", value));
+      facts.append(fact);
+    }
+    scopeBody.replaceChildren(detail, facts, element("p", "scope-note", "This permission is temporary and limited to this order. It is not a permanent customer profile."));
+    return;
+  }
+
+  const revoked = workspace.phase === "revoked";
+  setScopeState(revoked ? "revoked" : "locked");
+  scopeTitle.textContent = revoked ? "Access ended by customer" : "Permission required";
+  scopeState.textContent = revoked ? "Scope removed" : "Not shared";
+  const message = revoked
+    ? "The customer ended this order scope. Allergy detail has been removed and Fieldline cannot retrieve or use that permission for a future action."
+    : "Allergy details are unavailable. The customer has not granted a constraint for this order. Fieldline cannot view or act on allergy information without that temporary permission.";
+  scopeBody.replaceChildren(element("div", "locked-body", message));
+}
+
+function actionCopy(action) {
+  switch (action) {
+    case "accept": return ["Preparation confirmation", "Dedicated peanut-free prep surface confirmed. Peanuts omitted from this order.", "Confirm safe preparation"];
+    case "required_change": return ["Requested preparation change", "Omit peanuts and use the designated peanut-free preparation surface.", "Request preparation change"];
+    case "decline": return ["Kitchen note", "The kitchen cannot safely separate peanut handling for this order.", "Cannot safely fulfill"];
+    case "cannot_determine": return ["Supplier review note", "Supplier allergen documentation is unavailable for the selected ingredients.", "Cannot determine"];
+    default: return ["Preparation detail", "", "Record kitchen decision"];
+  }
+}
+
+function renderKitchen(workspace) {
+  const active = workspace.phase === "active";
+  const alreadyDecided = Boolean(workspace.decision);
+  const enabled = active && !alreadyDecided;
+  actionButtons.forEach((button) => {
+    button.disabled = !enabled;
+    button.classList.toggle("active", enabled && button.dataset.action === selectedAction);
+  });
+  decisionNote.disabled = !enabled;
+  recordButton.disabled = !enabled;
+  decisionNotice.hidden = true;
+
+  if (!active) {
+    kitchenIntro.textContent = workspace.phase === "revoked"
+      ? "Future kitchen actions are locked because the customer ended access."
+      : "Grant is required before a kitchen decision can use a customer constraint.";
+    decisionLabel.textContent = "Preparation detail";
+    decisionNote.value = "";
+    recordNote.textContent = workspace.phase === "revoked" ? "Access ended by customer. No further action is permitted." : "Actions unlock only for an active order scope.";
+    recordButton.textContent = "Record kitchen decision";
+    return;
+  }
+
+  if (alreadyDecided) {
+    kitchenIntro.textContent = "A kitchen decision has been recorded for this temporary order scope.";
+    decisionLabel.textContent = "Recorded preparation detail";
+    decisionNote.value = workspace.decision.payload.rationale;
+    recordNote.textContent = "One kitchen decision is recorded for this order.";
+    recordButton.textContent = "Decision recorded";
+    return;
+  }
+
+  const [label, note, buttonLabel] = actionCopy(selectedAction);
+  kitchenIntro.textContent = "Choose the kitchen outcome for the approved order scope.";
+  decisionLabel.textContent = label;
+  decisionNote.value = note;
+  recordNote.textContent = "This records a local kitchen decision for this order only.";
+  recordButton.textContent = buttonLabel;
+}
+
+function appendHistory(title, detail, ended = false) {
+  const item = element("div", `history-item${ended ? " ended" : ""}`);
+  item.append(element("span", "history-dot"));
+  const copy = document.createElement("div");
+  copy.append(element("strong", "", title), document.createTextNode(detail));
+  item.append(copy);
+  historyList.append(item);
+}
+
+function renderHistory(workspace) {
+  historyList.replaceChildren();
+  appendHistory("Order received", "Pad Thai added to the lunch queue.");
+  if (workspace.phase === "locked") {
+    appendHistory("Customer constraint not shared", "Waiting for an order-specific permission.");
+    return;
+  }
+  if (workspace.phase === "active") {
+    appendHistory("Permission active", "One customer-approved constraint is available for this order.");
+    if (workspace.decision) appendHistory("Kitchen decision recorded", "The order team recorded its preparation response.");
+    return;
+  }
+  appendHistory("Access ended by customer", "The temporary order scope was removed. Allergy detail is no longer available.", true);
+}
+
+function applyPolicyDefault(workspace) {
+  if (workspace.phase !== "active" || workspace.decision) return;
+  const evaluation = evaluateUniversalAllergyPolicy(
+    PAD_THAI,
+    workspace.recipientRequest.scopedFields.map((field) => ({ id: field.id, label: field.label, requireDedicatedSurface: true })),
+    { dedicatedPrepSurface: true },
+  );
+  selectedAction = evaluation.response;
+}
+
+function renderWorkspace() {
+  try {
+    currentWorkspace = findWorkspaceState();
+    applyPolicyDefault(currentWorkspace);
+    renderScope(currentWorkspace);
+    renderKitchen(currentWorkspace);
+    renderHistory(currentWorkspace);
   } catch (error) {
-    showError(`Acknowledgement was not recorded: ${error instanceof Error ? error.message : String(error)}`);
+    currentWorkspace = { phase: "locked" };
+    renderScope(currentWorkspace);
+    renderKitchen(currentWorkspace);
+    renderHistory(currentWorkspace);
+  }
+}
+
+function buildDecision(workspace) {
+  const common = {
+    handshakeId: workspace.recipientRequest.handshakeId,
+    recipientId: workspace.recipientRequest.recipientId,
+    dataScope: workspace.recipientRequest.dataScope,
+  };
+  const note = decisionNote.value.trim() || actionCopy(selectedAction)[1];
+  if (selectedAction === "accept") return createAcceptDecisionEvent({ ...common, rationale: note });
+  if (selectedAction === "required_change") return createRequiredChangeDecisionEvent({ ...common, rationale: note, requiredChanges: ["Omit peanuts from this Pad Thai.", "Use the designated peanut-free preparation surface."] });
+  if (selectedAction === "decline") return createDeclineDecisionEvent({ ...common, rationale: note });
+  return createCannotDetermineDecisionEvent({ ...common, reason: note });
+}
+
+actionButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!currentWorkspace || currentWorkspace.phase !== "active" || currentWorkspace.decision) return;
+    selectedAction = button.dataset.action;
+    renderKitchen(currentWorkspace);
+  });
+});
+
+recordButton.addEventListener("click", () => {
+  if (!currentWorkspace || currentWorkspace.phase !== "active" || currentWorkspace.decision) return;
+  try {
+    recordRecipientDecision(buildDecision(currentWorkspace), dependencies);
+    decisionNotice.textContent = "Kitchen decision recorded for this temporary order scope.";
+    decisionNotice.hidden = false;
+    renderWorkspace();
+  } catch (error) {
+    decisionNotice.textContent = `Decision was not recorded: ${error instanceof Error ? error.message : String(error)}`;
+    decisionNotice.hidden = false;
   }
 });
 
-renderRequest();
+renderWorkspace();
 window.addEventListener("storage", (event) => {
-  if (
-    event.key === HANDSHAKE_CLAIM_STORAGE_KEY ||
-    event.key === HANDSHAKE_EVENT_LEDGER_STORAGE_KEY
-  ) {
-    renderRequest();
-  }
+  if (event.key === HANDSHAKE_CLAIM_STORAGE_KEY || event.key === HANDSHAKE_EVENT_LEDGER_STORAGE_KEY) renderWorkspace();
 });
 window.addEventListener("handshake:event", (event) => {
   const detail = event instanceof CustomEvent ? event.detail : null;
-  if (
-    detail &&
-    ["request", "consent", "expiry", "revocation"].includes(detail.type)
-  ) {
-    renderRequest();
-  }
+  if (detail && ["request", "consent", "decision", "expiry", "revocation"].includes(detail.type)) renderWorkspace();
 });
