@@ -138,6 +138,41 @@ if (!browserCrypto?.randomUUID) {
 
 export const randomUUID = () => browserCrypto.randomUUID();
 `;
+const apiV1 = await import("./api/v1/[...path].ts");
+const demoApi = await import("./api/demo.ts");
+
+function apiConstraintsFromVault(vault) {
+  const constraints = new Map();
+  for (const allergy of vault.allergies) {
+    const id = allergy.allergenId.startsWith("allergen.")
+      ? `order.constraint.${allergy.allergenId.slice("allergen.".length)}`
+      : allergy.allergenId;
+    constraints.set(id, {
+      id,
+      label: allergy.label,
+      severity: ["severe", "moderate", "mild"].includes(allergy.severity)
+        ? allergy.severity
+        : "severe",
+      crossContaminationTolerance: allergy.crossContaminationTolerance,
+    });
+  }
+  return [...constraints.values()];
+}
+
+async function syncApiPassport(vault) {
+  const apiResponse = await demoApi.default.fetch(new Request("http://localhost/api/demo", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      action: "passport-update",
+      constraints: apiConstraintsFromVault(vault),
+    }),
+  }));
+  if (!apiResponse.ok) {
+    const payload = await apiResponse.json().catch(() => ({}));
+    throw new Error(payload.error?.message ?? "The API passport could not be updated.");
+  }
+}
 
 function browserSpecifier(specifier) {
   if (specifier === "node:crypto") {
@@ -306,6 +341,7 @@ Provide a concise, professional 1-2 sentence kitchen preparation recommendation 
       }
 
       const vault = loadUserPassportVault(serverStorage);
+      await syncApiPassport(vault);
       response.writeHead(200, { "Content-Type": "application/json" });
       response.end(JSON.stringify({
         reply: stripMemoryJsonFromReply(assistantText) || assistantText,
@@ -360,6 +396,7 @@ Provide a concise, professional 1-2 sentence kitchen preparation recommendation 
       serverMemories = [args.text.trim()];
       localPluginActive = true;
     }
+    await syncApiPassport(loadUserPassportVault(serverStorage));
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify(result));
     return;
@@ -387,6 +424,7 @@ Provide a concise, professional 1-2 sentence kitchen preparation recommendation 
       saveUserPassportVault(vault, serverStorage);
     }
 
+    await syncApiPassport(vault);
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify({
       ...vault,
@@ -408,6 +446,46 @@ Provide a concise, professional 1-2 sentence kitchen preparation recommendation 
     return;
   }
 
+  if (pathname === "/api/v1" || pathname.startsWith("/api/v1/")) {
+    const chunks = [];
+    for await (const chunk of request) {
+      chunks.push(chunk);
+    }
+    const origin = `http://${request.headers.host ?? "127.0.0.1"}`;
+    const apiRequest = new Request(`${origin}${request.url ?? "/api/v1"}`, {
+      method: request.method,
+      headers: request.headers,
+      ...(["GET", "HEAD"].includes(request.method ?? "GET")
+        ? {}
+        : { body: Buffer.concat(chunks) }),
+    });
+    const apiResponse = await apiV1.default.fetch(apiRequest);
+    const headers = Object.fromEntries(apiResponse.headers.entries());
+    response.writeHead(apiResponse.status, headers).end(
+      Buffer.from(await apiResponse.arrayBuffer()),
+    );
+    return;
+  }
+  if (pathname === "/api/demo") {
+    const chunks = [];
+    for await (const chunk of request) {
+      chunks.push(chunk);
+    }
+    const origin = `http://${request.headers.host ?? "127.0.0.1"}`;
+    const apiRequest = new Request(`${origin}${request.url ?? "/api/demo"}`, {
+      method: request.method,
+      headers: request.headers,
+      ...(["GET", "HEAD"].includes(request.method ?? "GET")
+        ? {}
+        : { body: Buffer.concat(chunks) }),
+    });
+    const apiResponse = await demoApi.default.fetch(apiRequest);
+    const headers = Object.fromEntries(apiResponse.headers.entries());
+    response.writeHead(apiResponse.status, headers).end(
+      Buffer.from(await apiResponse.arrayBuffer()),
+    );
+    return;
+  }
   const resolved = resolveRequest(pathname);
 
   if (!resolved) {

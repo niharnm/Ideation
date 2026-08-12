@@ -21,3 +21,11 @@ test("Handshake shows NimGTP poll status and an Approve shortcut", () => {
   assert.match(app, /approveButton\.click\(\)/);
   assert.match(app, /setPollStatus/);
 });
+
+test("approved Chat memories create and revoke the server-side restaurant handshake", () => {
+  assert.match(app, /order\.constraint\.\$\{constraintFamily\(allergenId\)\}/);
+  assert.match(app, /action: "passport-update"/);
+  assert.match(app, /action: "start", constraintId/);
+  assert.match(app, /setItem\(HANDSHAKE_STORAGE_KEY, handshake\.id\)/);
+  assert.match(app, /action: "revoke", handshakeId/);
+});

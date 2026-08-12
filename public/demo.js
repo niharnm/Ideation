@@ -1,12 +1,4 @@
-import {
-  HANDSHAKE_CLAIM_STORAGE_KEY,
-  HANDSHAKE_EVENT_LEDGER_STORAGE_KEY,
-  approveScopedRequest,
-  readHandshakeEventLedger,
-  readScopedClaim,
-  revokeScopedClaim,
-} from "/src/passport-flow.ts";
-
+const HANDSHAKE_STORAGE_KEY = "egoist.demo.handshake-id";
 const startButton = document.querySelector("#start-handshake");
 const revokeButton = document.querySelector("#revoke-handshake");
 const errorView = document.querySelector("#demo-error");
@@ -22,28 +14,33 @@ const previewConstraint = document.querySelector("#preview-constraint");
 const previewCopy = document.querySelector("#preview-copy");
 const previewAction = document.querySelector("#preview-action");
 
-const dependencies = {
-  storage: window.localStorage,
-  emit(event) {
-    window.dispatchEvent(new CustomEvent("handshake:event", { detail: event }));
-  },
-};
+let handshake = null;
+let busy = false;
 
-function clearError() {
-  errorView.textContent = "";
+async function api(body) {
+  const response = await fetch("/api/demo", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error?.message ?? "The Handshake API could not complete this action.");
+  return data;
 }
+
+function clearError() { errorView.textContent = ""; }
 
 function formatRemaining(validUntil) {
   const minutes = Math.max(0, Math.ceil((Date.parse(validUntil) - Date.now()) / 60_000));
   return `${minutes} min remaining`;
 }
 
-function updatePreview({ status, claim = null }) {
+function updatePreview(status, record = null) {
   previewBadge.classList.toggle("revoked", status === "revoked");
-  if (status === "active" && claim) {
+  if (status === "active" && record) {
     previewBadge.textContent = "Scope active";
-    previewTime.textContent = formatRemaining(claim.dataScope.validUntil);
-    previewConstraint.textContent = claim.dataScope.fields[0]?.label ?? "Approved constraint";
+    previewTime.textContent = formatRemaining(record.dataScope.validUntil);
+    previewConstraint.textContent = record.dataScope.fields[0]?.label ?? "Approved constraint";
     previewCopy.textContent = "Use this one constraint to evaluate this order. Access expires automatically.";
     previewCopy.classList.remove("revoked-copy");
     previewAction.textContent = "Kitchen review is ready.";
@@ -67,93 +64,87 @@ function updatePreview({ status, claim = null }) {
 }
 
 function render() {
-  const claim = readScopedClaim(dependencies.storage);
-  const decisionCount = readHandshakeEventLedger(dependencies.storage).events.filter((event) => event.type === "decision").length;
+  startButton.disabled = busy;
+  revokeButton.disabled = busy;
   statusDot.className = "status-dot";
   revokeButton.hidden = true;
-
-  if (claim?.status === "active" && Date.parse(claim.dataScope.validUntil) > Date.now()) {
+  if (handshake?.status === "active" && Date.parse(handshake.dataScope.validUntil) > Date.now()) {
+    const decision = handshake.events.find((event) => event.type === "decision");
     statusDot.classList.add("active");
     statusKicker.textContent = "Active restaurant scope";
     statusTitle.textContent = "The restaurant can review one approved constraint.";
-    statusDescription.textContent = decisionCount > 0
-      ? "A kitchen decision has been recorded in this local demo. The customer can still revoke future use at any time."
-      : "The restaurant receives only the peanut constraint for this order, then chooses how it can safely proceed.";
-    statusScope.textContent = claim.dataScope.fields.map((field) => field.label).join(", ");
-    statusAccess.textContent = formatRemaining(claim.dataScope.validUntil);
+    statusDescription.textContent = decision
+      ? "A kitchen decision is recorded in the Handshake API. You can still revoke future use at any time."
+      : `The restaurant receives only ${handshake.dataScope.fields[0]?.label ?? "the approved constraint"} for this order, then chooses how it can safely proceed.`;
+    statusScope.textContent = handshake.dataScope.fields.map((field) => field.label).join(", ");
+    statusAccess.textContent = formatRemaining(handshake.dataScope.validUntil);
     revokeButton.hidden = false;
-    updatePreview({ status: "active", claim });
+    updatePreview("active", handshake);
     return;
   }
-
-  if (claim?.status === "revoked") {
+  if (handshake?.status === "revoked") {
     statusDot.classList.add("revoked");
     statusKicker.textContent = "Customer revoked access";
     statusTitle.textContent = "The restaurant’s permission is now locked.";
-    statusDescription.textContent = "The restaurant workspace can no longer retrieve the allergy scope or make a future decision from it. The local demo keeps its event history only as unverified proof-case data.";
+    statusDescription.textContent = "The Handshake API removed the encrypted scoped value. The restaurant can no longer retrieve or use it.";
     statusScope.textContent = "No longer available";
     statusAccess.textContent = "Revoked";
-    updatePreview({ status: "revoked" });
+    updatePreview("revoked");
     return;
   }
-
   statusKicker.textContent = "Demo ready";
   statusTitle.textContent = "No restaurant scope is active.";
-  statusDescription.textContent = "Start the handshake to issue one time-bound peanut constraint to the restaurant workspace.";
+  statusDescription.textContent = "Start the handshake to issue one time-bound passport constraint through the API.";
   statusScope.textContent = "Not shared";
   statusAccess.textContent = "Waiting";
-  updatePreview({ status: "none" });
+  updatePreview("none");
 }
 
-startButton.addEventListener("click", () => {
-  clearError();
+async function load() {
+  const id = localStorage.getItem(HANDSHAKE_STORAGE_KEY);
+  if (!id) return render();
   try {
-    const existing = readScopedClaim(dependencies.storage);
-    if (existing?.status === "active") {
-      if (existing.claimantId !== "claimant-demo") {
-        errorView.textContent = "An unrelated local demo claim is active. Revoke it from its original claimant screen before starting this flow.";
-        return;
-      }
-      revokeScopedClaim("claimant-demo", dependencies, "A fresh demo handshake replaced this scope.");
-    }
-    const validFrom = new Date();
-    const validUntil = new Date(validFrom.getTime() + 15 * 60_000);
-    const result = approveScopedRequest({
-      claimantId: "claimant-demo",
-      recipient: { id: "recipient-1", displayName: "Fieldline" },
-      summary: "Use one allergy constraint to safely prepare one restaurant order.",
-      draft: {
-        purpose: "Prepare one Pad Thai order with a peanut constraint.",
-        fields: [{ id: "order.constraint.peanut", label: "Peanut allergy", selected: true }],
-        validFrom: validFrom.toISOString(),
-        validUntil: validUntil.toISOString(),
-        choice: null,
-      },
-    }, dependencies);
-    if (!result.success) {
-      errorView.textContent = result.issues.map((issue) => issue.message).join(" ");
-    }
-  } catch (error) {
-    errorView.textContent = error instanceof Error ? error.message : "The demo handshake could not be started.";
+    handshake = (await api({ action: "claimant-status", handshakeId: id })).handshake;
+  } catch {
+    localStorage.removeItem(HANDSHAKE_STORAGE_KEY);
+    handshake = null;
   }
   render();
-});
+}
 
-revokeButton.addEventListener("click", () => {
+startButton.addEventListener("click", async () => {
   clearError();
-  try {
-    revokeScopedClaim("claimant-demo", dependencies, "The customer ended restaurant access from the demo.");
-  } catch (error) {
-    errorView.textContent = error instanceof Error ? error.message : "Restaurant access could not be revoked.";
-  }
+  busy = true;
   render();
-});
-
-window.addEventListener("storage", (event) => {
-  if (event.key === HANDSHAKE_CLAIM_STORAGE_KEY || event.key === HANDSHAKE_EVENT_LEDGER_STORAGE_KEY) {
+  try {
+    const data = await api({ action: "start" });
+    handshake = data.handshake;
+    localStorage.setItem(HANDSHAKE_STORAGE_KEY, handshake.id);
+  } catch (error) {
+    errorView.textContent = error instanceof Error ? error.message : "The API handshake could not be started.";
+  } finally {
+    busy = false;
     render();
   }
 });
-window.addEventListener("handshake:event", render);
 
-render();
+revokeButton.addEventListener("click", async () => {
+  if (!handshake) return;
+  clearError();
+  busy = true;
+  render();
+  try {
+    handshake = (await api({ action: "revoke", handshakeId: handshake.id })).handshake;
+  } catch (error) {
+    errorView.textContent = error instanceof Error ? error.message : "Restaurant access could not be revoked.";
+  } finally {
+    busy = false;
+    render();
+  }
+});
+
+window.addEventListener("storage", (event) => {
+  if (event.key === HANDSHAKE_STORAGE_KEY) load();
+});
+
+load();

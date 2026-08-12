@@ -3,6 +3,14 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/v1/**/*.ts": {
+      "includeFiles": "{api/**,src/**}"
+    },
+    "api/demo.ts": {
+      "includeFiles": "{api/**,src/**}"
+    }
+  },
   "rewrites": [
     { "source": "/", "destination": "/demo.html" }
   ]
