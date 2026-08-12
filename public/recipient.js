@@ -64,8 +64,8 @@ const scopeTitle = document.querySelector("#scope-title");
 const scopeState = document.querySelector("#scope-state");
 const scopeBody = document.querySelector("#scope-body");
 const kitchenIntro = document.querySelector("#kitchen-intro");
-const actionButtons = [...document.querySelectorAll(".action")];
-const decisionLabel = document.querySelector("#decision-label");
+const actionButtons = [...document.querySelectorAll(".kitchen-act-btn")];
+const decisionLabel = document.querySelector("#decision-label") || { textContent: "" };
 const decisionNote = document.querySelector("#decision-note");
 const recordButton = document.querySelector("#record-decision");
 const recordNote = document.querySelector("#record-note");
@@ -141,35 +141,23 @@ function setScopeState(phase) {
 function renderScope(workspace) {
   if (workspace.phase === "active") {
     const field = workspace.recipientRequest.scopedFields[0];
-    const fields = workspace.recipientRequest.scopedFields;
+    const fields = workspace.recipientRequest.scopedFields || [];
+    const labels = fields.map((item) => item?.label || String(item?.value || field?.label || "Approved constraint"));
     setScopeState("active");
     scopeTitle.textContent = "Allergy scope active";
     scopeState.textContent = formatRemaining(workspace.recipientRequest.validUntil);
-    const detail = element("div", "scope-detail");
-    detail.append(
-      element("span", "scope-detail-icon", "✓"),
-      (() => {
-        const copy = document.createElement("div");
-        const labels = fields.map((item) => item?.label || String(item?.value ?? field?.label ?? "Approved constraint"));
-        copy.append(
-          element("span", "scope-label", fields.length === 1 ? "Approved constraint" : "Approved constraints"),
-          element("p", "", labels.join(", ")),
-        );
-        return copy;
-      })(),
-    );
-    const facts = element("div", "scope-facts");
-    for (const [label, value] of [
-      ["Purpose", workspace.recipientRequest.purpose],
-      ["Order context", "Pad Thai · #A1024"],
-      ["Access", formatRemaining(workspace.recipientRequest.validUntil)],
-      ["Customer data", fields.length === 1 ? "One approved constraint" : `${fields.length} approved constraints`],
-    ]) {
-      const fact = element("div", "scope-fact");
-      fact.append(element("span", "", label), element("strong", "", value));
-      facts.append(fact);
-    }
-    scopeBody.replaceChildren(detail, facts, element("p", "scope-note", "This permission is temporary and limited to this order. It is not a permanent customer profile."));
+    
+    const listWrapper = element("div", "scope-detail");
+    const countText = fields.length === 1 ? "One approved constraint" : `${fields.length} approved constraints`;
+    const labelTitle = element("span", "scope-label", countText);
+    const allergyNames = element("strong", "", labels.join(", ") || "Peanut allergy");
+    allergyNames.style.fontSize = "15px";
+    allergyNames.style.color = "#00824d";
+    allergyNames.style.display = "block";
+    allergyNames.style.marginTop = "4px";
+
+    listWrapper.append(labelTitle, allergyNames);
+    scopeBody.replaceChildren(listWrapper);
     return;
   }
 
@@ -358,15 +346,136 @@ window.addEventListener("handshake:event", (event) => {
   if (detail && ["request", "consent", "decision", "expiry", "revocation"].includes(detail.type)) renderWorkspace();
 });
 
-document.querySelectorAll(".mode button").forEach((button) => {
+// Place Order & Fake Checkout Confirmation
+const placeOrderBtn = document.querySelector("#place-order-btn");
+const orderConfirmedCard = document.querySelector("#order-confirmed-card");
+const drawerBodyContent = document.querySelector("#drawer-body-content");
+
+placeOrderBtn?.addEventListener("click", () => {
+  // Read current Passport Vault memories or create default peanut claim
+  let memories = [];
+  try {
+    const rawVault = window.localStorage.getItem("egoist.passport.vault.v1");
+    if (rawVault) {
+      const parsed = JSON.parse(rawVault);
+      memories = Object.values(parsed.allergies || {}).map((a) => a.label);
+    }
+  } catch {
+    memories = [];
+  }
+  if (memories.length === 0) memories = ["Peanut allergy"];
+
+  // Emit N1 request & consent events automatically for this order
+  const handshakeId = `handshake-${Date.now()}`;
+  const now = new Date();
+  const validUntil = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+  
+  const requestEvent = {
+    version: 1,
+    type: "request",
+    handshakeId,
+    timestamp: now.toISOString(),
+    payload: {
+      recipient: { id: RECIPIENT_ID, name: "Fieldline" },
+      purpose: "Prepare Pad Thai order with allergy constraints",
+    },
+    dataScope: {
+      fields: memories.map((m) => `order.constraint.${m.toLowerCase().replace(/[^a-z]/g, "")}`),
+      validFrom: now.toISOString(),
+      validUntil,
+    },
+  };
+
+  const consentEvent = {
+    version: 1,
+    type: "consent",
+    handshakeId,
+    timestamp: now.toISOString(),
+    payload: {
+      choice: "approve",
+      recipientId: RECIPIENT_ID,
+    },
+    dataScope: requestEvent.dataScope,
+  };
+
+  const ledgerRaw = dependencies.storage.getItem(HANDSHAKE_EVENT_LEDGER_STORAGE_KEY);
+  let ledger = { version: 1, events: [] };
+  try {
+    if (ledgerRaw) ledger = JSON.parse(ledgerRaw);
+  } catch {}
+  ledger.events.push(requestEvent, consentEvent);
+  dependencies.storage.setItem(HANDSHAKE_EVENT_LEDGER_STORAGE_KEY, JSON.stringify(ledger));
+  dependencies.storage.setItem(HANDSHAKE_CLAIM_STORAGE_KEY, JSON.stringify({ handshakeId, recipientId: RECIPIENT_ID }));
+
+  // Notify listeners and re-render workspace
+  dependencies.emit(consentEvent);
+  renderWorkspace();
+
+  // Show Order Confirmed visual card
+  if (orderConfirmedCard) {
+    orderConfirmedCard.hidden = false;
+    const confirmedDetail = document.querySelector("#confirmed-allergy-detail");
+    if (confirmedDetail) confirmedDetail.textContent = memories.join(", ");
+  }
+});
+
+// Drawer Toggle Handlers
+const cartTrigger = document.querySelector("#cart-header-trigger");
+const cartDrawer = document.querySelector("#cart-drawer");
+const drawerOverlay = document.querySelector("#drawer-overlay");
+const closeDrawerBtn = document.querySelector("#close-drawer-btn");
+
+function openCartDrawer() {
+  cartDrawer?.classList.add("open");
+  drawerOverlay?.classList.add("open");
+}
+
+function closeCartDrawer() {
+  cartDrawer?.classList.remove("open");
+  drawerOverlay?.classList.remove("open");
+}
+
+cartTrigger?.addEventListener("click", openCartDrawer);
+closeDrawerBtn?.addEventListener("click", closeCartDrawer);
+drawerOverlay?.addEventListener("click", closeCartDrawer);
+
+// Smart AI Chef Prep Suggestion via Groq API
+const smartAiBtn = document.querySelector("#smart-ai-suggest-btn");
+smartAiBtn?.addEventListener("click", async () => {
+  const fields = currentWorkspace?.recipientRequest?.scopedFields || [];
+  const decisionNote = document.querySelector("#decision-note");
+  if (!decisionNote) return;
+
+  smartAiBtn.textContent = "Asking AI Chef...";
+  try {
+    const res = await fetch("/api/smart-prep", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item: "Pad Thai · #A1024",
+        constraints: fields.map((f) => f.label || f.value || f.id),
+      }),
+    });
+    const data = await res.json();
+    if (data.suggestion) {
+      decisionNote.value = data.suggestion;
+    }
+  } catch (err) {
+    // Fallback if API fails
+  } finally {
+    smartAiBtn.textContent = "AI Chef Smart Suggestion";
+  }
+});
+
+document.querySelectorAll(".mode-btn").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".mode button").forEach((item) => {
+    document.querySelectorAll(".mode-btn").forEach((item) => {
       item.classList.toggle("is-on", item === button);
     });
   });
 });
 
-document.querySelectorAll("#filters .chip").forEach((button) => {
+document.querySelectorAll("#filters .filter-chip").forEach((button) => {
   button.addEventListener("click", () => {
     button.classList.toggle("is-on");
   });
@@ -379,37 +488,57 @@ const placeMeta = document.querySelector("#place-meta");
 placeButton?.addEventListener("click", (event) => {
   if (event.target.closest("#place-menu")) return;
   const open = placeMenu?.hidden;
-  if (placeMenu) placeMenu.hidden = !open;
+  if (placeMenu) {
+    placeMenu.hidden = !open;
+    placeMenu.classList.toggle("open", Boolean(open));
+  }
   placeButton.setAttribute("aria-expanded", String(Boolean(open)));
 });
-placeMenu?.querySelectorAll("button").forEach((option) => {
+placeMenu?.querySelectorAll(".address-opt").forEach((option) => {
   option.addEventListener("click", () => {
-    if (placeLabel) placeLabel.textContent = option.dataset.place || "Choose address";
-    if (placeMeta) placeMeta.textContent = option.dataset.meta || "ASAP · Convenience";
-    placeMenu.querySelectorAll("button").forEach((item) => {
+    if (placeLabel) placeLabel.textContent = option.dataset.place || "Delivery to Home";
+    if (placeMeta) placeMeta.textContent = option.dataset.meta || "ASAP · 15-25 min";
+    placeMenu.querySelectorAll(".address-opt").forEach((item) => {
       item.classList.toggle("is-on", item === option);
     });
     placeMenu.hidden = true;
+    placeMenu.classList.remove("open");
     placeButton?.setAttribute("aria-expanded", "false");
   });
 });
 document.addEventListener("click", (event) => {
   if (!placeButton || placeButton.contains(event.target)) return;
-  if (placeMenu) placeMenu.hidden = true;
+  if (placeMenu) {
+    placeMenu.hidden = true;
+    placeMenu.classList.remove("open");
+  }
   placeButton.setAttribute("aria-expanded", "false");
 });
 
 const cartLine = document.querySelector("#cart-line");
-document.querySelectorAll(".card .add").forEach((button) => {
+const cartCount = document.querySelector("#cart-count");
+let totalCartItems = 1;
+
+document.querySelectorAll(".food-card .add-btn").forEach((button) => {
   button.addEventListener("click", () => {
-    const card = button.closest(".card");
-    const name = card?.querySelector(".name")?.textContent?.trim();
-    const price = card?.querySelector(".price")?.textContent?.trim();
+    const card = button.closest(".food-card");
+    const name = button.dataset.item || card?.querySelector(".food-title")?.textContent?.trim();
+    const price = button.dataset.price || card?.querySelector(".food-price")?.textContent?.trim();
     if (!cartLine || !name || !price) return;
+    
+    totalCartItems += 1;
+    if (cartCount) cartCount.textContent = String(totalCartItems);
+    
+    button.classList.add("added");
+    button.textContent = "✓";
+
     const item = document.createElement("strong");
     item.textContent = name;
     const cost = document.createElement("span");
     cost.textContent = price;
     cartLine.replaceChildren(item, cost);
+
+    // Open drawer to confirm addition visually
+    openCartDrawer();
   });
 });

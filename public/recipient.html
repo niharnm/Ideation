@@ -5,517 +5,934 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <title>Fieldline</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-        color: #191919;
-        background: #fff;
-        --green: #00824d;
-        --green-deep: #00663c;
-        --green-wash: #e7f6ee;
-        --dd: #00824d;
+        --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+        --dd-green: #00824d;
+        --dd-green-hover: #00663c;
+        --dd-green-wash: #e7f6ee;
+        --dd-dark: #191919;
+        --dd-gray-100: #F6F6F6;
+        --dd-gray-200: #EEEEEE;
+        --dd-gray-400: #999999;
+        --dd-gray-600: #575757;
+        --apple-card-border: rgba(0, 0, 0, 0.08);
+        --apple-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+        --apple-shadow-md: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+        --apple-shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.14), 0 8px 24px rgba(0, 0, 0, 0.06);
+        --apple-radius-sm: 10px;
+        --apple-radius-md: 16px;
+        --apple-radius-lg: 22px;
+        --apple-radius-pill: 9999px;
+        --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
       }
-      * { box-sizing: border-box; }
-      body { margin: 0; min-width: 320px; background: #fff; }
-      a { color: inherit; text-decoration: none; }
-      button, textarea, input { font: inherit; }
-      button { cursor: pointer; }
-      button:focus-visible, textarea:focus-visible, a:focus-visible {
-        outline: 2px solid #191919;
-        outline-offset: 2px;
-      }
-      button:disabled { cursor: not-allowed; opacity: .48; }
+
+      * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+      html, body { margin: 0; padding: 0; min-height: 100vh; background: #F8F8FA; color: var(--dd-dark); font-family: var(--font-sans); }
+      button, input, textarea, select { font-family: inherit; }
+      button { cursor: pointer; border: none; background: none; }
       [hidden] { display: none !important; }
-      .top {
+
+      /* Navigation Header */
+      .top-nav {
         position: sticky;
         top: 0;
-        z-index: 8;
+        z-index: 100;
         display: grid;
-        grid-template-columns: auto minmax(280px, 560px) auto auto auto;
+        grid-template-columns: 1fr minmax(0, 420px) 1fr;
         align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        min-height: 72px;
+        gap: 12px;
+        height: 64px;
         padding: 0 20px;
-        background: #fff;
-        border-bottom: 1px solid #eee;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
       }
-      .logo {
-        font-size: 22px;
-        font-weight: 800;
-        letter-spacing: -0.05em;
-        color: var(--dd);
-        text-transform: uppercase;
-      }
-      .search {
+
+      .top-nav-right {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
         gap: 10px;
-        width: 100%;
-        justify-self: center;
-        padding: 0 16px;
-        height: 48px;
-        border: 0;
-        border-radius: 999px;
-        background: #f3f3f3;
-        color: #6b6b6b;
-        font-size: 16px;
+        flex-shrink: 0;
       }
-      .search, .search:focus, .search:focus-within,
-      .search input, .search input:focus, .search input:focus-visible {
-        outline: none;
-        box-shadow: none;
+
+      .logo-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        flex-shrink: 0;
+        justify-self: start;
       }
-      .search input {
-        flex: 1;
-        min-width: 0;
-        border: 0;
-        background: transparent;
-        color: #191919;
-        appearance: none;
-        -webkit-appearance: none;
-      }
-      .place {
-        position: relative;
-        min-width: 148px;
-        padding: 6px 10px;
-        border: 0;
-        border-radius: 12px;
-        background: transparent;
-        text-align: left;
-      }
-      .place:hover { background: #f6f6f6; }
-      .place b { display: block; font-size: 14px; font-weight: 700; }
-      .place small { display: block; color: #6b6b6b; font-size: 12px; font-weight: 400; }
-      .place-menu {
-        position: absolute;
-        top: calc(100% + 6px);
-        right: 0;
-        z-index: 9;
-        min-width: 220px;
-        padding: 6px;
-        border: 1px solid #eee;
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 8px 24px rgba(0,0,0,.12);
-      }
-      .place-menu button {
-        display: block;
-        width: 100%;
-        padding: 10px 12px;
-        border: 0;
+
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        background: var(--dd-green);
         border-radius: 8px;
-        background: transparent;
-        text-align: left;
-        font-size: 14px;
-      }
-      .place-menu button:hover, .place-menu button.is-on { background: #f6f6f6; }
-      .mode {
-        display: inline-flex;
-        padding: 3px;
-        border-radius: 999px;
-        background: #f3f3f3;
-      }
-      .mode button {
-        min-height: 34px;
-        padding: 0 14px;
-        border: 0;
-        border-radius: 999px;
-        background: transparent;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .mode button.is-on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-      .cart {
-        position: relative;
-        width: 48px;
-        height: 48px;
-        border: 0;
-        border-radius: 50%;
-        background: #191919;
+        display: grid;
+        place-items: center;
         color: #fff;
-        font-size: 18px;
+        font-weight: 800;
+        font-size: 15px;
       }
-      .cart b {
+
+      .logo-text {
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: var(--dd-dark);
+      }
+      .logo-text span { color: var(--dd-green); }
+
+      /* Mode Toggle (Delivery / Pickup) */
+      .mode-segmented {
+        display: inline-flex;
+        padding: 2px;
+        background: rgba(118, 118, 128, 0.08);
+        border-radius: var(--apple-radius-pill);
+        flex-shrink: 0;
+      }
+
+      .mode-btn {
+        padding: 5px 14px;
+        border-radius: var(--apple-radius-pill);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--dd-gray-600);
+        transition: all 0.15s ease;
+      }
+
+      .mode-btn.is-on {
+        background: #FFFFFF;
+        color: var(--dd-dark);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      }
+
+      /* Search Bar */
+      .search-box {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 38px;
+        min-width: 0;
+        flex: 1 1 280px;
+        max-width: 420px;
+        padding: 0 14px;
+        background: rgba(118, 118, 128, 0.08);
+        border-radius: var(--apple-radius-pill);
+      }
+
+      .search-box svg { fill: var(--dd-gray-600); flex-shrink: 0; }
+      .search-box input {
+        border: none;
+        outline: none;
+        background: transparent;
+        width: 100%;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--dd-dark);
+      }
+
+      /* Address Selector */
+      .address-trigger {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: var(--apple-radius-md);
+        text-align: left;
+        flex-shrink: 0;
+      }
+
+      .address-trigger:hover { background: rgba(0, 0, 0, 0.04); }
+      .address-info b { display: block; font-size: 12px; font-weight: 700; color: var(--dd-dark); }
+      .address-info small { display: block; font-size: 10px; color: var(--dd-gray-600); font-weight: 500; }
+
+      /* Cart Button in Top Nav */
+      .cart-header-btn {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        background: var(--dd-green);
+        color: #fff;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: background 0.15s ease;
+      }
+
+      .cart-header-btn svg { fill: currentColor; }
+      .cart-header-btn:hover { background: var(--dd-green-hover); }
+      .cart-badge {
         position: absolute;
-        top: -2px;
-        right: -2px;
+        top: -4px;
+        right: -4px;
         min-width: 18px;
         height: 18px;
         padding: 0 5px;
-        border-radius: 999px;
-        background: var(--dd);
+        border-radius: 10px;
+        background: var(--dd-dark);
         color: #fff;
-        font-size: 11px;
-        font-weight: 700;
+        font-size: 10px;
+        font-weight: 800;
         line-height: 18px;
-      }
-      .layout {
-        display: grid;
-        grid-template-columns: 92px minmax(0, 1fr) 340px;
-        min-height: calc(100vh - 72px);
-      }
-      .cats {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        padding: 12px 8px 24px;
-        border-right: 1px solid #f0f0f0;
-      }
-      .cat {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        width: 76px;
-        min-height: 64px;
-        padding: 8px 4px;
-        border-radius: 12px;
-        color: #3d3d3d;
-        font-size: 11px;
-        font-weight: 600;
-        line-height: 1.2;
         text-align: center;
       }
-      .cat i {
-        width: 22px;
-        height: 22px;
-        border-radius: 6px;
-        background: #f3f3f3;
-      }
-      .cat.is-on { background: var(--green-wash); color: var(--green-deep); }
-      .cat.is-on i { background: #cdeadc; }
-      .shop { padding: 20px 28px 48px; }
-      .store {
+
+      /* Main Page Layout */
+      .main-layout {
         display: grid;
-        grid-template-columns: 88px 1fr;
-        gap: 16px;
-        align-items: center;
-        margin-bottom: 18px;
+        grid-template-columns: 200px minmax(0, 1fr);
+        gap: 24px;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 20px;
       }
-      .store img {
-        width: 88px;
-        height: 88px;
-        object-fit: cover;
-        border-radius: 12px;
-        background: #f3f3f3;
-      }
-      .store h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.04em; }
-      .store p { margin: 4px 0 0; color: #6b6b6b; font-size: 14px; }
-      .tabs { display: flex; gap: 18px; border-bottom: 1px solid #eee; margin-bottom: 14px; }
-      .tabs a {
-        padding: 8px 0 12px;
-        color: #6b6b6b;
-        font-size: 15px;
-        font-weight: 600;
-      }
-      .tabs a.is-on {
-        color: #191919;
-        box-shadow: inset 0 -2px 0 #191919;
-      }
-      .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-      .chip {
-        min-height: 36px;
-        padding: 0 14px;
-        border: 1px solid #e4e4e4;
-        border-radius: 999px;
-        background: #fff;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .chip.is-on { border-color: #191919; background: #191919; color: #fff; }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 22px 16px;
-      }
-      .card { display: grid; gap: 6px; }
-      .card.is-live { outline: 2px solid var(--dd); outline-offset: 4px; border-radius: 16px; padding: 4px; }
-      .thumb {
-        position: relative;
-        aspect-ratio: 1;
-        overflow: hidden;
-        border-radius: 16px;
-        background: #f6f6f6;
-      }
-      .thumb img { width: 100%; height: 100%; object-fit: cover; }
-      .add {
-        position: absolute;
-        right: 8px;
-        bottom: 8px;
-        width: 36px;
-        height: 36px;
-        border: 0;
-        border-radius: 50%;
-        background: #fff;
-        box-shadow: 0 2px 8px rgba(0,0,0,.16);
-        font-size: 20px;
-        font-weight: 400;
-        line-height: 1;
-      }
-      .add.in { background: #191919; color: #fff; font-size: 12px; font-weight: 700; }
-      .price { font-size: 16px; font-weight: 700; }
-      .name { color: #3d3d3d; font-size: 14px; font-weight: 500; line-height: 1.35; }
-      .checkout {
-        padding: 16px;
-        border-left: 1px solid #eee;
-        background: #fff;
-        display: grid;
-        gap: 12px;
-        align-content: start;
-      }
-      .bag-head { display: flex; justify-content: space-between; align-items: baseline; }
-      .bag-head strong { font-size: 18px; font-weight: 800; }
-      .bag-head span { color: #6b6b6b; font-size: 13px; }
-      .bag, .scope-card, .ops {
-        border: 1px solid #eee;
-        border-radius: 16px;
-        background: #fff;
-      }
-      .bag { padding: 12px 14px; }
-      .line { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
-      .line strong { font-weight: 600; }
-      .scope-status { display: flex; justify-content: space-between; gap: 8px; padding: 12px 14px; }
-      .scope-card.active .scope-status { color: var(--green-deep); background: var(--green-wash); }
-      .scope-card.locked .scope-status { color: #666; background: #f6f6f6; }
-      .scope-card.revoked .scope-status { color: #9c342e; background: #fff7f6; }
-      .scope-title { margin: 0; font-size: 13px; font-weight: 700; }
-      .scope-state { font-size: 12px; font-weight: 600; }
-      .scope-body { padding: 0 14px 14px; }
-      .scope-detail { display: flex; gap: 8px; align-items: center; padding: 10px; border: 1px solid #dceee3; border-radius: 10px; background: #f7fcf8; }
-      .scope-detail-icon { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: var(--green-wash); color: var(--green-deep); font-size: 12px; }
-      .scope-label { display: block; color: #6b6b6b; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-      .scope-detail p { margin: 2px 0 0; font-size: 13px; font-weight: 700; }
-      .scope-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-      .scope-fact span { display: block; color: #6b6b6b; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-      .scope-fact strong { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; }
-      .scope-note, .locked-body { margin: 8px 0 0; color: #5f5f5f; font-size: 13px; line-height: 1.4; }
-      .grant {
+
+      /* Left Sidebar Categories */
+      .sidebar-nav {
         display: flex;
-        justify-content: center;
+        flex-direction: column;
+        gap: 2px;
+        position: sticky;
+        top: 88px;
+        height: fit-content;
+      }
+
+      .nav-item {
+        display: flex;
         align-items: center;
-        min-height: 48px;
-        padding: 0 16px;
-        border-radius: 999px;
-        background: var(--dd);
-        color: #fff;
-        font-size: 16px;
-        font-weight: 700;
-      }
-      .ops summary {
-        cursor: pointer;
-        padding: 12px 14px;
+        padding: 9px 14px;
+        border-radius: var(--apple-radius-md);
         font-size: 13px;
-        font-weight: 700;
-        user-select: none;
+        font-weight: 600;
+        color: var(--dd-gray-600);
+        text-decoration: none;
+        transition: background 0.15s ease;
       }
-      .kitchen, .history { padding: 0 14px 14px; }
-      .history { border-top: 1px solid #eee; padding-top: 10px; }
-      .kitchen h2, .history h2 { margin: 0; font-size: 13px; font-weight: 700; }
-      .section-intro { margin: 0 0 8px; color: #6b6b6b; font-size: 12px; }
-      .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-      .action {
-        min-height: 44px;
-        padding: 8px;
-        border: 1px solid #e4e4e4;
-        border-radius: 10px;
-        background: #fff;
+
+      .nav-item:hover {
+        background: rgba(0, 0, 0, 0.04);
+        color: var(--dd-dark);
+      }
+
+      .nav-item.is-active {
+        background: #FFFFFF;
+        color: var(--dd-green);
+        font-weight: 700;
+        box-shadow: var(--apple-shadow-sm);
+      }
+
+      /* Minimal Clean Cart Drawer */
+      .drawer-section-card {
+        background: #F9F9FB;
+        border-radius: var(--apple-radius-md);
+        border: 1px solid var(--apple-card-border);
+        padding: 14px;
+      }
+
+      .nav-item:hover {
+        background: rgba(0, 0, 0, 0.04);
+        color: var(--dd-dark);
+      }
+
+      .nav-item.is-active {
+        background: #FFFFFF;
+        color: var(--dd-green);
+        font-weight: 700;
+        box-shadow: var(--apple-shadow-sm);
+      }
+
+      /* Store Banner Header */
+      .store-banner {
+        position: relative;
+        border-radius: var(--apple-radius-lg);
+        overflow: hidden;
+        background: #FFFFFF;
+        box-shadow: var(--apple-shadow-sm);
+        margin-bottom: 24px;
+      }
+
+      .store-cover {
+        height: 170px;
+        background: linear-gradient(135deg, #1A2F25 0%, #004D2D 100%);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .store-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.75;
+      }
+
+      .store-meta-bar {
+        display: flex;
+        align-items: flex-end;
+        gap: 20px;
+        padding: 0 24px 20px;
+        margin-top: -36px;
+        position: relative;
+        z-index: 2;
+      }
+
+      .store-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: var(--apple-radius-md);
+        border: 4px solid #FFFFFF;
+        box-shadow: var(--apple-shadow-md);
+        object-fit: cover;
+        background: #FFF;
+      }
+
+      .store-details h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: var(--dd-dark);
+      }
+
+      .store-sub {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+        font-size: 13px;
+        color: var(--dd-gray-600);
+        font-weight: 500;
+      }
+
+      .rating-badge {
+        display: inline-flex;
+        align-items: center;
+        background: var(--dd-green-wash);
+        color: var(--dd-green);
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 12px;
+      }
+
+      /* Filter Chips */
+      .filter-bar {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        margin-bottom: 24px;
+        scrollbar-width: none;
+      }
+
+      .filter-bar::-webkit-scrollbar { display: none; }
+
+      .filter-chip {
+        padding: 8px 16px;
+        background: #FFFFFF;
+        border: 1px solid var(--apple-card-border);
+        border-radius: var(--apple-radius-pill);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--dd-gray-600);
+        white-space: nowrap;
+        box-shadow: var(--apple-shadow-sm);
+        transition: all 0.15s ease;
+      }
+
+      .filter-chip:hover {
+        background: rgba(0, 0, 0, 0.02);
+        border-color: rgba(0, 0, 0, 0.15);
+      }
+
+      .filter-chip.is-on {
+        background: var(--dd-dark);
+        color: #FFFFFF;
+        border-color: var(--dd-dark);
+      }
+
+      /* Product Cards Grid - Full Width Layout */
+      .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 24px;
+      }
+
+      .food-card {
+        background: #FFFFFF;
+        border-radius: var(--apple-radius-md);
+        border: 1px solid var(--apple-card-border);
+        overflow: hidden;
+        box-shadow: var(--apple-shadow-sm);
+        transition: all 0.25s var(--ease-spring);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .food-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--apple-shadow-md);
+      }
+
+      .food-card.active-order-item {
+        border: 2px solid var(--dd-green);
+        box-shadow: 0 0 0 4px rgba(0, 130, 77, 0.12);
+      }
+
+      .food-img-wrapper {
+        position: relative;
+        width: 100%;
+        padding-top: 70%;
+        overflow: hidden;
+        background: #F0F0F2;
+      }
+
+      .food-img-wrapper img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s var(--ease-spring);
+      }
+
+      .food-card:hover .food-img-wrapper img {
+        transform: scale(1.05);
+      }
+
+      /* Compact, Clean Add Button */
+      .add-btn {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        min-width: 32px;
+        height: 32px;
+        padding: 0 10px;
+        border-radius: var(--apple-radius-pill);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--dd-dark);
+        transition: all 0.2s var(--ease-spring);
+      }
+
+      .add-btn:hover {
+        background: var(--dd-green);
+        color: #FFF;
+        transform: scale(1.06);
+      }
+
+      .add-btn.added {
+        background: var(--dd-green);
+        color: #FFF;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .food-info {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+      }
+
+      .food-price {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--dd-dark);
+      }
+
+      .food-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--dd-dark);
+        line-height: 1.3;
+      }
+
+      .food-desc {
+        font-size: 12px;
+        color: var(--dd-gray-600);
+        margin-top: 2px;
+      }
+
+      /* Slide-Over Cart Drawer & Backdrop */
+      .drawer-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(6px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .drawer-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .cart-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(100vw, 420px);
+        z-index: 301;
+        background: #FFFFFF;
+        box-shadow: -8px 0 36px rgba(0, 0, 0, 0.16);
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.35s var(--ease-spring);
+      }
+
+      .cart-drawer.open {
+        transform: translateX(0);
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--dd-gray-100);
+      }
+
+      .drawer-header h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .close-drawer-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--dd-gray-100);
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        color: var(--dd-gray-600);
+        transition: background 0.15s ease;
+      }
+
+      .close-drawer-btn:hover { background: var(--dd-gray-200); color: var(--dd-dark); }
+
+      .drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .drawer-section-card {
+        background: #F9F9FB;
+        border-radius: var(--apple-radius-md);
+        border: 1px solid var(--apple-card-border);
+        padding: 16px;
+      }
+
+      .cart-item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 14px;
+      }
+
+      .cart-item-row strong { font-weight: 700; }
+      .cart-item-row span { color: var(--dd-gray-600); font-weight: 600; }
+
+      /* Allergy Scope Widget inside Drawer */
+      .scope-box {
+        transition: all 0.25s ease;
+      }
+
+      .scope-box.locked { background: #FFFFFF; border-color: rgba(0, 0, 0, 0.08); }
+      .scope-box.active { background: var(--dd-green-wash); border: 1.5px solid rgba(0, 130, 77, 0.3); }
+      .scope-box.revoked { background: #FFF5F5; border: 1.5px solid rgba(235, 87, 87, 0.3); }
+
+      .scope-header-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .scope-tag {
+        padding: 3px 9px;
+        border-radius: var(--apple-radius-pill);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .scope-box.locked .scope-tag { background: #E5E5EA; color: #666; }
+      .scope-box.active .scope-tag { background: var(--dd-green); color: #FFF; }
+      .scope-box.revoked .scope-tag { background: #EB5757; color: #FFF; }
+
+      .scope-body-content { font-size: 13px; line-height: 1.45; color: var(--dd-dark); }
+
+      .action-grant-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        height: 46px;
+        background: var(--dd-green);
+        color: #FFFFFF;
+        border-radius: var(--apple-radius-pill);
+        font-size: 14px;
+        font-weight: 700;
+        box-shadow: 0 4px 14px rgba(0, 130, 77, 0.25);
+        transition: all 0.2s ease;
+        text-decoration: none;
+      }
+
+      .action-grant-btn:hover { background: var(--dd-green-hover); transform: translateY(-1px); }
+
+      /* Kitchen Preparation Console */
+      .kitchen-actions-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .kitchen-act-btn {
+        padding: 10px;
+        border-radius: var(--apple-radius-sm);
+        border: 1px solid var(--apple-card-border);
+        background: #FFFFFF;
         text-align: left;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--dd-dark);
+        transition: all 0.15s ease;
+      }
+
+      .kitchen-act-btn small {
+        display: block;
+        font-size: 10px;
+        font-weight: 400;
+        color: var(--dd-gray-600);
+        margin-top: 2px;
+      }
+
+      .kitchen-act-btn.active {
+        background: var(--dd-dark);
+        color: #FFF;
+        border-color: var(--dd-dark);
+      }
+
+      .kitchen-act-btn.active small { color: rgba(255, 255, 255, 0.7); }
+
+      .smart-ai-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+        padding: 5px 10px;
+        border-radius: var(--apple-radius-pill);
+        background: rgba(0, 130, 77, 0.1);
+        color: var(--dd-green);
         font-size: 11px;
         font-weight: 700;
+        transition: background 0.15s ease;
       }
-      .action.active { border-color: #191919; background: #191919; color: #fff; }
-      .action small { display: block; margin-top: 2px; font-weight: 400; opacity: .8; }
-      .prep-box { margin-top: 8px; }
-      .prep-box label { display: block; margin-bottom: 4px; color: #6b6b6b; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-      textarea {
+
+      .smart-ai-btn:hover { background: rgba(0, 130, 77, 0.18); }
+
+      .prep-textarea {
         width: 100%;
-        min-height: 48px;
-        padding: 8px 10px;
-        border: 1px solid #e4e4e4;
-        border-radius: 10px;
-        resize: vertical;
-        font-size: 13px;
-      }
-      .record-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 8px; }
-      .record-note { color: #6b6b6b; font-size: 11px; }
-      .record {
-        border: 0;
-        border-radius: 999px;
-        background: #191919;
-        color: #fff;
-        min-height: 32px;
-        padding: 0 12px;
+        min-height: 52px;
+        padding: 10px;
+        border-radius: var(--apple-radius-sm);
+        border: 1px solid var(--apple-card-border);
+        background: #FFFFFF;
         font-size: 12px;
-        font-weight: 600;
-        white-space: nowrap;
+        outline: none;
+        resize: vertical;
+        margin-bottom: 10px;
       }
-      .notice { margin: 8px 0 0; color: var(--green-deep); font-size: 12px; }
-      .history-list { display: grid; gap: 8px; margin-top: 8px; }
-      .history-item { display: grid; grid-template-columns: 8px 1fr; gap: 8px; color: #5f5f5f; font-size: 12px; }
-      .history-dot { width: 8px; height: 8px; margin-top: 4px; border-radius: 50%; background: var(--green); }
-      .history-item.ended .history-dot { background: #cf655d; }
-      .history-item strong { display: block; color: #191919; font-weight: 600; }
-      @media (max-width: 1100px) {
-        .layout { grid-template-columns: 1fr; }
-        .cats { display: none; }
-        .checkout { border-left: 0; border-top: 1px solid #eee; }
+
+      .record-btn {
+        width: 100%;
+        height: 42px;
+        background: var(--dd-dark);
+        color: #FFF;
+        border-radius: var(--apple-radius-pill);
+        font-size: 13px;
+        font-weight: 700;
+        transition: all 0.2s ease;
       }
-      @media (max-width: 720px) {
-        .top { grid-template-columns: auto 1fr auto; }
-        .place, .mode { display: none; }
-        .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+      .record-btn:hover:not(:disabled) { background: #000; }
+
+      .activity-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+      .activity-item { display: flex; gap: 10px; font-size: 12px; }
+      .activity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dd-green); margin-top: 4px; flex-shrink: 0; }
+      .activity-dot.ended { background: #EB5757; }
+      .activity-content strong { display: block; color: var(--dd-dark); font-size: 12px; }
+      .activity-content span { color: var(--dd-gray-600); }
+
+      @media (max-width: 900px) {
+        .main-layout { grid-template-columns: 1fr; padding: 20px; }
+        .sidebar-nav { display: none; }
+        .top-nav { padding: 0 16px; }
+        .top-nav-right { gap: 8px; }
+        .mode-segmented, .address-trigger { display: none; }
       }
     </style>
   </head>
   <body>
-    <header class="top">
-      <a class="logo" href="/recipient.html">Fieldline</a>
-      <label class="search"><span aria-hidden="true">⌕</span><input value="Sandwiches & Wraps" readonly /></label>
-      <button class="place" id="place" type="button" aria-haspopup="listbox" aria-expanded="false">
-        <b id="place-label">Choose address</b>
-        <small id="place-meta">ASAP · Convenience</small>
-        <div class="place-menu" id="place-menu" hidden>
-          <button type="button" data-place="Near you" data-meta="ASAP · Convenience">Near you</button>
-          <button type="button" data-place="Downtown" data-meta="25–35 min · Convenience">Downtown</button>
-          <button type="button" data-place="Campus" data-meta="15–25 min · Convenience">Campus</button>
+    <!-- Top Navigation Header -->
+    <header class="top-nav">
+      <a class="logo-brand" href="/recipient.html">
+        <div class="logo-icon">F</div>
+        <div class="logo-text">Fieldline</div>
+      </a>
+
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" placeholder="Search 7-Eleven, pad thai, wraps..." value="Sandwiches & Wraps" />
+      </div>
+
+      <div class="top-nav-right">
+        <div class="mode-segmented">
+          <button class="mode-btn is-on" type="button" data-mode="delivery">Delivery</button>
+          <button class="mode-btn" type="button" data-mode="pickup">Pickup</button>
         </div>
-      </button>
-      <div class="mode"><button class="is-on" type="button">Delivery</button><button type="button">Pickup</button></div>
-      <button class="cart" type="button" aria-label="Cart">☰<b>1</b></button>
-    </header>
-    <div class="layout">
-      <aside class="cats" aria-label="Departments">
-        <a class="cat" href="/"><i></i>Home</a>
-        <a class="cat is-on" href="/recipient.html"><i></i>Grocery</a>
-        <a class="cat" href="/recipient.html"><i></i>Restaurant</a>
-        <a class="cat" href="/recipient.html"><i></i>Convenience</a>
-        <a class="cat" href="/recipient.html"><i></i>Retail</a>
-        <a class="cat" href="/recipient.html"><i></i>Late Night</a>
-        <a class="cat" href="/recipient.html"><i></i>Flowers</a>
-        <a class="cat" href="/recipient.html"><i></i>Beauty</a>
-        <a class="cat" href="/recipient.html"><i></i>Pets</a>
-        <a class="cat" href="/recipient.html"><i></i>Apparel</a>
-      </aside>
-      <main class="shop">
-        <div class="store">
-          <img alt="" src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=240&q=80" />
-          <div>
-            <h1>7-Eleven</h1>
-            <p>4.8 · 1.2 mi · 20 min · Convenience</p>
+
+        <div style="position: relative;">
+          <button class="address-trigger" id="place" type="button" aria-haspopup="true" aria-expanded="false">
+            <div class="address-info">
+              <b id="place-label">Delivery to Home</b>
+              <small id="place-meta">ASAP · 15-25 min</small>
+            </div>
+          </button>
+          <div class="address-dropdown" id="place-menu" hidden>
+            <button type="button" class="address-opt is-on" data-place="Delivery to Home" data-meta="ASAP · 15-25 min">Home</button>
+            <button type="button" class="address-opt" data-place="Downtown Office" data-meta="25–35 min · Office">Downtown Office</button>
+            <button type="button" class="address-opt" data-place="Campus Quad" data-meta="10–20 min · Campus">Campus Quad</button>
           </div>
         </div>
-        <nav class="tabs" aria-label="Marketplace">
-          <a href="/">Home</a>
-          <a class="is-on" href="/recipient.html">Grocery</a>
-          <a href="/recipient.html">Restaurant</a>
-        </nav>
-        <div class="filters" id="filters">
-          <button class="chip" type="button">Deals</button>
-          <button class="chip" type="button">Fastest</button>
-          <button class="chip" type="button">Over 4.5</button>
-          <button class="chip" type="button">Price</button>
-          <button class="chip" type="button">DashPass</button>
-          <button class="chip" type="button">Delivery Fees: Under $3</button>
+
+        <button class="cart-header-btn" type="button" id="cart-header-trigger" aria-label="Open cart">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 20 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          <span class="cart-badge" id="cart-count">1</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Page Layout -->
+    <div class="main-layout">
+      <!-- Left Category Sidebar -->
+      <nav class="sidebar-nav" aria-label="Departments">
+        <a class="nav-item" href="/">Home</a>
+        <a class="nav-item is-active" href="/recipient.html">Asian & Thai</a>
+        <a class="nav-item" href="/recipient.html">Grocery</a>
+        <a class="nav-item" href="/recipient.html">Sandwiches</a>
+        <a class="nav-item" href="/recipient.html">Drinks</a>
+        <a class="nav-item" href="/recipient.html">Desserts</a>
+        <a class="nav-item" href="/recipient.html">Special Deals</a>
+      </nav>
+
+      <!-- Center Store Catalog -->
+      <main class="store-catalog">
+        <div class="store-banner">
+          <div class="store-cover">
+            <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80" alt="Thai Kitchen Header" />
+          </div>
+          <div class="store-meta-bar">
+            <img class="store-avatar" src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=240&q=80" alt="Store Logo" />
+            <div class="store-details">
+              <h1>7-Eleven Asian Gourmet</h1>
+              <div class="store-sub">
+                <span class="rating-badge">Rating 4.8</span>
+                <span>• 1.2 mi • 20 min</span>
+                <span>• $0.99 Delivery Fee</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <section class="grid" aria-label="Sandwiches and wraps">
-          <article class="card is-live">
-            <div class="thumb">
-              <img alt="Pad Thai in a takeout box" src="https://images.unsplash.com/photo-1559314809-0d155014e29e?auto=format&fit=crop&w=640&q=80" />
-              <button class="add in" type="button">1x</button>
+
+        <!-- Filter Chips -->
+        <div class="filter-bar" id="filters">
+          <button class="filter-chip is-on" type="button">All Items</button>
+          <button class="filter-chip" type="button">DashPass Free Delivery</button>
+          <button class="filter-chip" type="button">Allergy Friendly</button>
+          <button class="filter-chip" type="button">Most Popular</button>
+          <button class="filter-chip" type="button">Under $10</button>
+        </div>
+
+        <!-- Food Grid -->
+        <section class="menu-grid">
+          <article class="food-card active-order-item">
+            <div class="food-img-wrapper">
+              <img src="https://images.unsplash.com/photo-1559314809-0d155014e29e?auto=format&fit=crop&w=640&q=80" alt="Pad Thai" />
+              <button class="add-btn added" type="button" data-item="Pad Thai · #A1024" data-price="$15.00">1x</button>
             </div>
-            <div class="price">$15.00</div>
-            <div class="name">Pad Thai · #A1024</div>
+            <div class="food-info">
+              <div class="food-price">$15.00</div>
+              <div class="food-title">Pad Thai · #A1024</div>
+              <div class="food-desc">Stir-fried rice noodles, eggs, tofu, bean sprouts, crushed peanuts.</div>
+            </div>
           </article>
-          <article class="card">
-            <div class="thumb">
-              <img alt="Tuna salad sandwich" src="https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=640&q=80" />
-              <button class="add" type="button">+</button>
+
+          <article class="food-card">
+            <div class="food-img-wrapper">
+              <img src="https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=640&q=80" alt="Tuna Salad Sandwich" />
+              <button class="add-btn" type="button" data-item="Tuna Salad Sandwich" data-price="$6.69">+</button>
             </div>
-            <div class="price">$6.69</div>
-            <div class="name">7-Eleven Tuna Salad Sandwich (4 oz)</div>
+            <div class="food-info">
+              <div class="food-price">$6.69</div>
+              <div class="food-title">Tuna Salad Sandwich</div>
+              <div class="food-desc">Fresh albacore tuna salad on whole wheat bread.</div>
+            </div>
           </article>
-          <article class="card">
-            <div class="thumb">
-              <img alt="Turkey and cheese wrap" src="https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=640&q=80" />
-              <button class="add" type="button">+</button>
+
+          <article class="food-card">
+            <div class="food-img-wrapper">
+              <img src="https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=640&q=80" alt="Turkey Wrap" />
+              <button class="add-btn" type="button" data-item="Turkey & Swiss Wrap" data-price="$7.29">+</button>
             </div>
-            <div class="price">$7.29</div>
-            <div class="name">Turkey & Cheese Wrap</div>
+            <div class="food-info">
+              <div class="food-price">$7.29</div>
+              <div class="food-title">Turkey & Swiss Wrap</div>
+              <div class="food-desc">Oven roasted turkey breast with aged Swiss cheese.</div>
+            </div>
           </article>
-          <article class="card">
-            <div class="thumb">
-              <img alt="Chicken sandwich" src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=640&q=80" />
-              <button class="add" type="button">+</button>
+
+          <article class="food-card">
+            <div class="food-img-wrapper">
+              <img src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=640&q=80" alt="Chicken Sandwich" />
+              <button class="add-btn" type="button" data-item="Crispy Chicken Sandwich" data-price="$8.49">+</button>
             </div>
-            <div class="price">$8.49</div>
-            <div class="name">Crispy Chicken Sandwich</div>
+            <div class="food-info">
+              <div class="food-price">$8.49</div>
+              <div class="food-title">Crispy Chicken Sandwich</div>
+              <div class="food-desc">Crispy fried chicken breast, pickles, mayo on brioche.</div>
+            </div>
           </article>
-          <article class="card">
-            <div class="thumb">
-              <img alt="Veggie wrap" src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=640&q=80" />
-              <button class="add" type="button">+</button>
+
+          <article class="food-card">
+            <div class="food-img-wrapper">
+              <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=640&q=80" alt="Garden Veggie Wrap" />
+              <button class="add-btn" type="button" data-item="Garden Veggie Wrap" data-price="$6.99">+</button>
             </div>
-            <div class="price">$6.99</div>
-            <div class="name">Garden Veggie Wrap</div>
-          </article>
-          <article class="card">
-            <div class="thumb">
-              <img alt="Ham sandwich" src="https://images.unsplash.com/photo-1481070414801-51fd732d7184?auto=format&fit=crop&w=640&q=80" />
-              <button class="add" type="button">+</button>
+            <div class="food-info">
+              <div class="food-price">$6.99</div>
+              <div class="food-title">Garden Veggie Wrap</div>
+              <div class="food-desc">Hummus, cucumbers, tomatoes, bell peppers, spinach.</div>
             </div>
-            <div class="price">$5.89</div>
-            <div class="name">Ham & Swiss on Wheat</div>
           </article>
         </section>
       </main>
-      <aside class="checkout">
-        <div class="bag-head"><strong>Cart</strong><span>7-Eleven</span></div>
-        <section class="bag">
-          <div class="line" id="cart-line"><strong>Pad Thai · #A1024</strong><span>$15.00</span></div>
-        </section>
-        <section class="scope-card locked" id="scope-card" aria-live="polite">
-          <div class="scope-status">
-            <p class="scope-title" id="scope-title">Permission required</p>
-            <span class="scope-state" id="scope-state">Not shared</span>
+    </div>
+
+    <!-- Backdrop Overlay for Cart Drawer -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+
+    <!-- Minimal Slide-Over Cart Drawer -->
+    <aside class="cart-drawer" id="cart-drawer">
+      <div class="drawer-header">
+        <h3>Checkout & Kitchen Ops</h3>
+        <button class="close-drawer-btn" id="close-drawer-btn" type="button" aria-label="Close cart">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- Order Confirmed Overlay Card -->
+        <div class="drawer-section-card" id="order-confirmed-card" style="background: #E7F6EE; border-color: rgba(0, 130, 77, 0.3);" hidden>
+          <div style="display: flex; align-items: center; gap: 8px; color: var(--dd-green); margin-bottom: 6px;">
+            <strong style="font-size: 15px;">Order Confirmed!</strong>
+            <span style="font-size: 11px; font-weight: 800; background: #00824d; color: #fff; padding: 2px 6px; border-radius: 99px;">20 MIN ETA</span>
           </div>
-          <div class="scope-body" id="scope-body">
-            <div class="locked-body"><strong>Allergy details are unavailable.</strong><br />Fieldline cannot view or act on a customer constraint until the customer grants temporary permission for this order.</div>
+          <p style="margin: 0; font-size: 12px; color: var(--dd-dark); line-height: 1.4;">Your Pad Thai order has been received by 7-Eleven. Your allergy passport protection is active for this order.</p>
+          <div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: #00663c;">Protected Allergies: <span id="confirmed-allergy-detail">Peanut allergy</span></div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="drawer-section-card">
+          <h4 style="margin: 0 0 10px; font-size: 14px; font-weight: 800;">7-Eleven Order</h4>
+          <div class="cart-item-row" id="cart-line">
+            <strong>Pad Thai · #A1024</strong>
+            <span>$15.00</span>
           </div>
-        </section>
-        <a class="grant" href="/index.html">Approve this order’s share</a>
-        <details class="ops" open>
-          <summary>Kitchen</summary>
-          <section class="kitchen" id="kitchen-panel">
-            <p class="section-intro" id="kitchen-intro">Grant is required before a kitchen decision can use a customer constraint.</p>
-            <div class="action-grid">
-              <button class="action" type="button" data-action="accept">Confirm safe<small>Safe preparation confirmed</small></button>
-              <button class="action" type="button" data-action="required_change">Request preparation change<small>Substitution or dedicated surface</small></button>
-              <button class="action" type="button" data-action="decline">Cannot safely fulfill<small>Do not prepare this order</small></button>
-              <button class="action" type="button" data-action="cannot_determine">Cannot determine<small>Supplier detail unavailable</small></button>
+          <button type="button" id="place-order-btn" class="record-btn" style="background: var(--dd-green); margin-top: 12px; height: 44px; font-size: 14px;">Place Order ($15.00)</button>
+        </div>
+
+        <!-- Allergy Passport Scope Widget -->
+        <div class="drawer-section-card scope-box locked" id="scope-card" aria-live="polite">
+          <div class="scope-header-status">
+            <strong style="font-size: 14px;" id="scope-title">Permission required</strong>
+            <span class="scope-tag" id="scope-state">Not shared</span>
+          </div>
+          <div class="scope-body-content" id="scope-body">
+            <p style="margin: 0; color: var(--dd-gray-600);">Allergy details are unavailable. Fieldline cannot view or act on customer constraints until temporary permission is granted.</p>
+          </div>
+        </div>
+
+        <!-- Kitchen Ops Console -->
+        <details class="drawer-section-card kitchen-ops-card" open>
+          <summary style="cursor: pointer; font-size: 14px; font-weight: 800; user-select: none;">Kitchen Preparation</summary>
+
+          <section id="kitchen-panel" style="margin-top: 10px;">
+            <p style="font-size: 12px; color: var(--dd-gray-600); margin: 0 0 8px;" id="kitchen-intro">Grant is required before a kitchen decision can use a customer constraint.</p>
+
+            <div class="kitchen-actions-grid">
+              <button class="kitchen-act-btn" type="button" data-action="accept">Confirm safe<small>Safe prep confirmed</small></button>
+              <button class="kitchen-act-btn active" type="button" data-action="required_change">Request preparation change<small>Dedicated surface</small></button>
+              <button class="kitchen-act-btn" type="button" data-action="decline">Cannot safely fulfill<small>Do not prepare</small></button>
+              <button class="kitchen-act-btn" type="button" data-action="cannot_determine">Cannot determine<small>Supplier unavailable</small></button>
             </div>
-            <div class="prep-box">
-              <label for="decision-note" id="decision-label">Preparation detail</label>
-              <textarea id="decision-note" disabled></textarea>
-            </div>
-            <div class="record-row">
-              <span class="record-note" id="record-note">Actions unlock only for an active order scope.</span>
-              <button class="record" id="record-decision" type="button" disabled>Record kitchen decision</button>
-            </div>
-            <p class="notice" id="decision-notice" hidden></p>
+
+            <button type="button" class="smart-ai-btn" id="smart-ai-suggest-btn">AI Chef Smart Suggestion</button>
+
+            <textarea class="prep-textarea" id="decision-note" placeholder="Kitchen preparation detail..." disabled></textarea>
+
+            <button class="record-btn" id="record-decision" type="button" disabled>Record kitchen decision</button>
+            <p id="record-note" style="font-size: 11px; color: var(--dd-gray-600); margin: 6px 0 0; text-align: center;">Actions unlock only for an active order scope.</p>
+            <p id="decision-notice" style="font-size: 12px; color: var(--dd-green); font-weight: 700; margin-top: 6px;" hidden></p>
           </section>
-          <section class="history">
-            <h2>Order activity</h2>
-            <div class="history-list" id="history-list">
-              <div class="history-item"><span class="history-dot"></span><div><strong>Order received</strong>Pad Thai was added to the lunch queue.</div></div>
-              <div class="history-item"><span class="history-dot"></span><div><strong>Customer constraint not shared</strong>Waiting for an order-specific permission.</div></div>
+
+          <section style="border-top: 1px solid var(--dd-gray-200); margin-top: 14px; padding-top: 10px;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800;">Order activity</h4>
+            <div class="activity-list" id="history-list">
+              <div class="activity-item">
+                <span class="activity-dot"></span>
+                <div class="activity-content">
+                  <strong>Order received</strong>
+                  <span>Pad Thai was added to the lunch queue.</span>
+                </div>
+              </div>
             </div>
           </section>
         </details>
-      </aside>
-    </div>
+      </div>
+    </aside>
+
     <script type="module" src="/recipient.js"></script>
   </body>
 </html>
+
