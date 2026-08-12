@@ -40,21 +40,21 @@ One-sentence entry: *This entry is for a diner, who needs to prove a selected di
 
 ## Operating Context
 
-Judges and builders run a local Node server (`npm start`, port 4173) with three browser tabs:
+Judges and builders use three browser tabs on the public proof or a local Node server (`npm start`, port 4173):
 
-1. `/chatgpt.html` — ChatGPT-like Groq chat with a fake Egoist AI Passport plugin. Dietary talk is saved to a local vault (`allergen.*`).
-2. `/index.html` — Handshake consent. Polls `/api/passport/vault`, lets the diner select fields, set an end time, approve, deny, or revoke.
-3. `/recipient.html` — Fieldline restaurant ops. Reads the approved localStorage claim, shows only that scope, records a kitchen decision, locks after revoke/expiry.
+1. `/chatgpt.html`, ChatGPT-like test chat with a local Egoist AI Passport plugin. It uses Groq when configured and a dietary-memory fallback otherwise. Dietary talk is saved to a local vault (`allergen.*`).
+2. `/index.html`, Handshake consent. Reads the local vault, lets the diner select fields, set an end time, approve, deny, or revoke.
+3. `/recipient.html`, Fieldline restaurant ops. Reads the approved API claim, shows only that scope, records a kitchen decision, and locks after revoke or expiry.
 
-Landing `/` (`demo.html`) is the pitch and optional shortcut handshake. Demo data is local and unlabeled as a live delivery-platform integration. `GROQ_API_KEY` lives in gitignored `.env`; the client must never see it.
+Landing `/demo.html` is the pitch and optional shortcut handshake. The root route, `/`, opens Handshake. Demo data is local and unlabeled as a live delivery-platform integration. `GROQ_API_KEY` lives in gitignored `.env` when configured; the client must never see it.
 
 ## Capabilities and Constraints
 
 Confirmed in this repo:
 
-- Chat `POST /api/chat` proxies Groq; missing key returns 503 with a setup message.
+- Chat `POST /api/chat` proxies Groq when configured; when it is unavailable, the client labels and uses the local dietary-memory adapter.
 - Plugin memories replace the vault’s `allergen.*` set (empty list clears them). Handshake merges those into the claimant vault and auto-selects them.
-- Approve writes a scoped claim to localStorage; Fieldline reads that claim, not the full vault.
+- Approve writes a local scoped claim and creates the matching demo API grant; Fieldline reads the API grant, not the full vault.
 - Deny shares nothing. Expiry and claimant revoke block later kitchen actions.
 - Kitchen can record one of four local outcomes; Handshake can preview an **unverified** receipt. Local events are not authenticated recipient proof.
 - MCP parse/sync endpoints exist for the same vault. The ChatGPT tab uses the local plugin path.

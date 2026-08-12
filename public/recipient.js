@@ -14,6 +14,7 @@ import {
 } from "/src/passport-flow.ts";
 
 const RECIPIENT_ID = "recipient-1";
+const API_HANDSHAKE_STORAGE_KEY = "egoist.demo.handshake-id";
 const SAMPLE_RECIPIENT_DATA = {
   "order.constraint.peanut": "Peanut allergy",
   "order.constraint.dairy": "Dairy constraint",
@@ -74,6 +75,18 @@ const historyList = document.querySelector("#history-list");
 
 let currentWorkspace = null;
 let selectedAction = "required_change";
+let busy = false;
+
+async function demoApi(body) {
+  const response = await fetch("/api/demo", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error?.message ?? "The Handshake API could not complete this action.");
+  return data;
+}
 
 function sameDataScope(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
@@ -146,7 +159,7 @@ function renderScope(workspace) {
     setScopeState("active");
     scopeTitle.textContent = "Allergy scope active";
     scopeState.textContent = formatRemaining(workspace.recipientRequest.validUntil);
-    
+
     const listWrapper = element("div", "scope-detail");
     const countText = fields.length === 1 ? "One approved constraint" : `${fields.length} approved constraints`;
     const labelTitle = element("span", "scope-label", countText);
@@ -192,14 +205,13 @@ function actionCopy(action, fields = []) {
 function renderKitchen(workspace) {
   const active = workspace.phase === "active";
   const alreadyDecided = Boolean(workspace.decision);
-  const enabled = active && !alreadyDecided;
+  const enabled = active && !alreadyDecided && !busy;
   actionButtons.forEach((button) => {
     button.disabled = !enabled;
     button.classList.toggle("active", enabled && button.dataset.action === selectedAction);
   });
   decisionNote.disabled = !enabled;
   recordButton.disabled = !enabled;
-  decisionNotice.hidden = true;
 
   if (!active) {
     kitchenIntro.textContent = workspace.phase === "revoked"
@@ -313,16 +325,34 @@ actionButtons.forEach((button) => {
   });
 });
 
-recordButton.addEventListener("click", () => {
-  if (!currentWorkspace || currentWorkspace.phase !== "active" || currentWorkspace.decision) return;
+recordButton.addEventListener("click", async () => {
+  if (busy || !currentWorkspace || currentWorkspace.phase !== "active" || currentWorkspace.decision) return;
+  const decision = buildDecision(currentWorkspace);
+  const apiHandshakeId = dependencies.storage.getItem(API_HANDSHAKE_STORAGE_KEY);
+  busy = true;
+  decisionNotice.hidden = true;
+  renderKitchen(currentWorkspace);
   try {
-    recordRecipientDecision(buildDecision(currentWorkspace), dependencies);
-    decisionNotice.textContent = "Kitchen decision recorded for this temporary order scope.";
+    if (apiHandshakeId) {
+      await demoApi({
+        action: "record-decision",
+        handshakeId: apiHandshakeId,
+        response: decision.payload.response,
+        rationale: decision.payload.rationale,
+      });
+    }
+    recordRecipientDecision(decision, dependencies);
+    decisionNotice.textContent = apiHandshakeId
+      ? "Kitchen decision and acknowledgement recorded through the Handshake API."
+      : "Kitchen decision recorded for this temporary order scope.";
     decisionNotice.hidden = false;
     renderWorkspace();
   } catch (error) {
     decisionNotice.textContent = `Decision was not recorded: ${error instanceof Error ? error.message : String(error)}`;
     decisionNotice.hidden = false;
+  } finally {
+    busy = false;
+    if (!currentWorkspace?.decision) renderKitchen(currentWorkspace);
   }
 });
 
@@ -369,7 +399,7 @@ placeOrderBtn?.addEventListener("click", () => {
   const handshakeId = `handshake-${Date.now()}`;
   const now = new Date();
   const validUntil = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
-  
+
   const requestEvent = {
     version: 1,
     type: "request",
@@ -525,10 +555,10 @@ document.querySelectorAll(".food-card .add-btn").forEach((button) => {
     const name = button.dataset.item || card?.querySelector(".food-title")?.textContent?.trim();
     const price = button.dataset.price || card?.querySelector(".food-price")?.textContent?.trim();
     if (!cartLine || !name || !price) return;
-    
+
     totalCartItems += 1;
     if (cartCount) cartCount.textContent = String(totalCartItems);
-    
+
     button.classList.add("added");
     button.textContent = "✓";
 

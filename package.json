@@ -10,7 +10,8 @@
     "build": "node build.mjs",
     "build:demo": "node build.mjs --demo-only",
     "start": "node server.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.1108.0",
@@ -18,5 +19,9 @@
     "@neondatabase/serverless": "^1.1.0",
     "@vercel/functions": "^3.9.3",
     "@vercel/oidc": "^3.8.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.17.2",
+    "typescript": "5.9.3"
   }
 }

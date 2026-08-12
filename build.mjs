@@ -64,7 +64,7 @@ async function buildSourceDirectory(directory) {
 await mkdir(outputDirectory, { recursive: true });
 await cp(join(root, "public"), outputDirectory, { recursive: true });
 
-for (const fileName of demoOnly ? ["recipient.js"] : ["app.js", "recipient.js"]) {
+for (const fileName of demoOnly ? ["recipient.js"] : ["app.js", "chatgpt.js", "recipient.js"]) {
   const outputPath = join(outputDirectory, fileName);
   const source = await readFile(outputPath, "utf8");
   await writeFile(outputPath, rewriteBrowserImports(source));

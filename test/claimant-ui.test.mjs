@@ -20,6 +20,8 @@ test("Handshake shows NimGTP poll status and an Approve shortcut", () => {
   assert.match(app, /event\.metaKey \|\| event\.ctrlKey/);
   assert.match(app, /approveButton\.click\(\)/);
   assert.match(app, /setPollStatus/);
+  assert.match(app, /LOCAL_PASSPORT_VAULT_STORAGE_KEY/);
+  assert.match(app, /serverVault = loadUserPassportVault\(dependencies\.storage\)/);
 });
 
 test("approved Chat memories create and revoke the server-side restaurant handshake", () => {
@@ -28,4 +30,7 @@ test("approved Chat memories create and revoke the server-side restaurant handsh
   assert.match(app, /action: "start", constraintId/);
   assert.match(app, /setItem\(HANDSHAKE_STORAGE_KEY, handshake\.id\)/);
   assert.match(app, /action: "revoke", handshakeId/);
+  assert.match(app, /function refreshApiDecision\(\)/);
+  assert.match(app, /Handshake API response/);
+  assert.match(app, /handshake\.events\.some\(\(event\) => event\.type === "decision"\)/);
 });

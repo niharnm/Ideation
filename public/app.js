@@ -10,6 +10,7 @@ import {
 } from "/src/claimant-receipt.ts";
 import {
   addCustomAllergyToVault,
+  LOCAL_PASSPORT_VAULT_STORAGE_KEY,
   loadUserPassportVault,
   removeVaultAllergy,
   saveUserPassportVault,
@@ -139,8 +140,12 @@ async function savePassport(vault) {
 
 async function loadPassport() {
   try {
+    const browserVault = loadUserPassportVault(dependencies.storage);
+    const browserEgoist = browserVault.allergies.filter((allergy) =>
+      allergy.allergenId.startsWith("allergen."),
+    );
     const { passport } = await demoApi({ action: "passport-status" });
-    userVault = {
+    const apiVault = {
       claimantId: passport.claimantId,
       allergies: passport.constraints.map((constraint) => ({
         allergenId: constraint.id,
@@ -150,7 +155,21 @@ async function loadPassport() {
       })),
       updatedAt: passport.updatedAt,
     };
+    userVault = browserEgoist.length > 0
+      ? {
+          ...apiVault,
+          allergies: [...apiVault.allergies, ...browserEgoist],
+          updatedAt: browserVault.updatedAt,
+        }
+      : apiVault;
+    if (browserEgoist.length > 0) await savePassport(userVault);
     saveUserPassportVault(userVault, dependencies.storage);
+    if (browserEgoist.length > 0) {
+      for (const selected of [...selectedFieldIds]) {
+        if (!selected.startsWith("allergen.")) selectedFieldIds.delete(selected);
+      }
+      for (const allergy of browserEgoist) selectedFieldIds.add(allergy.allergenId);
+    }
     for (const selected of [...selectedFieldIds]) {
       if (!userVault.allergies.some((allergy) => allergy.allergenId === selected)) selectedFieldIds.delete(selected);
     }
@@ -269,7 +288,7 @@ function renderVaultFields() {
 }
 
 renderVaultFields();
-loadPassport();
+const passportReady = loadPassport();
 
 function closeModal() {
   if (addAllergyModal) {
@@ -626,6 +645,77 @@ function kitchenOutcomeCopy(outcome) {
   }
 }
 
+function showApiDecision(handshake, claim) {
+  const decision = handshake.events.find((event) => event.type === "decision");
+  if (!decision) return;
+  requestView.hidden = true;
+  outcomeView.hidden = false;
+  outcomeView.replaceChildren();
+
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  eyebrow.textContent = "Handshake API response";
+  const heading = document.createElement("h2");
+  heading.textContent = kitchenOutcomeCopy(decision.payload.response);
+  const rationale = document.createElement("p");
+  rationale.textContent = decision.payload.rationale;
+  outcomeView.append(eyebrow, heading, rationale);
+
+  if (Array.isArray(decision.payload.requiredChanges)) {
+    const changes = document.createElement("div");
+    changes.className = "receipt-section";
+    const label = document.createElement("p");
+    label.className = "label";
+    label.textContent = "Required changes";
+    const list = document.createElement("ul");
+    for (const change of decision.payload.requiredChanges) {
+      const item = document.createElement("li");
+      item.textContent = change;
+      list.append(item);
+    }
+    changes.append(label, list);
+    outcomeView.append(changes);
+  }
+
+  const scope = document.createElement("p");
+  scope.textContent = `Shared with Fieldline: ${claim.dataScope.fields.map((field) => field.label).join(", ")}.`;
+  outcomeView.append(scope);
+
+  const revoke = document.createElement("button");
+  revoke.className = "button revoke";
+  revoke.type = "button";
+  revoke.textContent = "Revoke access now";
+  revoke.addEventListener("click", async () => {
+    if (!confirmRevoke()) return;
+    try {
+      await revokeActiveApiHandshake();
+      revokeScopedClaim(claim.claimantId, dependencies);
+      showOutcome(
+        "revoked",
+        "Access revoked",
+        "The recipient is blocked from future use of this claim.",
+      );
+    } catch (error) {
+      showPreviewError(error instanceof Error ? error.message : "Access was not revoked.");
+    }
+  });
+  outcomeView.append(revoke);
+}
+
+async function refreshApiDecision() {
+  const handshakeId = dependencies.storage.getItem(HANDSHAKE_STORAGE_KEY);
+  const claim = expireScopedClaimIfNeeded(dependencies);
+  if (!handshakeId || claim?.status !== "active") return;
+  try {
+    const { handshake } = await demoApi({ action: "claimant-status", handshakeId });
+    if (handshake.events.some((event) => event.type === "decision")) {
+      showApiDecision(handshake, claim);
+    }
+  } catch {
+    // The local claim remains usable if the optional API response is unavailable.
+  }
+}
+
 function accessCopy(status) {
   if (status === "active") {
     return "Fieldline can still use this scope. Revoke to lock the kitchen.";
@@ -861,6 +951,7 @@ if (storedClaim?.status === "active") {
 } else {
   resetRequestView();
 }
+refreshApiDecision();
 
 function showPreviewError(message) {
   const error = document.createElement("p");
@@ -961,12 +1052,21 @@ function setPollStatus(kind, message) {
 
 async function pollEgoistPassportVault() {
   try {
-    const res = await fetch("/api/passport/vault");
-    if (!res.ok) {
-      setPollStatus("error", "Could not check NimGTP memories. Is npm start running?");
-      return;
+    let serverVault;
+    try {
+      const res = await fetch("/api/passport/vault");
+      if (!res.ok) throw new Error("Passport vault route unavailable.");
+      serverVault = await res.json();
+      const browserVault = loadUserPassportVault(dependencies.storage);
+      const browserHasLocalMemory = browserVault.allergies.some((allergy) =>
+        allergy.allergenId.startsWith("allergen."),
+      );
+      if (!serverVault.egoistConnected && browserHasLocalMemory) {
+        serverVault = browserVault;
+      }
+    } catch {
+      serverVault = loadUserPassportVault(dependencies.storage);
     }
-    const serverVault = await res.json();
     const egoist = (serverVault.allergies || []).filter((allergy) =>
       allergy.allergenId.startsWith("allergen."),
     );
@@ -1028,4 +1128,7 @@ async function pollEgoistPassportVault() {
 }
 
 setInterval(pollEgoistPassportVault, 3000);
-pollEgoistPassportVault();
+passportReady.then(pollEgoistPassportVault);
+window.addEventListener("storage", (event) => {
+  if (event.key === LOCAL_PASSPORT_VAULT_STORAGE_KEY) pollEgoistPassportVault();
+});

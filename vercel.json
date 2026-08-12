@@ -9,9 +9,16 @@
     },
     "api/demo.ts": {
       "includeFiles": "{api/**,src/**}"
+    },
+    "api/chat.ts": {
+      "includeFiles": "{api/**,src/**}"
+    },
+    "api/chat/**/*.ts": {
+      "includeFiles": "{api/**,src/**}"
     }
   },
   "rewrites": [
+    { "source": "/api/smart-prep", "destination": "/api/chat?mode=smart-prep" },
     { "source": "/", "destination": "/demo.html" }
   ]
 }

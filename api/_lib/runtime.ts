@@ -13,6 +13,7 @@ import {
 let store: HandshakeStore | undefined;
 let cipher: ValueCipher | undefined;
 let service: HandshakeService | undefined;
+let demoService: HandshakeService | undefined;
 
 export function getService(): HandshakeService {
   if (!service) {
@@ -26,6 +27,16 @@ export function getService(): HandshakeService {
     service = new HandshakeService(store, cipher);
   }
   return service;
+}
+
+export function getDemoService(): HandshakeService {
+  if (!demoService) {
+    demoService = new HandshakeService(
+      new MemoryHandshakeStore(),
+      new LocalEnvelopeCipher(),
+    );
+  }
+  return demoService;
 }
 
 export async function demoPrincipal(role: "claimant" | "recipient"): Promise<ApiPrincipal> {

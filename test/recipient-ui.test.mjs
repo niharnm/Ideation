@@ -15,13 +15,13 @@ test("Fieldline restaurant view starts with a locked scope and no rendered aller
   assert.match(html, /id="scope-card"/);
   assert.match(html, /Allergy details are unavailable\./);
   assert.match(app, /fetch\("\/api\/demo"/);
-  assert.match(app, /localStorage\.getItem\(HANDSHAKE_STORAGE_KEY\)/);
-  assert.match(app, /workspace\.phase === "locked"/);
+  assert.match(app, /storage\.getItem\(API_HANDSHAKE_STORAGE_KEY\)/);
+  assert.match(app, /phase: "locked"/);
 });
 
 test("approved restaurant scope is minimized to the customer-approved field", () => {
-  assert.match(app, /const fields = workspace\.handshake\.dataScope\.fields/);
-  assert.match(app, /workspace\.grant\.values\[field\.id\]/);
+  assert.match(app, /processRecipientRequest\(request, consent, SAMPLE_RECIPIENT_DATA\)/);
+  assert.match(app, /workspace\.recipientRequest\.scopedFields/);
   assert.match(app, /One approved constraint/);
   assert.match(app, /\$\{fields\.length\} approved constraints/);
   assert.doesNotMatch(app, /user\.ssn|homeAddress|creditCard/i);
@@ -31,10 +31,12 @@ test("approved restaurant scope is minimized to the customer-approved field", ()
 
 test("revocation removes scope detail and locks later restaurant actions", () => {
   assert.match(app, /Access ended by customer/);
-  assert.match(app, /Allergy detail was removed by the Handshake API/);
   assert.match(app, /button\.disabled = !enabled/);
   assert.match(app, /Future kitchen actions are locked because the customer ended access/);
   assert.match(app, /action: "record-decision"/);
+  assert.match(app, /const decision = buildDecision\(currentWorkspace\)/);
+  assert.match(app, /const note = decisionNote\.value\.trim\(\) \|\| actionCopy/);
+  assert.match(app, /rationale: decision\.payload\.rationale/);
 });
 
 test("business UI contains merchant queue, active scope, kitchen actions, and status history", () => {

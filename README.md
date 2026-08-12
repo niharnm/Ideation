@@ -1,39 +1,40 @@
 # Ideation prototype
 
-Local AI Passport demo for the Egoist Machines Identity track: a diner proves a selected dietary constraint to a restaurant for one order, then can take it back.
+Browser-local AI Passport demo for the Egoist Machines Identity track: a diner proves a selected dietary constraint to a restaurant for one order, then can take it back.
 
-Requires Node.js 22.18 or newer. Copy `.env.example` to `.env` and set
-`GROQ_API_KEY` for the local chat tab. Never commit `.env`.
+The public proof is at `https://ideation-handshake.vercel.app/demo.html`. Its judged path is:
+
+1. `https://ideation-handshake.vercel.app/chatgpt.html`, NimGTP with a local Egoist-style passport adapter
+2. `https://ideation-handshake.vercel.app/index.html`, Handshake consent
+3. `https://ideation-handshake.vercel.app/recipient.html`, Fieldline restaurant ops
+
+For local development, use Node.js 22.18 or newer. A server-side Groq response is optional. Copy `.env.example` to `.env` and set `GROQ_API_KEY` to use it. Without that key, dietary prompts use the browser-local demo adapter. Never commit `.env`.
 
 ```sh
 npm test
+npm run typecheck
 npm start
 ```
 
-Open `http://127.0.0.1:4173/` for the demo hub, then use these three tabs:
+Open `http://127.0.0.1:4173/demo.html` for the demo hub, then use these three tabs:
 
-1. `http://127.0.0.1:4173/chatgpt.html` — ChatGPT-like assistant with a local Egoist AI Passport plugin
-2. `http://127.0.0.1:4173/index.html` — Handshake consent
-3. `http://127.0.0.1:4173/recipient.html` — Fieldline restaurant ops
+1. `http://127.0.0.1:4173/chatgpt.html`, ChatGPT-like assistant with a local Egoist AI Passport plugin
+2. `http://127.0.0.1:4173/index.html`, Handshake consent
+3. `http://127.0.0.1:4173/recipient.html`, Fieldline restaurant ops
 
-Tell ChatGPT your allergies. The plugin writes dietary memories to the
-server-side demo passport. Handshake reads that passport, creates an
+Tell NimGTP about one peanut allergy. The local adapter writes that dietary memory to the
+browser-local demo passport. Handshake reads that passport, creates an
 order-scoped grant when you approve, and Fieldline retrieves only the approved
 constraint for Pad Thai · #A1024. Revoke from Handshake to lock later kitchen
 actions.
 
 `handshake:demo-linked-events` accepts local demo data only. The claimant view labels it unverified. Local browser events are not authenticated recipient actions and are never persisted as recipient proof.
 
-The hub, claimant screen, and restaurant workspace call the server-side
-Handshake API adapter. The browser stores only the active handshake ID, while
-passport values, grants, decisions, receipts, and revocations are handled
-server-side. Passport edits affect new handshakes. Values already approved into
-an active handshake remain unchanged until that grant is revoked or expires.
-
-`handshake:demo-linked-events` accepts local demo data only. The claimant view
-labels it unverified, validates the linked chain, and renders a receipt preview
-with delivery pending. Local browser events are not authenticated recipient
-actions and are never persisted as recipient proof.
+The hub, claimant screen, and restaurant workspace call the Handshake demo API
+adapter. The browser-local passport supplies new request fields. The API adapter
+handles the scoped grant, decision, acknowledgement, and revocation shown in the
+proof. Passport edits affect new handshakes. Values already approved into an
+active handshake remain unchanged until that grant is revoked or expires.
 
 ## API product
 
@@ -46,7 +47,8 @@ keys never enter browser code.
 Apply [`db/schema.sql`](./db/schema.sql) to a Neon Postgres database, configure
 the variables in [`.env.example`](./.env.example), and give Vercel an AWS OIDC
 role with access to the configured KMS key. Production startup fails closed
-when Postgres, KMS, or the API-key pepper are absent.
+for `/api/v1` when Postgres, KMS, or the API-key pepper are absent. The explicitly
+local website proof uses a separate in-memory demo service.
 
 Provision a partner key once, from a trusted operator environment:
 

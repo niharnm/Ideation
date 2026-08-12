@@ -10,25 +10,30 @@ proof case only.
 
 ## Live demo, 60 to 75 seconds
 
-Prerequisite: Node.js 22.18 or newer. Copy `.env.example` to `.env` and set
-`GROQ_API_KEY`.
+Use the public proof without any secret configuration. For local development,
+Node.js 22.18 or newer is required. `GROQ_API_KEY` is optional and must remain
+server-side.
 
 ```sh
 npm test
 npm start
 ```
 
-1. Open three tabs: ChatGPT at `http://127.0.0.1:4173/chatgpt.html`, Handshake
-   at `http://127.0.0.1:4173/index.html`, and checkout at
-   `http://127.0.0.1:4173/recipient.html`. The numbered 1–2–3 path is on every page.
-2. In ChatGPT, say you don't like milk and can't eat peanuts (or tap a suggestion).
-   The Egoist AI Passport plugin saves those memories locally.
+1. Open three tabs: NimGTP at `https://ideation-handshake.vercel.app/chatgpt.html`,
+   Handshake at `https://ideation-handshake.vercel.app/index.html`, and Fieldline
+   at `https://ideation-handshake.vercel.app/recipient.html`. The numbered 1, 2,
+   3 path is on every page.
+2. In NimGTP, say `I have a severe peanut allergy. Save that to my AI Passport.`
+   The local Egoist-style adapter saves that memory to the browser-local passport.
 3. Return to Handshake. The new constraints appear within a few seconds, labeled
-   From ChatGPT. Choose an end time and select **Approve this exact scope**.
+   From NimGTP. Keep only peanut selected, choose an end time, and select
+   **Approve this exact scope**.
 4. In Fieldline checkout, open **Pad Thai · #A1024** and show the green
    **Allergy scope active** card. It contains only the approved constraints.
-5. Record a kitchen decision, then return to Handshake and **Revoke access
-   now**. Fieldline should lock future kitchen actions.
+5. Select **Request preparation change**, enter `Use a dedicated surface and
+   replace the peanut garnish.`, and record the kitchen decision. Return to
+   Handshake, show the response, then **Revoke access now**. Fieldline should
+   remove the scope and lock future kitchen actions.
 6. Keep automated tests as fallback evidence, not the main demo:
 
    ```sh
