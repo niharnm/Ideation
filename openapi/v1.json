@@ -1,0 +1,83 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Handshake API",
+    "version": "1.0.0",
+    "description": "Partner API for short-lived, field-scoped consent handshakes."
+  },
+  "servers": [{ "url": "https://{host}/api/v1", "variables": { "host": { "default": "api.example.com" } } }],
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/passport": {
+      "get": {
+        "operationId": "getPassport",
+        "summary": "Read the authenticated claimant's encrypted passport",
+        "parameters": [{ "name": "claimantId", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Passport profile" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" } }
+      },
+      "put": {
+        "operationId": "putPassport",
+        "summary": "Create or replace the authenticated claimant's encrypted passport",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PassportInput" } } } },
+        "responses": { "200": { "description": "Updated passport profile" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/handshakes": {
+      "post": { "operationId": "createHandshake", "summary": "Create a pending scoped request", "responses": { "201": { "description": "Created" }, "401": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } } },
+      "get": { "operationId": "listHandshakes", "summary": "List handshakes involving the authenticated organization", "parameters": [{ "$ref": "#/components/parameters/Cursor" }, { "$ref": "#/components/parameters/Limit" }], "responses": { "200": { "description": "Handshake page" }, "401": { "$ref": "#/components/responses/Error" } } }
+    },
+    "/handshakes/{id}": { "get": { "operationId": "getHandshake", "summary": "Read participant-safe metadata and events", "parameters": [{ "$ref": "#/components/parameters/HandshakeId" }], "responses": { "200": { "description": "Handshake" }, "404": { "$ref": "#/components/responses/Error" } } } },
+    "/handshakes/{id}/consent": { "post": { "operationId": "consentToHandshake", "summary": "Approve with exact scoped values or deny", "parameters": [{ "$ref": "#/components/parameters/HandshakeId" }], "responses": { "200": { "description": "Updated handshake" }, "409": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } } } },
+    "/handshakes/{id}/grant": { "get": { "operationId": "getActiveGrant", "summary": "Recipient-only active scoped values", "parameters": [{ "$ref": "#/components/parameters/HandshakeId" }], "responses": { "200": { "description": "Active values" }, "403": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" } } } },
+    "/handshakes/{id}/decisions": { "post": { "operationId": "createDecision", "summary": "Recipient submits one decision", "parameters": [{ "$ref": "#/components/parameters/HandshakeId" }], "responses": { "201": { "description": "Decision event" }, "409": { "$ref": "#/components/responses/Error" } } } },
+    "/handshakes/{id}/acknowledgements": { "post": { "operationId": "acknowledgeDecision", "summary": "Recipient acknowledgement and receipt", "parameters": [{ "$ref": "#/components/parameters/HandshakeId" }], "responses": { "201": { "description": "Acknowledgement and receipt" }, "409": { "$ref": "#/components/responses/Error" } } } },
+    "/handshakes/{id}/revocations": { "post": { "operationId": "revokeHandshake", "summary": "Claimant revokes an active grant", "parameters": [{ "$ref": "#/components/parameters/HandshakeId" }], "responses": { "200": { "description": "Revoked handshake" }, "409": { "$ref": "#/components/responses/Error" } } } }
+  },
+  "components": {
+    "securitySchemes": { "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "hsk_<key-id>_<secret>" } },
+    "parameters": { "HandshakeId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, "Cursor": { "name": "cursor", "in": "query", "schema": { "type": "string" } }, "Limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 } } },
+    "schemas": {
+      "PassportInput": {
+        "type": "object",
+        "required": ["claimantId", "constraints"],
+        "properties": {
+          "claimantId": { "type": "string" },
+          "constraints": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "required": ["id", "label", "severity", "crossContaminationTolerance"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^order\\.(constraint|preference)\\." },
+                "label": { "type": "string", "maxLength": 120 },
+                "severity": { "type": "string", "enum": ["severe", "moderate", "mild"] },
+                "crossContaminationTolerance": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "API error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["error"],
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": { "code": { "type": "string" }, "message": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

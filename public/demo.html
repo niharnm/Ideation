@@ -158,7 +158,7 @@
           <div class="section-heading"><h2>Landing → NimGTP → Dash.</h2><p class="section-note">Start in chat. Order on Dash. Handshake sits between them only when a constraint needs to travel.</p></div>
           <div class="flow">
             <article class="flow-step"><span class="step-num">01</span><h3>Open NimGTP</h3><p>Talk like you would in any chat. Mention milk, peanuts, or another constraint. Those memories save locally.</p></article>
-            <article class="flow-step"><span class="step-num">02</span><h3>Continue to Dash</h3><p>The grocery storefront looks like checkout. Pad Thai is already in the cart. Allergy detail stays locked.</p></article>
+            <article class="flow-step"><span class="step-num">02</span><h3>AI asks Egoist</h3><p>Egoist returns the saved constraint to the server-side passport. Continue to Dash with allergy detail still locked.</p></article>
             <article class="flow-step"><span class="step-num">03</span><h3>Approve the share</h3><p>Handshake asks for the minimum fact, this order, a fixed end time. Dash then unlocks only that card.</p></article>
             <article class="flow-step"><span class="step-num">04</span><h3>Revoke</h3><p>Return to Handshake and revoke. Future kitchen actions on Dash lock.</p></article>
           </div>
@@ -179,7 +179,7 @@
               <div class="order-meta"><span>Order #A1024</span><span id="preview-time">15 min window</span></div>
               <h3 class="order-title">Pad Thai</h3>
               <div class="scope" id="scope-preview"><div class="scope-title"><span>Permitted order constraint</span><span>One field</span></div><strong id="preview-constraint">Peanut allergy</strong><p id="preview-copy">Use this one constraint to evaluate this order. Access expires automatically.</p></div>
-              <div class="console-action"><span id="preview-action">Kitchen review is ready.</span><a href="/recipient.html">Open Dash</a></div>
+              <div class="console-action"><span id="preview-action">Kitchen review is ready.</span><a href="/recipient.html">Open Fieldline restaurant ops</a></div>
             </div>
           </article>
         </div>
@@ -193,7 +193,7 @@
             <p>The judged path is NimGTP, then Dash. This button issues a local peanut scope so you can still show lock and revoke if Groq is unavailable.</p>
             <div class="demo-controls">
               <button class="button" id="start-handshake" type="button">Start a fresh handshake</button>
-              <a class="button secondary" href="/recipient.html">Open Dash</a>
+              <a class="button secondary" href="/recipient.html">Open Fieldline restaurant ops</a>
               <button class="button danger" id="revoke-handshake" type="button" hidden>Revoke restaurant access</button>
             </div>
             <p class="demo-error" id="demo-error" role="alert"></p>
@@ -207,7 +207,7 @@
         </div>
       </section>
     </main>
-    <footer class="wrap">Identity track, Build lane. Restaurant ordering is a local proof case for Egoist AI Passport. It is not a live delivery-platform integration or authenticated recipient transport. API keys stay in <code>.env</code>, never in the browser.</footer>
+    <footer class="wrap">Restaurant ordering is a live Handshake API proof case for Egoist. It is not a live delivery-platform integration. API keys stay in <code>.env</code>, never in the browser.</footer>
     <script type="module" src="/demo.js"></script>
   </body>
 </html>

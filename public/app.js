@@ -24,6 +24,7 @@ const defaultFieldOptions = [
   { id: "order.preference.vegetarian", label: "Vegetarian preference", selected: false },
 ];
 const LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY = "handshake:demo-linked-events:v1";
+const HANDSHAKE_STORAGE_KEY = "egoist.demo.handshake-id";
 
 const requestView = document.querySelector("#request-view");
 const outcomeView = document.querySelector("#outcome-view");
@@ -99,6 +100,68 @@ function allergiesForShare(allergies) {
 let seenEgoistIds = new Set();
 const deselectedFieldIds = new Set();
 
+async function demoApi(body) {
+  const response = await fetch("/api/demo", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error?.message ?? "The passport API could not complete this action.");
+  return data;
+}
+
+function apiConstraintId(allergenId) {
+  return allergenId.startsWith("allergen.")
+    ? `order.constraint.${constraintFamily(allergenId)}`
+    : allergenId;
+}
+
+function apiConstraints(vault) {
+  const constraints = new Map();
+  for (const allergy of vault.allergies) {
+    const id = apiConstraintId(allergy.allergenId);
+    constraints.set(id, {
+      id,
+      label: allergy.label,
+      severity: ["severe", "moderate", "mild"].includes(allergy.severity)
+        ? allergy.severity
+        : "severe",
+      crossContaminationTolerance: allergy.crossContaminationTolerance,
+    });
+  }
+  return [...constraints.values()];
+}
+
+async function savePassport(vault) {
+  return demoApi({ action: "passport-update", constraints: apiConstraints(vault) });
+}
+
+async function loadPassport() {
+  try {
+    const { passport } = await demoApi({ action: "passport-status" });
+    userVault = {
+      claimantId: passport.claimantId,
+      allergies: passport.constraints.map((constraint) => ({
+        allergenId: constraint.id,
+        label: constraint.label,
+        severity: constraint.severity,
+        crossContaminationTolerance: constraint.crossContaminationTolerance,
+      })),
+      updatedAt: passport.updatedAt,
+    };
+    saveUserPassportVault(userVault, dependencies.storage);
+    for (const selected of [...selectedFieldIds]) {
+      if (!userVault.allergies.some((allergy) => allergy.allergenId === selected)) selectedFieldIds.delete(selected);
+    }
+    if (selectedFieldIds.size === 0 && userVault.allergies[0]) selectedFieldIds.add(userVault.allergies[0].allergenId);
+    renderVaultFields();
+  } catch (error) {
+    errorView.textContent = error instanceof Error ? error.message : "The passport could not be loaded.";
+    errorView.hidden = false;
+  }
+}
+
 function renderVaultFields() {
   fieldsView.replaceChildren();
   const visible = allergiesForShare(userVault.allergies);
@@ -170,20 +233,28 @@ function renderVaultFields() {
     removeBtn.textContent = "×";
     removeBtn.title = `Remove ${allergy.label} from vault`;
     removeBtn.setAttribute("aria-label", `Remove ${allergy.label}`);
-    removeBtn.addEventListener("click", (e) => {
+    removeBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      userVault = removeVaultAllergy(userVault, allergy.allergenId);
-      selectedFieldIds.delete(allergy.allergenId);
-      deselectedFieldIds.add(allergy.allergenId);
-      saveUserPassportVault(userVault, dependencies.storage);
-      renderVaultFields();
-      if (allergy.allergenId.startsWith("allergen.")) {
-        fetch("/api/passport/vault", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ removeAllergenId: allergy.allergenId }),
-        }).catch(() => {});
+      const nextVault = removeVaultAllergy(userVault, allergy.allergenId);
+      try {
+        await savePassport(nextVault);
+        if (allergy.allergenId.startsWith("allergen.")) {
+          const response = await fetch("/api/passport/vault", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ removeAllergenId: allergy.allergenId }),
+          });
+          if (!response.ok) throw new Error("The chat memory was not removed.");
+        }
+        userVault = nextVault;
+        selectedFieldIds.delete(allergy.allergenId);
+        deselectedFieldIds.add(allergy.allergenId);
+        saveUserPassportVault(userVault, dependencies.storage);
+        renderVaultFields();
+      } catch (error) {
+        errorView.textContent = error instanceof Error ? error.message : "The passport was not updated.";
+        errorView.hidden = false;
       }
     });
 
@@ -198,6 +269,7 @@ function renderVaultFields() {
 }
 
 renderVaultFields();
+loadPassport();
 
 function closeModal() {
   if (addAllergyModal) {
@@ -257,7 +329,7 @@ addAllergyModal.addEventListener("click", (event) => {
 });
 
 if (addAllergyForm) {
-  addAllergyForm.addEventListener("submit", (e) => {
+  addAllergyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const label = allergyLabelInput.value.trim();
     if (!label) return;
@@ -279,13 +351,18 @@ if (addAllergyForm) {
       return;
     }
 
-    userVault = addCustomAllergyToVault(userVault, newConstraint);
-    if (shareNewAllergyCheck.checked) {
-      selectedFieldIds.add(newConstraint.allergenId);
+    const nextVault = addCustomAllergyToVault(userVault, newConstraint);
+    try {
+      await savePassport(nextVault);
+      userVault = nextVault;
+      if (shareNewAllergyCheck.checked) selectedFieldIds.add(newConstraint.allergenId);
+      saveUserPassportVault(userVault, dependencies.storage);
+      renderVaultFields();
+      closeModal();
+    } catch (error) {
+      allergyFormError.textContent = error instanceof Error ? error.message : "The passport was not updated.";
+      allergyFormError.hidden = false;
     }
-    saveUserPassportVault(userVault, dependencies.storage);
-    renderVaultFields();
-    closeModal();
   });
 }
 
@@ -427,6 +504,12 @@ function confirmRevoke() {
   return window.confirm("Revoke now? Fieldline will lose this order scope immediately.");
 }
 
+async function revokeActiveApiHandshake() {
+  const handshakeId = dependencies.storage.getItem(HANDSHAKE_STORAGE_KEY);
+  if (!handshakeId) return;
+  await demoApi({ action: "revoke", handshakeId });
+}
+
 function showOutcome(kind, title, message, claim = null) {
   requestView.hidden = true;
   outcomeView.hidden = false;
@@ -480,14 +563,19 @@ function showOutcome(kind, title, message, claim = null) {
     revoke.type = "button";
     revoke.textContent = "Revoke access now";
     revoke.title = "This locks the kitchen immediately.";
-    revoke.addEventListener("click", () => {
+    revoke.addEventListener("click", async () => {
       if (!confirmRevoke()) return;
-      revokeScopedClaim("claimant-1", dependencies);
-      showOutcome(
-        "revoked",
-        "Access revoked",
-        "The recipient is blocked from future use of this claim.",
-      );
+      try {
+        await revokeActiveApiHandshake();
+        revokeScopedClaim("claimant-1", dependencies);
+        showOutcome(
+          "revoked",
+          "Access revoked",
+          "The recipient is blocked from future use of this claim.",
+        );
+      } catch (error) {
+        showPreviewError(error instanceof Error ? error.message : "Access was not revoked.");
+      }
     });
     outcomeView.append(revoke);
   }
@@ -648,14 +736,19 @@ function showReceipt(receipt) {
     revoke.type = "button";
     revoke.textContent = "Revoke access now";
     revoke.title = "This locks the kitchen immediately.";
-    revoke.addEventListener("click", () => {
+    revoke.addEventListener("click", async () => {
       if (!confirmRevoke()) return;
-      const revocation = revokeScopedClaim(localClaim.claimantId, dependencies);
-      showReceipt({
-        ...receipt,
-        access: { ...receipt.access, status: "revoked" },
-        timestamps: { ...receipt.timestamps, terminalAt: revocation.occurredAt },
-      });
+      try {
+        await revokeActiveApiHandshake();
+        const revocation = revokeScopedClaim(localClaim.claimantId, dependencies);
+        showReceipt({
+          ...receipt,
+          access: { ...receipt.access, status: "revoked" },
+          timestamps: { ...receipt.timestamps, terminalAt: revocation.occurredAt },
+        });
+      } catch (error) {
+        showPreviewError(error instanceof Error ? error.message : "Access was not revoked.");
+      }
     });
     outcomeView.append(revoke);
   }
@@ -721,11 +814,22 @@ function scheduleExpiry(claim) {
 
 expiryInput.addEventListener("change", updateEndTime);
 
-approveButton.addEventListener("click", () => {
+approveButton.addEventListener("click", async () => {
   errorView.hidden = true;
   const result = approveScopedRequest(input("approve"), dependencies);
   if (!result.success) {
     showError(result.issues);
+    return;
+  }
+  try {
+    await savePassport(userVault);
+    const constraintId = apiConstraintId(result.value.claim.dataScope.fields[0].id);
+    const { handshake } = await demoApi({ action: "start", constraintId });
+    dependencies.storage.setItem(HANDSHAKE_STORAGE_KEY, handshake.id);
+  } catch (error) {
+    revokeScopedClaim(result.value.claim.claimantId, dependencies, "The API handshake could not be created.");
+    errorView.textContent = error instanceof Error ? error.message : "The order permission could not be created.";
+    errorView.hidden = false;
     return;
   }
   renderClaim(result.value.claim);
@@ -890,6 +994,7 @@ async function pollEgoistPassportVault() {
       allergies: [...nonEgoist, ...egoist],
       updatedAt: serverVault.updatedAt,
     };
+    await savePassport(userVault);
     saveUserPassportVault(userVault, dependencies.storage);
     if (egoist.length > 0) {
       for (const id of [...selectedFieldIds]) {

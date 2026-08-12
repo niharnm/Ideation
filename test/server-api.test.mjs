@@ -81,6 +81,8 @@ test("Server API: chat status endpoint exists and client never embeds a Groq key
   assert.doesNotMatch(chatgpt, /Authorization:\s*`Bearer/);
   assert.match(server, /extractMemoriesWithGroq/);
   assert.match(server, /mergeMemoryStrings/);
+  assert.match(server, /syncApiPassport\(vault\)/);
+  assert.match(server, /order\.constraint\.\$\{allergy\.allergenId\.slice/);
   assert.doesNotMatch(server, /\/api\/egoist\/connect/);
   assert.doesNotMatch(server, /passport\.ego\.ist/);
   assert.match(server, /"\.css": "text\/css; charset=utf-8"/);
