@@ -45,7 +45,7 @@ function resolveRequest(pathname) {
   }
 
   const requestedPath = pathname === "/"
-    ? "/public/index.html"
+    ? "/public/demo.html"
     : pathname.startsWith("/src/")
       ? pathname
       : `/public${pathname}`;
