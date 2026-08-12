@@ -356,3 +356,42 @@ export function recordRecipientDecision(
   dependencies.emit(decisionEvent);
   return decisionEvent;
 }
+
+import {
+  evaluateUniversalAllergyPolicy,
+  type KitchenCapabilities,
+  type UniversalPolicyEvaluationResult,
+} from "./universal-policy-engine.ts";
+import {
+  getAllergenMetadata,
+  normalizeAllergenUri,
+  type DishIngredientProfile,
+} from "./universal-taxonomy.ts";
+
+export {
+  evaluateUniversalAllergyPolicy,
+  getAllergenMetadata,
+  normalizeAllergenUri,
+};
+export type {
+  DishIngredientProfile,
+  KitchenCapabilities,
+  UniversalPolicyEvaluationResult,
+};
+
+export function evaluateRecipientUniversalPolicy(params: {
+  request: ProcessedRecipientRequest;
+  dish: DishIngredientProfile;
+  kitchenCapabilities?: KitchenCapabilities;
+}): UniversalPolicyEvaluationResult {
+  const requestedAllergies = params.request.dataScope.fields.map((f) => ({
+    id: f.id,
+    label: f.label,
+  }));
+  return evaluateUniversalAllergyPolicy(
+    params.dish,
+    requestedAllergies,
+    params.kitchenCapabilities,
+  );
+}
+

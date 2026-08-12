@@ -9,4 +9,6 @@ export * from "./passport-flow.ts";
 export * from "./proof-case/allergy-ordering.ts";
 export * from "./proof-case/restaurant-fixtures.ts";
 export * from "./recipient-console.ts";
+export * from "./universal-policy-engine.ts";
+export * from "./universal-taxonomy.ts";
 export * from "./validate-handshake-event.ts";
