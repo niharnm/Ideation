@@ -128,13 +128,14 @@ actionButtons.forEach((button) => button.addEventListener("click", () => { if (!
 
 recordButton.addEventListener("click", async () => {
   if (busy || workspace.phase !== "active" || decisionEvent(workspace.handshake)) return;
+  const requestedRationale = decisionNote.value.trim();
   busy = true; render(); decisionNotice.hidden = true;
   try {
     const fields = workspace.handshake.dataScope.fields.map((field) => ({
       ...field,
       value: workspace.grant.values[field.id],
     }));
-    await api({ action: "record-decision", handshakeId: workspace.handshake.id, response: selectedAction, rationale: decisionNote.value.trim() || actionCopy(selectedAction, fields)[1] });
+    await api({ action: "record-decision", handshakeId: workspace.handshake.id, response: selectedAction, rationale: requestedRationale || actionCopy(selectedAction, fields)[1] });
     decisionNotice.textContent = "Kitchen decision and acknowledgement recorded through the Handshake API.";
     decisionNotice.hidden = false;
     await load();

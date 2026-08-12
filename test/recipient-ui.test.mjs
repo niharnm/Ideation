@@ -35,6 +35,8 @@ test("revocation removes scope detail and locks later restaurant actions", () =>
   assert.match(app, /button\.disabled = !enabled/);
   assert.match(app, /Future kitchen actions are locked because the customer ended access/);
   assert.match(app, /action: "record-decision"/);
+  assert.match(app, /const requestedRationale = decisionNote\.value\.trim\(\)/);
+  assert.match(app, /rationale: requestedRationale \|\| actionCopy/);
 });
 
 test("business UI contains merchant queue, active scope, kitchen actions, and status history", () => {

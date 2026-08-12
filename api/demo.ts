@@ -1,6 +1,6 @@
 import { ApiError, type ApiPrincipal } from "../src/api/service.ts";
 import { errorResponse, json, response } from "./_lib/http.ts";
-import { getService } from "./_lib/runtime.ts";
+import { getDemoService } from "./_lib/runtime.ts";
 
 const claimant: ApiPrincipal = {
   organizationId: "demo-claimant",
@@ -27,11 +27,11 @@ function string(value: unknown, name: string): string {
 }
 
 async function currentHandshake(principal: ApiPrincipal, id: unknown) {
-  return getService().get(principal, string(id, "handshakeId"));
+  return getDemoService().get(principal, string(id, "handshakeId"));
 }
 
 async function passport() {
-  const service = getService();
+  const service = getDemoService();
   try {
     return await service.getPassport(claimant, defaultPassport.claimantId);
   } catch (error) {
@@ -44,7 +44,7 @@ async function handle(request: Request) {
   if (request.method !== "POST") throw new ApiError(405, "method_not_allowed", "Use POST for the website demo adapter.");
   const body = await json(request);
   const action = string(body.action, "action");
-  const service = getService();
+  const service = getDemoService();
 
   if (action === "passport-status") return response({ passport: await passport() });
 

@@ -1,3 +1,12 @@
+import {
+  parseNaturalLanguageToConstraints,
+  replaceEgoistAllergies,
+} from "/src/egoist-mcp-server.ts";
+import {
+  loadUserPassportVault,
+  saveUserPassportVault,
+} from "/src/passport-vault.ts";
+
 const form = document.querySelector("#chat-form");
 const promptInput = document.querySelector("#prompt");
 const sendButton = document.querySelector("#send");
@@ -34,6 +43,21 @@ const threads = [
 ];
 
 let activeId = null;
+
+function saveLocalConstraints(constraints) {
+  if (!Array.isArray(constraints) || constraints.length === 0) return false;
+  const vault = loadUserPassportVault(window.localStorage);
+  const updated = replaceEgoistAllergies(vault, constraints);
+  saveUserPassportVault(updated, window.localStorage);
+  return true;
+}
+
+function localPassportReply(text) {
+  const constraints = parseNaturalLanguageToConstraints(text);
+  if (!saveLocalConstraints(constraints)) return null;
+  const labels = constraints.map((constraint) => constraint.label).join(", ");
+  return `Saved to your local AI Passport: ${labels}. Handshake can now request only the fact you choose to share.`;
+}
 
 function emptyMarkup() {
   return `<div class="empty" id="empty">
@@ -198,19 +222,24 @@ form.addEventListener("submit", async (event) => {
     });
     const payload = await res.json();
     if (!res.ok) {
+      const fallback = localPassportReply(text);
+      if (fallback) {
+        bubble.textContent = fallback;
+        thread.messages.push({ role: "assistant", content: fallback });
+        return;
+      }
       bubble.classList.add("error");
-      const setup = payload.error || "Chat is unavailable.";
-      bubble.textContent = res.status === 503
-        ? `${setup} You can still add a constraint in Handshake, or use the landing-page shortcut.`
-        : setup;
+      bubble.textContent = payload.error || "Chat is unavailable for this request.";
       thread.messages.push({ role: "assistant", content: bubble.textContent });
       return;
     }
+    saveLocalConstraints(payload.constraints);
     bubble.textContent = payload.reply;
     thread.messages.push({ role: "assistant", content: payload.reply });
   } catch {
-    bubble.classList.add("error");
-    bubble.textContent = "Could not reach the local chat server. Is npm start running?";
+    const fallback = localPassportReply(text);
+    bubble.classList.toggle("error", !fallback);
+    bubble.textContent = fallback || "Could not reach the chat service for this request.";
     thread.messages.push({ role: "assistant", content: bubble.textContent });
   } finally {
     sendButton.disabled = false;

@@ -91,5 +91,8 @@ test("ChatGPT demo tab exposes a connected Egoist plugin", () => {
   assert.match(js, /\bthreads\b/);
   assert.match(js, /fetch\("\/api\/chat"/);
   assert.match(js, /\/api\/chat\/status/);
+  assert.match(js, /localPassportReply/);
+  assert.match(js, /saveLocalConstraints/);
+  assert.match(js, /parseNaturalLanguageToConstraints/);
   assert.match(gitignore, /^\.env$/m);
 });

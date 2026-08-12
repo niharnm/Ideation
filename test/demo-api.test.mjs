@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 process.env.API_KEY_PEPPER = "demo-api-test-pepper";
+process.env.NODE_ENV = "production";
 
 const handler = (await import("../api/demo.ts")).default;
 
