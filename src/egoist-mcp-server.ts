@@ -77,6 +77,46 @@ export const EGOIST_MCP_TOOLS: MCPToolDefinition[] = [
   },
 ];
 
+function hasKeyword(text: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
+  return new RegExp(`\\b${escaped}s?\\b`, "i").test(text);
+}
+
+function clauseForKeyword(text: string, keyword: string): string {
+  const parts = text.split(/\band\b|,|;|\./i);
+  return parts.find((part) => hasKeyword(part, keyword))?.trim() || text;
+}
+
+function classifyConstraint(clause: string): {
+  severity: string;
+  crossContaminationTolerance: boolean;
+} {
+  const lower = clause.toLowerCase();
+  const allergyLanguage =
+    /\b(allerg|anaphylac|cannot|can'?t\s+(eat|drink)|intoleran|severe|strict|dedicated)/i.test(
+      lower,
+    );
+  const preferenceLanguage =
+    /\b(don'?t like|do not like|does not like|dislike|prefer not|not a fan)\b/i.test(lower);
+  if (preferenceLanguage && !allergyLanguage) {
+    return { severity: "mild", crossContaminationTolerance: true };
+  }
+  if (/\b(anaphylac|severe)/i.test(lower)) {
+    return { severity: "anaphylactic", crossContaminationTolerance: false };
+  }
+  return { severity: "severe", crossContaminationTolerance: false };
+}
+
+export function normalizeCrossContaminationTolerance(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const lower = value.trim().toLowerCase();
+    if (lower === "shared_facility_ok" || lower === "true") return true;
+    if (lower === "strict_isolation" || lower === "false") return false;
+  }
+  return false;
+}
+
 export function parseNaturalLanguageToConstraints(text: string): AllergyConstraint[] {
   const lower = text.toLowerCase();
   const constraints: AllergyConstraint[] = [];
@@ -103,43 +143,32 @@ export function parseNaturalLanguageToConstraints(text: string): AllergyConstrai
     { keyword: "sulfite", allergenId: "allergen.sulfite", defaultLabel: "Sulfite" },
   ];
 
-  // Handle Egoist memory patterns: "The user cannot eat nuts" -> peanut + tree_nut
-  // "nuts" alone (not "peanut", not "tree nut") maps to BOTH peanut and tree_nut
-  const nutsPattern = /\bnut(s)?\b/;
-  const hasPeanutExplicit = lower.includes("peanut");
-  const hasTreeNutExplicit = lower.includes("tree nut");
-  if (nutsPattern.test(lower) && !hasPeanutExplicit && !hasTreeNutExplicit) {
-    const meta1 = getAllergenMetadata("allergen.peanut");
-    const meta2 = getAllergenMetadata("allergen.tree_nut");
-    const isAnaphylactic = lower.includes("anaphylac") || lower.includes("severe");
-    constraints.push({
-      allergenId: "allergen.peanut",
-      label: meta1 ? meta1.name : "Peanut",
-      severity: isAnaphylactic ? "anaphylactic" : "severe",
-      crossContaminationTolerance: false, // strict: no cross-contamination allowed
-    });
-    constraints.push({
-      allergenId: "allergen.tree_nut",
-      label: meta2 ? meta2.name : "Tree Nut",
-      severity: isAnaphylactic ? "anaphylactic" : "severe",
-      crossContaminationTolerance: false, // strict: no cross-contamination allowed
-    });
-    seen.add("allergen.peanut");
-    seen.add("allergen.tree_nut");
+  const hasPeanutExplicit = hasKeyword(lower, "peanut");
+  const hasTreeNutExplicit = hasKeyword(lower, "tree nut");
+  if (/\bnuts?\b/i.test(lower) && !hasPeanutExplicit && !hasTreeNutExplicit) {
+    const classified = classifyConstraint(clauseForKeyword(text, "nut"));
+    for (const allergenId of ["allergen.peanut", "allergen.tree_nut"] as const) {
+      const meta = getAllergenMetadata(allergenId);
+      constraints.push({
+        allergenId,
+        label: meta ? meta.name : allergenId,
+        severity: classified.severity,
+        crossContaminationTolerance: classified.crossContaminationTolerance,
+      });
+      seen.add(allergenId);
+    }
   }
 
   for (const item of allergenKeywords) {
-    if (lower.includes(item.keyword) && !seen.has(item.allergenId)) {
+    if (hasKeyword(lower, item.keyword) && !seen.has(item.allergenId)) {
       seen.add(item.allergenId);
-      const isAnaphylactic = lower.includes("anaphylac") || lower.includes("severe");
-      const isStrict = lower.includes("strict") || lower.includes("dedicated") || isAnaphylactic;
+      const classified = classifyConstraint(clauseForKeyword(text, item.keyword));
       const meta = getAllergenMetadata(item.allergenId);
-
       constraints.push({
         allergenId: item.allergenId,
         label: meta ? meta.name : item.defaultLabel,
-        severity: isAnaphylactic ? "anaphylactic" : "severe",
-        crossContaminationTolerance: false, // Egoist memories = strict by default (no cross-contam)
+        severity: classified.severity,
+        crossContaminationTolerance: classified.crossContaminationTolerance,
       });
     }
   }
@@ -217,7 +246,9 @@ export function handleEgoistMCPRequest(
           allergenId,
           label,
           severity: args.severity || "severe",
-          crossContaminationTolerance: args.crossContaminationTolerance || "strict_isolation",
+          crossContaminationTolerance: normalizeCrossContaminationTolerance(
+            args.crossContaminationTolerance ?? "strict_isolation",
+          ),
         };
 
         const existingIdx = vault.allergies.findIndex((a) => a.allergenId === allergenId);

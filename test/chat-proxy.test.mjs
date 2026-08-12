@@ -68,5 +68,6 @@ test("ChatGPT demo tab exposes a connected Egoist plugin", () => {
   const gitignore = readFileSync(new URL("../.gitignore", import.meta.url), "utf8");
   assert.match(html, /Egoist AI Passport · Connected/);
   assert.match(js, /fetch\("\/api\/chat"/);
+  assert.match(js, /\/api\/chat\/status/);
   assert.match(gitignore, /^\.env$/m);
 });

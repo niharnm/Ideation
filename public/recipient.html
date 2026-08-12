@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <title>Fieldline Restaurant Ops</title>
+    <link rel="stylesheet" href="/demo-flow.css" />
     <style>
       :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #253126; background: #f4f6f1; }
       * { box-sizing: border-box; }
@@ -12,6 +13,12 @@
       a { color: inherit; }
       button, textarea { font: inherit; }
       button { cursor: pointer; }
+      button:focus-visible, textarea:focus-visible, a:focus-visible {
+        outline: 3px solid #879989;
+        outline-offset: 2px;
+      }
+      .nav-item[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+      .filter[aria-disabled="true"] { opacity: .55; pointer-events: none; }
       button:disabled { cursor: not-allowed; opacity: .48; }
       [hidden] { display: none !important; }
       .app { display: grid; grid-template-columns: 230px minmax(0,1fr); min-height: 100vh; }
@@ -121,7 +128,8 @@
       .action.active, .record { color: #fff; }
       textarea { background: #fcfcfa; }
       .notice { color: #456e4b; }
-      .history-item strong { color: #414145; }
+      .nav-item[aria-disabled="true"] { opacity: .55; pointer-events: none; cursor: default; }
+      .demo-chrome { margin-left: 6px; color: #8d8d92; font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
     </style>
   </head>
   <body>
@@ -129,25 +137,38 @@
       <aside class="sidebar">
         <a class="brand" href="/recipient.html"><span class="mark">F</span><span>Fieldline<small>Restaurant Ops</small></span></a>
         <div class="location">Thai Kitchen <span>⌄</span></div>
-        <p class="nav-label">Restaurant</p>
-        <a class="nav-item" href="/recipient.html"><span class="icon">⌂</span>Dashboard</a>
+        <p class="nav-label">Restaurant <span class="demo-chrome">Demo chrome</span></p>
+        <span class="nav-item" aria-disabled="true" title="Demo chrome — not wired">Dashboard</span>
         <a class="nav-item active" href="/recipient.html"><span class="icon">▣</span>Orders</a>
-        <a class="nav-item" href="/recipient.html"><span class="icon">☷</span>Menus</a>
-        <a class="nav-item" href="/recipient.html"><span class="icon">◷</span>Reservations</a>
-        <p class="nav-label">Manage</p>
-        <a class="nav-item" href="/recipient.html"><span class="icon">◌</span>Customers</a>
-        <a class="nav-item" href="/recipient.html"><span class="icon">⚙</span>Settings</a>
+        <span class="nav-item" aria-disabled="true" title="Demo chrome — not wired">Menus</span>
+        <span class="nav-item" aria-disabled="true" title="Demo chrome — not wired">Reservations</span>
+        <p class="nav-label">Manage <span class="demo-chrome">Demo chrome</span></p>
+        <span class="nav-item" aria-disabled="true" title="Demo chrome — not wired">Customers</span>
+        <span class="nav-item" aria-disabled="true" title="Demo chrome — not wired">Settings</span>
         <div class="side-footer"><strong>Lunch service</strong>Accepting orders until 2:30 PM</div>
       </aside>
       <div>
-        <header class="topbar"><div class="crumb"><strong>Orders</strong> / Open orders</div><div class="top-actions"><a class="customer-link" href="/">View customer permission</a><span class="avatar">TK</span></div></header>
+        <header class="topbar">
+          <div class="crumb"><strong>Orders</strong> / Open orders</div>
+          <div class="top-actions">
+            <nav class="demo-flow" aria-label="Demo path">
+              <ol class="demo-steps">
+                <li><a href="/chatgpt.html"><span class="num">1</span> Chat</a></li>
+                <li><a href="/index.html"><span class="num">2</span> Handshake</a></li>
+                <li><a href="/recipient.html" aria-current="page"><span class="num">3</span> Fieldline</a></li>
+              </ol>
+            </nav>
+            <a class="customer-link" href="/index.html">View customer permission</a>
+            <span class="avatar">TK</span>
+          </div>
+        </header>
         <main class="main">
-          <div class="heading-row"><div><h1>Order management</h1><p class="subheading">Wednesday lunch service, 4 open orders</p></div><span class="service-control">Accepting orders</span></div>
+          <div class="heading-row"><div><h1>Order management</h1><p class="subheading">Verifier view: only an approved, time-boxed constraint can appear on a ticket. Wednesday lunch, 4 open orders.</p></div><span class="service-control">Accepting orders</span></div>
           <section class="metrics" aria-label="Order summary"><article class="metric"><span class="metric-label">New orders</span><strong class="metric-value">04</strong></article><article class="metric"><span class="metric-label">In kitchen</span><strong class="metric-value">02 <em class="metric-note">On track</em></strong></article><article class="metric"><span class="metric-label">Ready for pickup</span><strong class="metric-value">01</strong></article><article class="metric"><span class="metric-label">Average prep time</span><strong class="metric-value">18 min</strong></article></section>
           <div class="workspace">
-            <section class="card" aria-label="Restaurant order queue"><div class="card-head"><h2>Open orders</h2><span class="head-meta">Updated just now</span></div><div class="filters"><button class="filter active" type="button">All 4</button><button class="filter" type="button">New</button><button class="filter" type="button">Kitchen</button><button class="filter" type="button">Ready</button></div><table class="orders-table"><thead><tr><th>Order</th><th>Items</th><th>Service</th><th>Status</th></tr></thead><tbody><tr class="selected"><td><strong>#A1024</strong><small>12:14 PM</small></td><td><strong>Pad Thai</strong><small>1 item</small></td><td>Pickup</td><td><span class="status review">Kitchen review</span></td></tr><tr><td><strong>#A1025</strong><small>12:17 PM</small></td><td><strong>Green Curry</strong><small>2 items</small></td><td>Delivery</td><td><span class="status prep">Preparing</span></td></tr><tr><td><strong>#A1026</strong><small>12:21 PM</small></td><td><strong>Basil Chicken</strong><small>1 item</small></td><td>Pickup</td><td><span class="status waiting">New</span></td></tr><tr><td><strong>#A1027</strong><small>12:26 PM</small></td><td><strong>Tofu Fried Rice</strong><small>3 items</small></td><td>Delivery</td><td><span class="status waiting">New</span></td></tr></tbody></table></section>
+            <section class="card" aria-label="Restaurant order queue"><div class="card-head"><h2>Open orders</h2><span class="head-meta">Demo queue · Pad Thai is live</span></div><div class="filters"><button class="filter active" type="button">All 4</button><button class="filter" type="button" aria-disabled="true" tabindex="-1" title="Demo chrome">New</button><button class="filter" type="button" aria-disabled="true" tabindex="-1" title="Demo chrome">Kitchen</button><button class="filter" type="button" aria-disabled="true" tabindex="-1" title="Demo chrome">Ready</button></div><table class="orders-table"><thead><tr><th>Order</th><th>Items</th><th>Service</th><th>Status</th></tr></thead><tbody><tr class="selected"><td><strong>#A1024</strong><small>12:14 PM</small></td><td><strong>Pad Thai</strong><small>1 item</small></td><td>Pickup</td><td><span class="status review">Kitchen review</span></td></tr><tr><td><strong>#A1025</strong><small>12:17 PM</small></td><td><strong>Green Curry</strong><small>2 items</small></td><td>Delivery</td><td><span class="status prep">Preparing</span></td></tr><tr><td><strong>#A1026</strong><small>12:21 PM</small></td><td><strong>Basil Chicken</strong><small>1 item</small></td><td>Pickup</td><td><span class="status waiting">New</span></td></tr><tr><td><strong>#A1027</strong><small>12:26 PM</small></td><td><strong>Tofu Fried Rice</strong><small>3 items</small></td><td>Delivery</td><td><span class="status waiting">New</span></td></tr></tbody></table></section>
             <aside class="right-col">
-              <section class="card ticket"><div class="ticket-top"><p class="ticket-label">Selected order · Pickup</p><div class="ticket-title"><div><h2>Pad Thai · #A1024</h2><p>Place on pickup shelf after review</p></div><span class="ticket-badge">New</span></div></div><div class="ticket-lines"><div class="ticket-line"><strong>Pad Thai</strong><span>Qty 1</span></div><div class="ticket-line"><strong>Subtotal</strong><span>$15.00</span></div></div></section>
+              <section class="card ticket"><div class="ticket-top"><p class="ticket-label">Selected order · Pickup</p><div class="ticket-title"><div><h2>Pad Thai · #A1024</h2><p>Place on pickup shelf after review</p></div><span class="ticket-badge">Kitchen review</span></div></div><div class="ticket-lines"><div class="ticket-line"><strong>Pad Thai</strong><span>Qty 1</span></div><div class="ticket-line"><strong>Subtotal</strong><span>$15.00</span></div></div></section>
               <section class="scope-card locked" id="scope-card" aria-live="polite"><div class="scope-status"><p class="scope-title" id="scope-title">Permission required</p><span class="scope-state" id="scope-state">Not shared</span></div><div class="scope-body" id="scope-body"><div class="locked-body"><strong>Allergy details are unavailable.</strong><br />Fieldline cannot view or act on a customer constraint until the customer grants temporary permission for this order.</div></div></section>
               <section class="card kitchen" id="kitchen-panel"><h2>Kitchen decision</h2><p class="section-intro" id="kitchen-intro">Grant is required before a kitchen decision can use a customer constraint.</p><div class="action-grid"><button class="action" type="button" data-action="accept">Confirm safe<small>Safe preparation confirmed</small></button><button class="action" type="button" data-action="required_change">Request preparation change<small>Substitution or dedicated surface</small></button><button class="action" type="button" data-action="decline">Cannot safely fulfill<small>Do not prepare this order</small></button><button class="action" type="button" data-action="cannot_determine">Cannot determine<small>Supplier detail unavailable</small></button></div><div class="prep-box"><label for="decision-note" id="decision-label">Preparation detail</label><textarea id="decision-note" disabled></textarea></div><div class="record-row"><span class="record-note" id="record-note">Actions unlock only for an active order scope.</span><button class="record" id="record-decision" type="button" disabled>Record kitchen decision</button></div><p class="notice" id="decision-notice" hidden></p></section>
               <section class="card history"><h2>Order activity</h2><div class="history-list" id="history-list"><div class="history-item"><span class="history-dot"></span><div><strong>Order received</strong>Pad Thai was added to the lunch queue.</div></div><div class="history-item"><span class="history-dot"></span><div><strong>Customer constraint not shared</strong>Waiting for an order-specific permission.</div></div></div></section>

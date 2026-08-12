@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
-    <title>ChatGPT</title>
+    <title>ChatGPT · Egoist AI Passport</title>
+    <link rel="stylesheet" href="/demo-flow.css" />
     <style>
       :root {
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -16,46 +17,137 @@
       button, textarea { font: inherit; color: inherit; }
       button { cursor: pointer; }
       a { color: inherit; text-decoration: none; }
-      .app { display: grid; grid-template-columns: 260px minmax(0, 1fr) 300px; min-height: 100%; }
-      .sidebar { display: flex; flex-direction: column; gap: 12px; padding: 12px; background: #171717; border-right: 1px solid #2f2f2f; }
+      button:focus-visible, textarea:focus-visible, a:focus-visible {
+        outline: 3px solid #10a37f;
+        outline-offset: 2px;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr) 300px;
+        grid-template-rows: 1fr auto;
+        min-height: 100%;
+      }
+      .sidebar {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        background: #171717;
+        border-right: 1px solid #2f2f2f;
+      }
       .logo { display: flex; align-items: center; gap: 10px; padding: 8px 10px; font-weight: 700; }
       .logo-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: #fff; color: #111; font-size: 14px; }
       .new-chat { width: 100%; min-height: 40px; border: 1px solid #3d3d3d; border-radius: 10px; background: transparent; text-align: left; padding: 0 12px; }
       .new-chat:hover { background: #212121; }
+      .sidebar-copy { margin: 0; padding: 0 10px; color: #8b8b8b; font-size: 12px; line-height: 1.45; }
       .nav-links { display: grid; gap: 4px; margin-top: auto; padding-top: 12px; }
-      .nav-links a { padding: 8px 10px; border-radius: 8px; color: #b4b4b4; font-size: 13px; }
-      .nav-links a:hover { background: #212121; color: #fff; }
-      .main { display: grid; grid-template-rows: 1fr auto; min-width: 0; }
-      .thread { overflow: auto; padding: 28px 0 12px; }
+      .thread {
+        grid-column: 2;
+        grid-row: 1;
+        overflow: auto;
+        padding: 28px 0 12px;
+      }
       .thread-inner { width: min(100% - 48px, 740px); margin: 0 auto; display: grid; gap: 22px; }
-      .empty { text-align: center; padding: 18vh 0 8vh; }
-      .empty h1 { margin: 0 0 10px; font-size: 32px; letter-spacing: -.04em; }
-      .empty p { margin: 0; color: #9b9b9b; }
+      .empty { text-align: center; padding: 12vh 0 4vh; }
+      .empty h1 { margin: 0 0 10px; font-size: 32px; letter-spacing: -0.04em; }
+      .empty p { margin: 0 auto; max-width: 42ch; color: #9b9b9b; line-height: 1.5; }
+      .suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 22px; }
+      .suggestion {
+        min-height: 40px;
+        padding: 0 14px;
+        border: 1px solid #3d3d3d;
+        border-radius: 999px;
+        background: #2f2f2f;
+        color: #ececec;
+        font-size: 13px;
+      }
+      .suggestion:hover { background: #3a3a3a; }
       .msg { display: grid; grid-template-columns: 32px 1fr; gap: 14px; align-items: start; }
       .avatar { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
       .avatar.user { background: #5b5bd6; }
       .avatar.assistant { background: #10a37f; color: #08150f; }
       .bubble { margin: 0; line-height: 1.6; white-space: pre-wrap; }
-      .composer-wrap { padding: 0 0 22px; }
+      .composer-wrap { grid-column: 2; grid-row: 2; padding: 0 0 22px; }
       .composer { width: min(100% - 48px, 740px); margin: 0 auto; }
-      .plugin-chip { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px 10px; border: 1px solid #3d3d3d; border-radius: 999px; background: #2f2f2f; font-size: 12px; color: #d0d0d0; }
+      .plugin-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+        margin-bottom: 8px;
+        padding: 6px 10px;
+        border: 1px solid #3d3d3d;
+        border-radius: 999px;
+        background: #2f2f2f;
+        font-size: 12px;
+        color: #d0d0d0;
+        flex-wrap: wrap;
+      }
+      .plugin-chip.unavailable { color: #f0a8a4; border-color: #5a3330; }
       .plugin-dot { width: 7px; height: 7px; border-radius: 50%; background: #10a37f; box-shadow: 0 0 0 4px rgba(16,163,127,.15); }
+      .plugin-chip.unavailable .plugin-dot { background: #f0a8a4; box-shadow: 0 0 0 4px rgba(240,168,164,.15); }
       .box { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; padding: 10px 10px 10px 16px; border: 1px solid #3d3d3d; border-radius: 26px; background: #2f2f2f; }
       textarea { width: 100%; min-height: 44px; max-height: 160px; resize: none; border: 0; background: transparent; outline: none; line-height: 1.45; }
       .send { width: 36px; height: 36px; border: 0; border-radius: 999px; background: #fff; color: #111; font-size: 16px; }
       .send:disabled { opacity: .35; cursor: not-allowed; }
       .hint { margin: 8px 0 0; color: #8b8b8b; font-size: 11px; text-align: center; }
-      .plugin { padding: 18px 16px; border-left: 1px solid #2f2f2f; background: #1a1a1a; }
+      .plugin {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+        padding: 18px 16px;
+        border-left: 1px solid #2f2f2f;
+        background: #1a1a1a;
+      }
       .plugin-card { padding: 16px; border: 1px solid #333; border-radius: 16px; background: #111; }
-      .plugin-kicker { margin: 0 0 8px; color: #10a37f; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-      .plugin-card h2 { margin: 0 0 8px; font-size: 18px; letter-spacing: -.03em; }
+      .plugin-kicker { margin: 0 0 8px; color: #10a37f; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+      .plugin-card h2 { margin: 0 0 8px; font-size: 18px; letter-spacing: -0.03em; }
       .plugin-card p { margin: 0; color: #b0b0b0; font-size: 13px; line-height: 1.5; }
       .saved { margin-top: 14px; display: grid; gap: 8px; }
+      .saved-heading { margin: 0; color: #9b9b9b; font-size: 11px; font-weight: 700; }
       .saved-item { padding: 9px 10px; border-radius: 10px; background: #242424; font-size: 13px; }
+      .saved-empty { margin: 0; color: #8b8b8b; font-size: 13px; line-height: 1.45; }
       .error { color: #f0a8a4; font-size: 13px; }
+      .next-step {
+        display: none;
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #242424;
+        color: #d0d0d0;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .next-step a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+      .next-step.is-visible { display: block; }
       @media (max-width: 980px) {
-        .app { grid-template-columns: 1fr; }
-        .sidebar, .plugin { display: none; }
+        .app {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr auto auto;
+        }
+        .sidebar {
+          grid-column: 1;
+          grid-row: 1;
+          flex-direction: row;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          border-right: 0;
+          border-bottom: 1px solid #2f2f2f;
+        }
+        .sidebar-copy { display: none; }
+        .new-chat { width: auto; }
+        .nav-links { display: none; }
+        .thread { grid-column: 1; grid-row: 2; }
+        .plugin {
+          grid-column: 1;
+          grid-row: 3;
+          border-left: 0;
+          border-top: 1px solid #2f2f2f;
+        }
+        .composer-wrap { grid-column: 1; grid-row: 4; }
+        .empty { padding-top: 6vh; }
       }
     </style>
   </head>
@@ -64,38 +156,46 @@
       <aside class="sidebar">
         <div class="logo"><span class="logo-mark">G</span> ChatGPT</div>
         <button class="new-chat" id="new-chat" type="button">New chat</button>
-        <nav class="nav-links" aria-label="Demo tabs">
-          <a href="/chatgpt.html">Chat</a>
-          <a href="/index.html">Handshake</a>
-          <a href="/recipient.html">Checkout</a>
+        <p class="sidebar-copy">Step 1 of 3. Tell the assistant your allergies. The plugin saves them to your local AI Passport.</p>
+        <nav class="demo-flow demo-flow--dark" aria-label="Demo path">
+          <p class="demo-flow-kicker">Identity demo</p>
+          <ol class="demo-steps">
+            <li><a href="/chatgpt.html" aria-current="page"><span class="num">1</span> Chat</a></li>
+            <li><a href="/index.html"><span class="num">2</span> Handshake</a></li>
+            <li><a href="/recipient.html"><span class="num">3</span> Fieldline</a></li>
+          </ol>
         </nav>
       </aside>
-      <main class="main">
-        <div class="thread" id="thread">
-          <div class="thread-inner" id="messages">
-            <div class="empty" id="empty">
-              <h1>What's on the menu?</h1>
-              <p>Tell me your allergies. The Egoist AI Passport plugin will save them for checkout.</p>
+      <div class="thread" id="thread">
+        <div class="thread-inner" id="messages">
+          <div class="empty" id="empty">
+            <h1>What's on the menu?</h1>
+            <p>Tell me your allergies. The Egoist AI Passport plugin will save them for checkout.</p>
+            <div class="suggestions">
+              <button class="suggestion" type="button" data-prompt="I don't like milk and I can't eat peanuts.">Milk and peanuts</button>
+              <button class="suggestion" type="button" data-prompt="I have a severe peanut allergy.">Peanut allergy</button>
+              <button class="suggestion" type="button" data-prompt="I'm gluten free and allergic to shellfish.">Gluten and shellfish</button>
             </div>
           </div>
         </div>
-        <div class="composer-wrap">
-          <div class="composer">
-            <div class="plugin-chip"><span class="plugin-dot" aria-hidden="true"></span> Egoist AI Passport · Connected</div>
-            <form class="box" id="chat-form">
-              <textarea id="prompt" rows="1" placeholder="Message ChatGPT" required></textarea>
-              <button class="send" id="send" type="submit" aria-label="Send">↑</button>
-            </form>
-            <p class="hint">Local demo. Memories stay on this machine and update Handshake.</p>
-          </div>
+      </div>
+      <div class="composer-wrap">
+        <div class="composer">
+          <div class="plugin-chip" id="plugin-chip"><span class="plugin-dot" aria-hidden="true"></span> <span id="plugin-chip-label">Egoist AI Passport · Connected</span></div>
+          <form class="box" id="chat-form">
+            <textarea id="prompt" rows="1" placeholder="Message ChatGPT" required></textarea>
+            <button class="send" id="send" type="submit" aria-label="Send">↑</button>
+          </form>
+          <p class="hint">Local demo. Memories stay on this machine and update Handshake. Enter to send, Shift+Enter for a new line.</p>
         </div>
-      </main>
+      </div>
       <aside class="plugin">
         <article class="plugin-card">
           <p class="plugin-kicker">Plugin</p>
           <h2>Egoist AI Passport</h2>
-          <p>Can save dietary memories to your AI Passport. Handshake will share only what you approve at checkout.</p>
-          <div class="saved" id="saved"></div>
+          <p>Saves dietary memories locally. Handshake will share only what you approve with Fieldline for one order.</p>
+          <div class="saved" id="saved" aria-live="polite"></div>
+          <p class="next-step" id="next-step">Memories saved. Open <a href="/index.html">Handshake</a> and approve the exact scope.</p>
         </article>
       </aside>
     </div>

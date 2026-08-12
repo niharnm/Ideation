@@ -5,27 +5,26 @@ import { extname, isAbsolute, relative, resolve } from "node:path";
 import { stripTypeScriptTypes } from "node:module";
 import { fileURLToPath } from "node:url";
 
-import { randomUUID } from "node:crypto";
-
 import {
   buildChatSystemPrompt,
+  buildMemoryExtractorPrompt,
+  looksLikeDietaryTurn,
+  mergeMemoryStrings,
+  parseExtractorJson,
   resolveMemoriesFromTurn,
   stripMemoryJsonFromReply,
 } from "./src/chat-memories.ts";
 import {
-  buildEgoistAuthorizeUrl,
-  createOAuthState,
-  createPkcePair,
-  exchangeEgoistAuthCode,
-  fetchEgoistMemories,
-  registerEgoistOAuthClient,
-} from "./src/egoist-client.ts";
-import {
   handleEgoistMCPRequest,
   parseMemoryInputsToConstraints,
+  parseNaturalLanguageToConstraints,
   syncMemoriesToVault,
 } from "./src/egoist-mcp-server.ts";
-import { loadUserPassportVault } from "./src/passport-vault.ts";
+import {
+  loadUserPassportVault,
+  removeVaultAllergy,
+  saveUserPassportVault,
+} from "./src/passport-vault.ts";
 
 // In-memory storage for server-side Egoist Passport Vault API
 class ServerMemoryStorage {
@@ -44,9 +43,6 @@ class ServerMemoryStorage {
   }
 }
 const serverStorage = new ServerMemoryStorage();
-const SESSION_COOKIE = "handshake_egoist_session";
-const sessions = new Map();
-let oauthClientPromise = null;
 let serverMemories = [];
 let localPluginActive = false;
 
@@ -77,47 +73,51 @@ function loadDotEnv() {
 loadDotEnv();
 const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 
-function readCookies(request) {
-  const header = request.headers.cookie ?? "";
-  const cookies = {};
-  for (const part of header.split(";")) {
-    const [rawName, ...rest] = part.trim().split("=");
-    if (!rawName) continue;
-    cookies[rawName] = decodeURIComponent(rest.join("="));
+async function groqComplete(groqKey, messages, options = {}) {
+  const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${groqKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      temperature: options.temperature ?? 0.4,
+      messages,
+      ...(options.json ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+  const groqPayload = await groqResponse.json();
+  if (!groqResponse.ok) {
+    const error = new Error(groqPayload.error?.message || "Groq request failed.");
+    error.status = groqResponse.status;
+    error.payload = groqPayload;
+    throw error;
   }
-  return cookies;
+  return groqPayload.choices?.[0]?.message?.content || "";
 }
 
-function getSession(request) {
-  const sessionId = readCookies(request)[SESSION_COOKIE];
-  return sessionId ? sessions.get(sessionId) ?? null : null;
-}
-
-function setSessionCookie(response, sessionId) {
-  response.setHeader(
-    "Set-Cookie",
-    `${SESSION_COOKIE}=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+async function extractMemoriesWithGroq(groqKey, input) {
+  const raw = await groqComplete(
+    groqKey,
+    [
+      { role: "system", content: buildMemoryExtractorPrompt(input.previousMemories) },
+      {
+        role: "user",
+        content: `Current memories: ${JSON.stringify(input.previousMemories)}\nUser: ${input.userText}\nAssistant: ${input.assistantText}`,
+      },
+    ],
+    { temperature: 0, json: true },
   );
+  return parseExtractorJson(raw);
 }
 
-function originFromRequest(request) {
-  const host = request.headers.host ?? `127.0.0.1:${port}`;
-  return `http://${host}`;
-}
-
-async function getOAuthClient(redirectUri) {
-  if (!oauthClientPromise) {
-    oauthClientPromise = registerEgoistOAuthClient(redirectUri);
-  }
-  return oauthClientPromise;
-}
-
-async function refreshVaultFromEgoist(session) {
-  if (!session?.tokens?.access_token) return loadUserPassportVault(serverStorage);
-  const memories = await fetchEgoistMemories(session.tokens.access_token);
-  session.lastSyncedAt = new Date().toISOString();
-  session.memoryCount = memories.length;
-  return syncMemoriesToVault(memories, serverStorage);
+function applyMemories(memories) {
+  serverMemories = Array.isArray(memories)
+    ? memories.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim())
+    : [];
+  localPluginActive = true;
+  return syncMemoriesToVault(serverMemories, serverStorage);
 }
 
 const root = fileURLToPath(new URL(".", import.meta.url));
@@ -125,6 +125,7 @@ const port = Number(process.env.PORT ?? 4173);
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
   ".png": "image/png",
   ".ts": "text/javascript; charset=utf-8",
 };
@@ -200,6 +201,17 @@ createServer(async (request, response) => {
     return;
   }
 
+  if (pathname === "/api/chat/status" && request.method === "GET") {
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({
+      available: Boolean(process.env.GROQ_API_KEY),
+      error: process.env.GROQ_API_KEY
+        ? ""
+        : "Chat is unavailable. Set GROQ_API_KEY in .env and restart the server.",
+    }));
+    return;
+  }
+
   if (pathname === "/api/chat" && request.method === "POST") {
     const groqKey = process.env.GROQ_API_KEY;
     if (!groqKey) {
@@ -229,44 +241,32 @@ createServer(async (request, response) => {
     ];
 
     try {
-      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          temperature: 0.4,
-          messages: groqMessages,
-        }),
-      });
-      const groqPayload = await groqResponse.json();
-      if (!groqResponse.ok) {
-        response.writeHead(502, { "Content-Type": "application/json" });
-        response.end(JSON.stringify({
-          error: groqPayload.error?.message || "Groq request failed.",
-        }));
-        return;
-      }
-
-      const assistantText = groqPayload.choices?.[0]?.message?.content || "";
-      const resolved = resolveMemoriesFromTurn({
+      const assistantText = await groqComplete(groqKey, groqMessages);
+      let resolved = resolveMemoriesFromTurn({
         userText,
         assistantText,
         previousMemories: serverMemories,
       });
-      if (resolved.replaced) {
-        serverMemories = resolved.memories || [];
-        localPluginActive = true;
-        syncMemoriesToVault(serverMemories, serverStorage);
-      } else if (userText) {
-        const parsed = parseMemoryInputsToConstraints({ text: userText });
-        if (parsed.length > 0) {
-          serverMemories = [userText.trim()];
-          localPluginActive = true;
-          syncMemoriesToVault(serverMemories, serverStorage);
+
+      if (!resolved.replaced && looksLikeDietaryTurn(userText)) {
+        try {
+          const extracted = await extractMemoriesWithGroq(groqKey, {
+            userText,
+            assistantText,
+            previousMemories: serverMemories,
+          });
+          if (extracted) {
+            resolved = { memories: extracted, replaced: true };
+          }
+        } catch {
+          // Fall through to keyword merge so a missed JSON fence cannot wipe the vault.
         }
+      }
+
+      if (resolved.replaced) {
+        applyMemories(resolved.memories || []);
+      } else if (userText && parseMemoryInputsToConstraints({ text: userText }).length > 0) {
+        applyMemories(mergeMemoryStrings(serverMemories, userText));
       }
 
       const vault = loadUserPassportVault(serverStorage);
@@ -281,91 +281,6 @@ createServer(async (request, response) => {
       response.end(JSON.stringify({
         error: error instanceof Error ? error.message : "Chat request failed.",
       }));
-    }
-    return;
-  }
-
-  const origin = originFromRequest(request);
-  const redirectUri = `${origin}/callback`;
-
-  if (pathname === "/api/egoist/status" && request.method === "GET") {
-    const session = getSession(request);
-    response.writeHead(200, { "Content-Type": "application/json" });
-    response.end(JSON.stringify({
-      connected: Boolean(session?.tokens?.access_token),
-      lastSyncedAt: session?.lastSyncedAt ?? null,
-      memoryCount: session?.memoryCount ?? 0,
-    }));
-    return;
-  }
-
-  if (pathname === "/api/egoist/connect" && request.method === "GET") {
-    try {
-      const client = await getOAuthClient(redirectUri);
-      const pkce = createPkcePair();
-      const state = createOAuthState();
-      const sessionId = randomUUID();
-      sessions.set(sessionId, {
-        oauthState: state,
-        codeVerifier: pkce.verifier,
-        clientId: client.client_id,
-        tokens: null,
-      });
-      setSessionCookie(response, sessionId);
-      response.writeHead(302, {
-        Location: buildEgoistAuthorizeUrl({
-          clientId: client.client_id,
-          redirectUri,
-          state,
-          codeChallenge: pkce.challenge,
-        }),
-      });
-      response.end();
-    } catch (error) {
-      response.writeHead(502, { "Content-Type": "application/json" });
-      response.end(JSON.stringify({
-        error: error instanceof Error ? error.message : String(error),
-      }));
-    }
-    return;
-  }
-
-  if (pathname === "/api/egoist/disconnect" && request.method === "POST") {
-    const sessionId = readCookies(request)[SESSION_COOKIE];
-    if (sessionId) sessions.delete(sessionId);
-    response.setHeader(
-      "Set-Cookie",
-      `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
-    );
-    response.writeHead(200, { "Content-Type": "application/json" });
-    response.end(JSON.stringify({ connected: false }));
-    return;
-  }
-
-  if (pathname === "/callback" && request.method === "GET") {
-    const url = new URL(request.url ?? "/", origin);
-    const code = url.searchParams.get("code") ?? "";
-    const state = url.searchParams.get("state") ?? "";
-    const sessionId = readCookies(request)[SESSION_COOKIE];
-    const session = sessionId ? sessions.get(sessionId) : null;
-    if (!code || !session || session.oauthState !== state) {
-      response.writeHead(302, { Location: "/?egoist=error" });
-      response.end();
-      return;
-    }
-    try {
-      session.tokens = await exchangeEgoistAuthCode({
-        clientId: session.clientId,
-        redirectUri,
-        code,
-        codeVerifier: session.codeVerifier,
-      });
-      await refreshVaultFromEgoist(session);
-      response.writeHead(302, { Location: "/" });
-      response.end();
-    } catch {
-      response.writeHead(302, { Location: "/?egoist=error" });
-      response.end();
     }
     return;
   }
@@ -400,26 +315,59 @@ createServer(async (request, response) => {
     }
 
     const result = handleEgoistMCPRequest(toolName, args, serverStorage);
+    if (Array.isArray(args.memories)) {
+      serverMemories = args.memories
+        .filter((item) => typeof item === "string" && item.trim())
+        .map((item) => item.trim());
+      localPluginActive = true;
+    } else if (typeof args.text === "string" && args.text.trim()) {
+      serverMemories = [args.text.trim()];
+      localPluginActive = true;
+    }
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify(result));
     return;
   }
 
-  if (pathname === "/api/passport/vault" && request.method === "GET") {
-    const session = getSession(request);
-    let vault = loadUserPassportVault(serverStorage);
-    if (session?.tokens?.access_token) {
-      try {
-        vault = await refreshVaultFromEgoist(session);
-      } catch {
-        vault = loadUserPassportVault(serverStorage);
-      }
+  if (pathname === "/api/passport/vault" && request.method === "POST") {
+    let payload = {};
+    try {
+      let bodyText = "";
+      for await (const chunk of request) bodyText += chunk;
+      payload = JSON.parse(bodyText);
+    } catch {
+      payload = {};
     }
+
+    let vault = loadUserPassportVault(serverStorage);
+    if (Array.isArray(payload.memories)) {
+      vault = applyMemories(payload.memories);
+    } else if (typeof payload.removeAllergenId === "string" && payload.removeAllergenId.trim()) {
+      const allergenId = payload.removeAllergenId.trim();
+      serverMemories = serverMemories.filter((memory) =>
+        !parseNaturalLanguageToConstraints(memory).some((item) => item.allergenId === allergenId)
+      );
+      vault = removeVaultAllergy(loadUserPassportVault(serverStorage), allergenId);
+      saveUserPassportVault(vault, serverStorage);
+    }
+
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify({
       ...vault,
-      egoistConnected: Boolean(session?.tokens?.access_token) || localPluginActive,
-      lastSyncedAt: session?.lastSyncedAt ?? null,
+      memories: serverMemories,
+      egoistConnected: localPluginActive,
+    }));
+    return;
+  }
+
+  if (pathname === "/api/passport/vault" && request.method === "GET") {
+    const vault = loadUserPassportVault(serverStorage);
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({
+      ...vault,
+      memories: serverMemories,
+      egoistConnected: localPluginActive,
+      lastSyncedAt: null,
     }));
     return;
   }

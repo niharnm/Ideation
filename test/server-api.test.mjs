@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { handleEgoistMCPRequest, loadUserPassportVault } from "../src/index.ts";
 
@@ -67,4 +68,15 @@ test("Server API: egoist_passport_sync_memories clears deleted memories", () => 
     vault.allergies.filter((a) => a.allergenId.startsWith("allergen.")).length,
     0
   );
+});
+
+test("Server API: chat status endpoint exists and client never embeds a Groq key", () => {
+  const server = readFileSync(new URL("../server.mjs", import.meta.url), "utf8");
+  const chatgpt = readFileSync(new URL("../public/chatgpt.js", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  assert.match(server, /pathname === "\/api\/chat\/status"/);
+  assert.match(server, /available: Boolean\(process\.env\.GROQ_API_KEY\)/);
+  assert.doesNotMatch(chatgpt, /gsk_[A-Za-z0-9]+/);
+  assert.doesNotMatch(app, /gsk_[A-Za-z0-9]+/);
+  assert.doesNotMatch(chatgpt, /Authorization:\s*`Bearer/);
 });

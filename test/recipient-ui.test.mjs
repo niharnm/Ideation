@@ -21,7 +21,8 @@ test("Fieldline restaurant view starts with a locked scope and no rendered aller
 test("approved restaurant scope is minimized to the customer-approved field", () => {
   assert.match(app, /processRecipientRequest\(request, consent, SAMPLE_RECIPIENT_DATA\)/);
   assert.match(app, /const field = workspace\.recipientRequest\.scopedFields\[0\]/);
-  assert.match(app, /Customer data", "One approved constraint"/);
+  assert.match(app, /One approved constraint/);
+  assert.match(app, /\$\{fields\.length\} approved constraints/);
   assert.doesNotMatch(app, /user\.ssn|homeAddress|creditCard/i);
 });
 

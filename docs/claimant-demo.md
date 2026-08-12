@@ -20,11 +20,11 @@ npm start
 
 1. Open three tabs: ChatGPT at `http://127.0.0.1:4173/chatgpt.html`, Handshake
    at `http://127.0.0.1:4173/index.html`, and checkout at
-   `http://127.0.0.1:4173/recipient.html`.
-2. In ChatGPT, say you don't like milk and can't eat peanuts. The Egoist AI
-   Passport plugin saves those memories locally.
-3. Return to Handshake. The new constraints appear within a few seconds.
-   Choose an end time and select **Approve this exact scope**.
+   `http://127.0.0.1:4173/recipient.html`. The numbered 1–2–3 path is on every page.
+2. In ChatGPT, say you don't like milk and can't eat peanuts (or tap a suggestion).
+   The Egoist AI Passport plugin saves those memories locally.
+3. Return to Handshake. The new constraints appear within a few seconds, labeled
+   From ChatGPT. Choose an end time and select **Approve this exact scope**.
 4. In Fieldline checkout, open **Pad Thai · #A1024** and show the green
    **Allergy scope active** card. It contains only the approved constraints.
 5. Record a kitchen decision, then return to Handshake and **Revoke access

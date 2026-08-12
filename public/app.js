@@ -16,7 +16,7 @@ import {
 } from "/src/passport-vault.ts";
 import { handleEgoistMCPRequest } from "/src/egoist-mcp-server.ts";
 
-const recipient = { id: "recipient-1", displayName: "Recipient" };
+const recipient = { id: "recipient-1", displayName: "Fieldline" };
 const purpose = "Prepare one restaurant order from the constraint you choose.";
 const summary = "Use the selected scoped field for one restaurant order.";
 const defaultFieldOptions = [
@@ -39,6 +39,8 @@ const signalEndTimeView = document.querySelector("#signal-end-time");
 const passportCardTitle = document.querySelector("#passport-card-title");
 const passportCardDetail = document.querySelector("#passport-card-detail");
 const passportCardExpiry = document.querySelector("#passport-card-expiry");
+const pollStatusView = document.querySelector("#poll-status");
+const chatHintView = document.querySelector("#chat-hint");
 
 const addAllergyModal = document.querySelector("#add-allergy-modal");
 const openAddAllergyBtn = document.querySelector("#open-add-allergy-btn");
@@ -68,12 +70,50 @@ const dependencies = {
 
 let userVault = loadUserPassportVault(dependencies.storage);
 
+function constraintFamily(allergenId) {
+  return String(allergenId)
+    .replace(/^allergen\./, "")
+    .replace(/^order\.constraint\./, "")
+    .replace(/^order\.preference\./, "")
+    .replace(/-/g, "_");
+}
+
+function allergiesForShare(allergies) {
+  const egoistFamilies = new Set(
+    allergies
+      .filter((allergy) => allergy.allergenId.startsWith("allergen."))
+      .map((allergy) => constraintFamily(allergy.allergenId)),
+  );
+  return allergies.filter((allergy) => {
+    if (!allergy.allergenId.startsWith("order.constraint.")) return true;
+    return !egoistFamilies.has(constraintFamily(allergy.allergenId));
+  });
+}
+
+let seenEgoistIds = new Set();
+
 function renderVaultFields() {
   fieldsView.replaceChildren();
+  const visible = allergiesForShare(userVault.allergies);
 
-  for (const allergy of userVault.allergies) {
+  if (visible.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "mcp-status";
+    empty.textContent = "No constraints yet. Mention an allergy in ChatGPT, or add a custom constraint.";
+    fieldsView.append(empty);
+    renderScopeSummary();
+    return;
+  }
+
+  for (const allergy of visible) {
     const labelEl = document.createElement("label");
     labelEl.className = "field";
+    const isNewEgoist =
+      allergy.allergenId.startsWith("allergen.") &&
+      !seenEgoistIds.has(allergy.allergenId);
+    if (isNewEgoist) {
+      labelEl.classList.add("is-new");
+    }
 
     const input = document.createElement("input");
     input.type = "checkbox";
@@ -95,6 +135,13 @@ function renderVaultFields() {
 
     const badgeGroup = document.createElement("div");
     badgeGroup.className = "badge-group";
+
+    if (allergy.allergenId.startsWith("allergen.")) {
+      const sourceBadge = document.createElement("span");
+      sourceBadge.className = "badge";
+      sourceBadge.textContent = "From ChatGPT";
+      badgeGroup.append(sourceBadge);
+    }
 
     const severityBadge = document.createElement("span");
     severityBadge.className = `badge ${allergy.severity}`;
@@ -125,6 +172,9 @@ function renderVaultFields() {
 
     labelEl.append(input, textSpan, badgeGroup, removeBtn);
     fieldsView.append(labelEl);
+    if (allergy.allergenId.startsWith("allergen.")) {
+      seenEgoistIds.add(allergy.allergenId);
+    }
   }
 
   renderScopeSummary();
@@ -155,9 +205,32 @@ if (closeAddAllergyBtn) closeAddAllergyBtn.addEventListener("click", closeModal)
 if (cancelAddAllergyBtn) cancelAddAllergyBtn.addEventListener("click", closeModal);
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !addAllergyModal.hidden) {
+  if (addAllergyModal.hidden) return;
+  if (event.key === "Escape") {
     closeModal();
+    return;
   }
+  if (event.key !== "Tab") return;
+  const focusable = [...addAllergyModal.querySelectorAll("button, input, select, textarea")].filter(
+    (node) => !node.disabled && node.offsetParent !== null,
+  );
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+  if (!addAllergyModal.hidden || requestView.hidden || approveButton.disabled) return;
+  event.preventDefault();
+  approveButton.click();
 });
 
 addAllergyModal.addEventListener("click", (event) => {
@@ -261,6 +334,11 @@ function renderScopeSummary() {
     ? "One selected field"
     : `${selectedFields.length} selected fields`;
   signalEndTimeView.textContent = formatScopeEndTime(endsAt);
+  approveButton.disabled = selectedFields.length === 0;
+
+  if (!passportCardTitle || !passportCardDetail || !passportCardExpiry) {
+    return;
+  }
 
   if (selectedFields.length === 0) {
     passportCardTitle.textContent = "Nothing selected";
@@ -313,10 +391,23 @@ function addStartNewRequest(container) {
 }
 
 function showError(issues) {
-  errorView.textContent = issues
-    .map((issue) => `${issue.path.replace("$.", "")}: ${issue.message}`)
-    .join(" ");
+  const messages = issues.map((issue) => {
+    const path = String(issue.path || "");
+    const text = String(issue.message || "");
+    if (path.includes("fields") || /select at least one/i.test(text)) {
+      return "Select at least one constraint before approving.";
+    }
+    if (path.includes("validUntil") || /end time|expir/i.test(text)) {
+      return "Choose an end time within the next 24 hours.";
+    }
+    return text || "This request could not be completed.";
+  });
+  errorView.textContent = [...new Set(messages)].join(" ");
   errorView.hidden = false;
+}
+
+function confirmRevoke() {
+  return window.confirm("Revoke now? Fieldline will lose this order scope immediately.");
 }
 
 function showOutcome(kind, title, message, claim = null) {
@@ -366,7 +457,9 @@ function showOutcome(kind, title, message, claim = null) {
     revoke.className = "button revoke";
     revoke.type = "button";
     revoke.textContent = "Revoke access now";
+    revoke.title = "This locks the kitchen immediately.";
     revoke.addEventListener("click", () => {
+      if (!confirmRevoke()) return;
       revokeScopedClaim("claimant-1", dependencies);
       showOutcome(
         "revoked",
@@ -408,6 +501,31 @@ function addReceiptItem(container, label, value) {
   container.append(item);
 }
 
+function kitchenOutcomeCopy(outcome) {
+  switch (outcome) {
+    case "accept":
+      return "Kitchen can prepare this order";
+    case "required_change":
+      return "Kitchen asked for a change";
+    case "decline":
+      return "Kitchen cannot fulfill this order";
+    case "cannot_determine":
+      return "Kitchen could not determine safety";
+    default:
+      return `Kitchen outcome: ${String(outcome).replaceAll("_", " ")}`;
+  }
+}
+
+function accessCopy(status) {
+  if (status === "active") {
+    return "Fieldline can still use this scope. Revoke to lock the kitchen.";
+  }
+  if (status === "revoked") {
+    return "You revoked access. Fieldline cannot use this scope again.";
+  }
+  return "Access has ended. Fieldline cannot use this scope again.";
+}
+
 function showReceipt(receipt) {
   requestView.hidden = true;
   outcomeView.hidden = false;
@@ -415,15 +533,17 @@ function showReceipt(receipt) {
 
   const eyebrow = document.createElement("p");
   eyebrow.className = "eyebrow";
-  eyebrow.textContent = "Unverified receipt preview";
+  eyebrow.textContent = "Local preview";
   const heading = document.createElement("h2");
-  heading.textContent = `Recipient outcome: ${receipt.decision.outcome.replaceAll("_", " ")}`;
+  heading.textContent = kitchenOutcomeCopy(receipt.decision.outcome);
   const authenticity = document.createElement("p");
   authenticity.className = "unverified-notice";
-  authenticity.textContent = receipt.authenticity.message;
+  authenticity.textContent = `This is a local preview, not a signed receipt. ${receipt.authenticity.message}`;
+  const access = document.createElement("p");
+  access.textContent = accessCopy(receipt.access.status);
   const rationale = document.createElement("p");
   rationale.textContent = receipt.decision.rationale;
-  outcomeView.append(eyebrow, heading, authenticity, rationale);
+  outcomeView.append(eyebrow, heading, authenticity, access, rationale);
 
   if (receipt.decision.requiredChanges) {
     const changes = document.createElement("div");
@@ -445,36 +565,44 @@ function showReceipt(receipt) {
   scope.className = "receipt-section";
   const scopeLabel = document.createElement("p");
   scopeLabel.className = "label";
-  scopeLabel.textContent = "Exactly shared fields";
+  scopeLabel.textContent = "Shared with Fieldline";
   const fields = document.createElement("div");
   fields.className = "receipt-fields";
   for (const field of receipt.fields) {
-    const value = document.createElement("code");
-    value.textContent = `${field.label} · ${field.id}`;
+    const value = document.createElement("p");
+    value.textContent = field.label;
     fields.append(value);
   }
   scope.append(scopeLabel, fields);
 
   const facts = document.createElement("div");
   facts.className = "summary-grid receipt-grid";
-  addReceiptItem(facts, "Recipient", receipt.recipient.displayName);
-  addReceiptItem(
-    facts,
-    "Reported acknowledgement role",
-    `${receipt.acknowledgement.roleName} · ${receipt.acknowledgement.outcome}`,
-  );
-  if (receipt.acknowledgement.note) {
-    addReceiptItem(facts, "Reported acknowledgement note", receipt.acknowledgement.note);
-  }
-  addReceiptItem(facts, "Current access", receipt.access.status.replaceAll("_", " "));
+  addReceiptItem(facts, "Restaurant", receipt.recipient.displayName);
+  addReceiptItem(facts, "Access", receipt.access.status.replaceAll("_", " "));
   addReceiptItem(facts, "Access ends", formatTimestamp(receipt.access.validUntil));
+  if (receipt.acknowledgement.note) {
+    addReceiptItem(facts, "Kitchen note", receipt.acknowledgement.note);
+  }
 
+  const deliveryStatus = document.createElement("p");
+  deliveryStatus.className = "delivery-pending";
+  deliveryStatus.textContent = "Delivery pending. No recipient delivery is confirmed.";
+
+  const details = document.createElement("details");
+  details.className = "receipt-details";
+  const summary = document.createElement("summary");
+  summary.textContent = "Preview details";
   const times = document.createElement("div");
   times.className = "summary-grid receipt-grid";
+  addReceiptItem(
+    times,
+    "Reported by",
+    `${receipt.acknowledgement.roleName} · ${receipt.acknowledgement.outcome}`,
+  );
   for (const [label, value] of [
     ["Requested", receipt.timestamps.requestedAt],
     ["Approved", receipt.timestamps.consentedAt],
-    ["Recipient decision", receipt.timestamps.decidedAt],
+    ["Kitchen decision", receipt.timestamps.decidedAt],
     ["Reported acknowledgement time", receipt.timestamps.acknowledgedAt],
     ["Preview prepared", receipt.timestamps.preparedAt],
     ...(receipt.timestamps.terminalAt
@@ -483,21 +611,9 @@ function showReceipt(receipt) {
   ]) {
     addReceiptItem(times, label, formatTimestamp(value));
   }
+  details.append(summary, times);
 
-  const delivery = document.createElement("div");
-  delivery.className = "receipt-section";
-  const deliveryLabel = document.createElement("p");
-  deliveryLabel.className = "label";
-  deliveryLabel.textContent = "Intended receipt recipients";
-  const deliveryValue = document.createElement("p");
-  deliveryValue.textContent = receipt.delivery.intendedRecipients
-    .map((party) => `${party.displayName} (${party.role})`)
-    .join(" and ");
-  const deliveryStatus = document.createElement("p");
-  deliveryStatus.className = "delivery-pending";
-  deliveryStatus.textContent = "Delivery pending. No recipient delivery is confirmed.";
-  delivery.append(deliveryLabel, deliveryValue, deliveryStatus);
-  outcomeView.append(scope, facts, times, delivery);
+  outcomeView.append(scope, facts, deliveryStatus, details);
 
   const localClaim = expireScopedClaimIfNeeded(dependencies);
   if (
@@ -509,7 +625,9 @@ function showReceipt(receipt) {
     revoke.className = "button revoke";
     revoke.type = "button";
     revoke.textContent = "Revoke access now";
+    revoke.title = "This locks the kitchen immediately.";
     revoke.addEventListener("click", () => {
+      if (!confirmRevoke()) return;
       const revocation = revokeScopedClaim(localClaim.claimantId, dependencies);
       showReceipt({
         ...receipt,
@@ -533,7 +651,7 @@ function addReceiptPending() {
   label.textContent = "Receipt pending";
   const message = document.createElement("p");
   message.textContent =
-    "Authenticated recipient decision and acknowledgement transport is required before receipt delivery.";
+    "The kitchen has not recorded an outcome yet. When they do, a local preview appears here. It is not a signed receipt.";
   pending.append(label, message);
   outcomeView.append(pending);
 }
@@ -729,19 +847,44 @@ if (mcpSubmitBtn && mcpInput && mcpStatus) {
 
 let lastVaultUpdatedAt = userVault.updatedAt || "";
 
+function setPollStatus(kind, message) {
+  if (pollStatusView) {
+    const sameKind = pollStatusView.classList.contains(`is-${kind}`);
+    if (sameKind && pollStatusView.textContent === message) {
+      return;
+    }
+    pollStatusView.className = `poll-status is-${kind}`;
+    pollStatusView.textContent = message;
+  }
+  if (chatHintView && kind !== "waiting") {
+    chatHintView.textContent = message;
+  }
+}
+
 async function pollEgoistPassportVault() {
   try {
     const res = await fetch("/api/passport/vault");
-    if (!res.ok) return;
+    if (!res.ok) {
+      setPollStatus("error", "Could not check ChatGPT memories. Is npm start running?");
+      return;
+    }
     const serverVault = await res.json();
-    if (!serverVault.updatedAt || serverVault.updatedAt === lastVaultUpdatedAt) return;
+    const egoist = (serverVault.allergies || []).filter((allergy) =>
+      allergy.allergenId.startsWith("allergen."),
+    );
+    if (!serverVault.updatedAt || serverVault.updatedAt === lastVaultUpdatedAt) {
+      if (egoist.length === 0) {
+        setPollStatus(
+          "waiting",
+          "Waiting for ChatGPT memories. This page checks every few seconds.",
+        );
+      }
+      return;
+    }
     lastVaultUpdatedAt = serverVault.updatedAt;
 
     const nonEgoist = userVault.allergies.filter(
       (allergy) => !allergy.allergenId.startsWith("allergen."),
-    );
-    const egoist = (serverVault.allergies || []).filter((allergy) =>
-      allergy.allergenId.startsWith("allergen."),
     );
     userVault = {
       ...userVault,
@@ -749,12 +892,33 @@ async function pollEgoistPassportVault() {
       updatedAt: serverVault.updatedAt,
     };
     saveUserPassportVault(userVault, dependencies.storage);
+    const egoistFamilies = new Set(egoist.map((allergy) => constraintFamily(allergy.allergenId)));
+    for (const allergy of [...selectedFieldIds]) {
+      if (
+        allergy.startsWith("order.constraint.") &&
+        egoistFamilies.has(constraintFamily(allergy))
+      ) {
+        selectedFieldIds.delete(allergy);
+      }
+    }
     for (const allergy of egoist) {
       selectedFieldIds.add(allergy.allergenId);
     }
+    if (egoist.length > 0) {
+      const countLabel = egoist.length === 1 ? "memory" : "memories";
+      setPollStatus(
+        "ready",
+        `ChatGPT saved ${egoist.length} ${countLabel} to your passport. Select what Fieldline may see, then approve.`,
+      );
+    } else {
+      setPollStatus(
+        "waiting",
+        "Waiting for ChatGPT memories. This page checks every few seconds.",
+      );
+    }
     renderVaultFields();
   } catch {
-    // Retry on the next interval.
+    setPollStatus("error", "Could not check ChatGPT memories. Is npm start running?");
   }
 }
 

@@ -1,0 +1,133 @@
+/* Shared three-tab demo path. Light by default; .demo-flow--dark for ChatGPT. */
+.demo-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.demo-flow-kicker {
+  margin: 0;
+  color: #6d6d71;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.demo-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo-steps a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: #3e3e42;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+.demo-steps a:hover {
+  background: rgba(23, 23, 25, 0.06);
+}
+.demo-steps a:focus-visible {
+  outline: 3px solid #879989;
+  outline-offset: 2px;
+}
+.demo-steps a[aria-current="page"] {
+  background: #1d1d20;
+  color: #fff;
+}
+.demo-steps .num {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(23, 23, 25, 0.08);
+  font-size: 10px;
+  font-weight: 800;
+}
+.demo-steps a[aria-current="page"] .num {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+.demo-flow--dark .demo-flow-kicker {
+  color: #8b8b8b;
+}
+.demo-flow--dark .demo-steps a {
+  color: #b4b4b4;
+}
+.demo-flow--dark .demo-steps a:hover {
+  background: #212121;
+  color: #fff;
+}
+.demo-flow--dark .demo-steps a[aria-current="page"] {
+  background: #2f2f2f;
+  color: #fff;
+}
+.demo-flow--dark .demo-steps .num {
+  background: #2f2f2f;
+}
+.demo-flow--dark .demo-steps a:focus-visible {
+  outline-color: #10a37f;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .enter-fade {
+    animation: demo-enter 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .scope-card {
+    transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
+  }
+  .saved-item.is-new,
+  .field.is-new {
+    animation: demo-enter 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .send:active,
+  .hero-action:active,
+  .record:active,
+  .button:active,
+  .nav-cta:active {
+    transform: scale(0.97);
+  }
+  .send,
+  .hero-action,
+  .record,
+  .button,
+  .nav-cta {
+    transition: transform 160ms ease-out, background 160ms ease-out, box-shadow 160ms ease-out;
+  }
+}
+
+@keyframes demo-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter-fade,
+  .saved-item.is-new,
+  .field.is-new {
+    animation: demo-enter 120ms ease both;
+  }
+  @keyframes demo-enter {
+    from { opacity: 0.65; }
+    to { opacity: 1; }
+  }
+}

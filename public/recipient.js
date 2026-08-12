@@ -14,7 +14,25 @@ import {
 } from "/src/passport-flow.ts";
 
 const RECIPIENT_ID = "recipient-1";
-const SAMPLE_RECIPIENT_DATA = { "order.constraint.peanut": "Peanut allergy" };
+const SAMPLE_RECIPIENT_DATA = {
+  "order.constraint.peanut": "Peanut allergy",
+  "order.constraint.dairy": "Dairy constraint",
+  "order.preference.vegetarian": "Vegetarian preference",
+  "allergen.peanut": "Peanut allergy",
+  "allergen.dairy": "Dairy / Milk",
+  "allergen.tree_nut": "Tree nut allergy",
+  "allergen.gluten": "Wheat / Gluten",
+  "allergen.shellfish": "Shellfish allergy",
+  "allergen.egg": "Egg allergy",
+  "allergen.soy": "Soy allergy",
+  "allergen.sesame": "Sesame allergy",
+  "allergen.fish": "Fish allergy",
+  "allergen.alpha_gal": "Alpha-gal (red meat)",
+  "allergen.sulfite": "Sulfite sensitivity",
+  "allergen.mustard": "Mustard allergy",
+  "allergen.celery": "Celery allergy",
+  "allergen.lupin": "Lupin allergy",
+};
 const PAD_THAI = {
   id: "pad-thai",
   name: "Pad Thai",
@@ -123,6 +141,7 @@ function setScopeState(phase) {
 function renderScope(workspace) {
   if (workspace.phase === "active") {
     const field = workspace.recipientRequest.scopedFields[0];
+    const fields = workspace.recipientRequest.scopedFields;
     setScopeState("active");
     scopeTitle.textContent = "Allergy scope active";
     scopeState.textContent = formatRemaining(workspace.recipientRequest.validUntil);
@@ -131,7 +150,11 @@ function renderScope(workspace) {
       element("span", "scope-detail-icon", "✓"),
       (() => {
         const copy = document.createElement("div");
-        copy.append(element("span", "scope-label", "Approved constraint"), element("p", "", String(field?.value ?? field?.label ?? "Approved constraint")));
+        const labels = fields.map((item) => item?.label || String(item?.value ?? field?.label ?? "Approved constraint"));
+        copy.append(
+          element("span", "scope-label", fields.length === 1 ? "Approved constraint" : "Approved constraints"),
+          element("p", "", labels.join(", ")),
+        );
         return copy;
       })(),
     );
@@ -140,7 +163,7 @@ function renderScope(workspace) {
       ["Purpose", workspace.recipientRequest.purpose],
       ["Order context", "Pad Thai · #A1024"],
       ["Access", formatRemaining(workspace.recipientRequest.validUntil)],
-      ["Customer data", "One approved constraint"],
+      ["Customer data", fields.length === 1 ? "One approved constraint" : `${fields.length} approved constraints`],
     ]) {
       const fact = element("div", "scope-fact");
       fact.append(element("span", "", label), element("strong", "", value));
@@ -227,7 +250,13 @@ function renderHistory(workspace) {
     return;
   }
   if (workspace.phase === "active") {
-    appendHistory("Permission active", "One customer-approved constraint is available for this order.");
+    const fieldCount = workspace.recipientRequest?.scopedFields?.length || 0;
+    appendHistory(
+      "Permission active",
+      fieldCount === 1
+        ? "One customer-approved constraint is available for this order."
+        : `${fieldCount} customer-approved constraints are available for this order.`,
+    );
     if (workspace.decision) appendHistory("Kitchen decision recorded", "The order team recorded its preparation response.");
     return;
   }
@@ -293,7 +322,18 @@ recordButton.addEventListener("click", () => {
   }
 });
 
-renderWorkspace();
+let lastLedgerSignature = "";
+function pollClaim() {
+  const signature = `${dependencies.storage.getItem(HANDSHAKE_CLAIM_STORAGE_KEY) || ""}|${dependencies.storage.getItem(HANDSHAKE_EVENT_LEDGER_STORAGE_KEY) || ""}`;
+  if (signature === lastLedgerSignature) return;
+  lastLedgerSignature = signature;
+  renderWorkspace();
+}
+pollClaim();
+setInterval(pollClaim, 1500);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") pollClaim();
+});
 window.addEventListener("storage", (event) => {
   if (event.key === HANDSHAKE_CLAIM_STORAGE_KEY || event.key === HANDSHAKE_EVENT_LEDGER_STORAGE_KEY) renderWorkspace();
 });
