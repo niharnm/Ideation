@@ -10,4 +10,3 @@ export * from "./proof-case/allergy-ordering.ts";
 export * from "./proof-case/restaurant-fixtures.ts";
 export * from "./recipient-console.ts";
 export * from "./validate-handshake-event.ts";
-
