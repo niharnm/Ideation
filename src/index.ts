@@ -6,6 +6,7 @@ export * from "./decision-event.ts";
 export * from "./decision-policy.ts";
 export * from "./egoist-mcp-server.ts";
 export * from "./handshake-event.ts";
+export * from "./identity-proof.ts";
 export * from "./operator-demo.ts";
 export * from "./passport-flow.ts";
 export * from "./passport-vault.ts";

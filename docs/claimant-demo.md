@@ -21,19 +21,19 @@ npm start
 
 1. Open three tabs: NimGTP at `https://ideation-handshake.vercel.app/chatgpt.html`,
    Handshake at `https://ideation-handshake.vercel.app/index.html`, and Fieldline
-   at `https://ideation-handshake.vercel.app/recipient.html`. The numbered 1, 2,
-   3 path is on every page.
-2. In NimGTP, say `I have a severe peanut allergy. Save that to my AI Passport.`
-   The local Egoist-style adapter saves that memory to the browser-local passport.
-3. Return to Handshake. The new constraints appear within a few seconds, labeled
-   From NimGTP. Keep only peanut selected, choose an end time, and select
-   **Approve this exact scope**.
-4. In Fieldline checkout, open **Pad Thai · #A1024** and show the green
-   **Allergy scope active** card. It contains only the approved constraints.
-5. Select **Request preparation change**, enter `Use a dedicated surface and
-   replace the peanut garnish.`, and record the kitchen decision. Return to
-   Handshake, show the response, then **Revoke access now**. Fieldline should
-   remove the scope and lock future kitchen actions.
+   at `https://ideation-handshake.vercel.app/recipient.html`. The numbered 1-2-3 path is on every page.
+2. In Handshake, point out the single credential-backed fact, `Peanut avoidance
+   requirement`. It identifies **Cedar Health Clinic** as a demo issuer and says
+   exactly what will never be shared. The local status is only a demo status, not
+   a clinical integration.
+3. In NimGTP, optionally add a preference. Return to Handshake and show that it
+   remains a self-reported private note, never an Identity proof. Choose an end
+   time and select **Approve this exact scope**.
+4. In Fieldline, open **Pad Thai · #A1024** and show the green **Verified order
+   fact active** card. It contains only the one approved credential-backed fact
+   and names its demo issuer.
+5. Record a kitchen decision, then return to Handshake and **Revoke access now**.
+   Fieldline should remove the fact and lock future kitchen actions.
 6. Keep automated tests as fallback evidence, not the main demo:
 
    ```sh
@@ -55,12 +55,12 @@ those claims.
 
 ## 45 to 60 second pitch
 
-“Today, people have to repeat sensitive context whenever they order food. With
-Egoist, they simply ask their AI to order Thai food and mention a peanut
-allergy. The AI asks Egoist for a narrow, fifteen-minute permission, and the
-restaurant receives only the one constraint needed for this order. The kitchen
-can record a preparation change, and the customer can revoke future access at
-any time. Restaurants are the proof case. The bigger idea is AI-mediated,
-purpose-bound, revocable permission for any context a person chooses to share.
-This is an explicitly local proof case, not an authenticated delivery-platform
-integration.”
+“Today, people have to repeat sensitive context whenever they order food. In
+this demo, Cedar Health Clinic issues one locally verified, demo-only peanut
+avoidance requirement. The holder chooses a narrow, fifteen-minute permission,
+and the restaurant receives only that one fact. A NimGTP note stays private and
+cannot become a credential. The kitchen can record a preparation change, and
+the customer can revoke future access at any time. Restaurants are the proof
+case. The bigger idea is claimant-controlled, purpose-bound permission with a
+clear source and a correction path. This is an explicitly local proof case, not
+an authenticated delivery-platform or clinical integration.”

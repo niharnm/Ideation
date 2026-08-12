@@ -872,8 +872,8 @@
             <strong style="font-size: 15px;">Order Confirmed!</strong>
             <span style="font-size: 11px; font-weight: 800; background: #00824d; color: #fff; padding: 2px 6px; border-radius: 99px;">20 MIN ETA</span>
           </div>
-          <p style="margin: 0; font-size: 12px; color: var(--dd-dark); line-height: 1.4;">Your Pad Thai order has been received by 7-Eleven. Your allergy passport protection is active for this order.</p>
-          <div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: #00663c;">Protected Allergies: <span id="confirmed-allergy-detail">Peanut allergy</span></div>
+          <p style="margin: 0; font-size: 12px; color: var(--dd-dark); line-height: 1.4;">Your Pad Thai order is ready for kitchen review with the exact fact you approved in Handshake.</p>
+          <div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: #00663c;">Verified order fact: <span id="confirmed-allergy-detail">Peanut avoidance requirement</span></div>
         </div>
 
         <!-- Order Summary -->
@@ -883,7 +883,7 @@
             <strong>Pad Thai · #A1024</strong>
             <span>$15.00</span>
           </div>
-          <button type="button" id="place-order-btn" class="record-btn" style="background: var(--dd-green); margin-top: 12px; height: 44px; font-size: 14px;">Place Order ($15.00)</button>
+          <button type="button" id="place-order-btn" class="record-btn" style="background: var(--dd-green); margin-top: 12px; height: 44px; font-size: 14px;">Continue with approved fact</button>
         </div>
 
         <!-- Allergy Passport Scope Widget -->
@@ -893,7 +893,7 @@
             <span class="scope-tag" id="scope-state">Not shared</span>
           </div>
           <div class="scope-body-content" id="scope-body">
-            <p style="margin: 0; color: var(--dd-gray-600);">Allergy details are unavailable. Fieldline cannot view or act on customer constraints until temporary permission is granted.</p>
+            <p style="margin: 0; color: var(--dd-gray-600);">No credential-backed fact has been shared. Fieldline cannot view or act on customer constraints until temporary permission is granted.</p>
           </div>
         </div>
 
@@ -910,8 +910,6 @@
               <button class="kitchen-act-btn" type="button" data-action="decline">Cannot safely fulfill<small>Do not prepare</small></button>
               <button class="kitchen-act-btn" type="button" data-action="cannot_determine">Cannot determine<small>Supplier unavailable</small></button>
             </div>
-
-            <button type="button" class="smart-ai-btn" id="smart-ai-suggest-btn">AI Chef Smart Suggestion</button>
 
             <textarea class="prep-textarea" id="decision-note" placeholder="Kitchen preparation detail..." disabled></textarea>
 
@@ -939,4 +937,3 @@
     <script type="module" src="/recipient.js"></script>
   </body>
 </html>
-

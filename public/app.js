@@ -15,14 +15,17 @@ import {
   removeVaultAllergy,
   saveUserPassportVault,
 } from "/src/passport-vault.ts";
+import {
+  CREDENTIAL_BACKED_FIELD_ID,
+  DEMO_DIETARY_CREDENTIAL,
+  isCredentialBackedField,
+} from "/src/identity-proof.ts";
 
 const recipient = { id: "recipient-1", displayName: "Fieldline" };
 const purpose = "Prepare one restaurant order from the constraint you choose.";
 const summary = "Use the selected scoped field for one restaurant order.";
 const defaultFieldOptions = [
-  { id: "order.constraint.peanut", label: "Peanut constraint", selected: true },
-  { id: "order.constraint.dairy", label: "Dairy constraint", selected: false },
-  { id: "order.preference.vegetarian", label: "Vegetarian preference", selected: false },
+  { id: CREDENTIAL_BACKED_FIELD_ID, label: DEMO_DIETARY_CREDENTIAL.label, selected: true },
 ];
 const LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY = "handshake:demo-linked-events:v1";
 const HANDSHAKE_STORAGE_KEY = "egoist.demo.handshake-id";
@@ -42,6 +45,8 @@ const passportCardDetail = document.querySelector("#passport-card-detail");
 const passportCardExpiry = document.querySelector("#passport-card-expiry");
 const pollStatusView = document.querySelector("#poll-status");
 const chatHintView = document.querySelector("#chat-hint");
+const correctionButton = document.querySelector("#show-correction");
+const correctionView = document.querySelector("#correction-copy");
 
 const addAllergyModal = document.querySelector("#add-allergy-modal");
 const openAddAllergyBtn = document.querySelector("#open-add-allergy-btn");
@@ -84,18 +89,7 @@ const SEED_FIELD_IDS = new Set(
 );
 
 function allergiesForShare(allergies) {
-  const hasEgoist = allergies.some((allergy) => allergy.allergenId.startsWith("allergen."));
-  const egoistFamilies = new Set(
-    allergies
-      .filter((allergy) => allergy.allergenId.startsWith("allergen."))
-      .map((allergy) => constraintFamily(allergy.allergenId)),
-  );
-  return allergies.filter((allergy) => {
-    if (allergy.allergenId.startsWith("allergen.")) return true;
-    if (hasEgoist && SEED_FIELD_IDS.has(allergy.allergenId)) return false;
-    if (!allergy.allergenId.startsWith("order.constraint.")) return true;
-    return !egoistFamilies.has(constraintFamily(allergy.allergenId));
-  });
+  return allergies;
 }
 
 let seenEgoistIds = new Set();
@@ -208,7 +202,9 @@ function renderVaultFields() {
     input.type = "checkbox";
     input.className = "field-checkbox";
     input.value = allergy.allergenId;
-    input.checked = selectedFieldIds.has(allergy.allergenId);
+    const credentialBacked = isCredentialBackedField(allergy.allergenId);
+    input.checked = credentialBacked && selectedFieldIds.has(allergy.allergenId);
+    input.disabled = !credentialBacked;
     input.dataset.label = allergy.label;
     input.addEventListener("change", () => {
       if (input.checked) {
@@ -227,10 +223,15 @@ function renderVaultFields() {
     const badgeGroup = document.createElement("div");
     badgeGroup.className = "badge-group";
 
-    if (allergy.allergenId.startsWith("allergen.")) {
+    if (credentialBacked) {
       const sourceBadge = document.createElement("span");
       sourceBadge.className = "badge";
-      sourceBadge.textContent = "From NimGTP";
+      sourceBadge.textContent = "Credential backed";
+      badgeGroup.append(sourceBadge);
+    } else {
+      const sourceBadge = document.createElement("span");
+      sourceBadge.className = "badge";
+      sourceBadge.textContent = "Self-reported, not proof eligible";
       badgeGroup.append(sourceBadge);
     }
 
@@ -252,6 +253,9 @@ function renderVaultFields() {
     removeBtn.textContent = "×";
     removeBtn.title = `Remove ${allergy.label} from vault`;
     removeBtn.setAttribute("aria-label", `Remove ${allergy.label}`);
+    if (credentialBacked) {
+      removeBtn.hidden = true;
+    }
     removeBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -306,6 +310,15 @@ if (openAddAllergyBtn && addAllergyModal) {
     allergyFormError.hidden = true;
     allergyFormError.textContent = "";
     if (allergyLabelInput) allergyLabelInput.focus();
+  });
+}
+
+if (correctionButton && correctionView) {
+  correctionButton.addEventListener("click", () => {
+    correctionView.hidden = !correctionView.hidden;
+    correctionButton.textContent = correctionView.hidden
+      ? "How do I correct this?"
+      : "Hide correction path";
   });
 }
 
@@ -458,7 +471,7 @@ function renderScopeSummary() {
     passportCardDetail.textContent = "Choose a constraint before approving this order.";
   } else if (selectedFields.length === 1) {
     passportCardTitle.textContent = selectedFields[0].dataset.label;
-    passportCardDetail.textContent = "Recipient can use this one constraint to evaluate the order.";
+    passportCardDetail.textContent = "Fieldline can verify and use this one credential-backed fact for the order.";
   } else {
     passportCardTitle.textContent = `${selectedFields.length} selected constraints`;
     passportCardDetail.textContent = "Recipient can use only these selected constraints to evaluate the order.";
@@ -1045,9 +1058,7 @@ function setPollStatus(kind, message) {
     pollStatusView.className = `poll-status is-${kind}`;
     pollStatusView.textContent = message;
   }
-  if (chatHintView && kind !== "waiting") {
-    chatHintView.textContent = message;
-  }
+  if (chatHintView && kind === "error") chatHintView.textContent = message;
 }
 
 async function pollEgoistPassportVault() {
@@ -1074,7 +1085,7 @@ async function pollEgoistPassportVault() {
       if (egoist.length === 0) {
         setPollStatus(
           "waiting",
-          "Waiting for NimGTP memories. This page checks every few seconds.",
+          "NimGTP notes remain private and are not Identity proofs.",
         );
       }
       return;
@@ -1096,29 +1107,16 @@ async function pollEgoistPassportVault() {
     };
     await savePassport(userVault);
     saveUserPassportVault(userVault, dependencies.storage);
+    selectedFieldIds.add(CREDENTIAL_BACKED_FIELD_ID);
     if (egoist.length > 0) {
-      for (const id of [...selectedFieldIds]) {
-        if (!id.startsWith("allergen.")) selectedFieldIds.delete(id);
-      }
-    }
-    for (const allergy of egoist) {
-      if (
-        !previousEgoistIds.has(allergy.allergenId) &&
-        !deselectedFieldIds.has(allergy.allergenId)
-      ) {
-        selectedFieldIds.add(allergy.allergenId);
-      }
-    }
-    if (egoist.length > 0) {
-      const countLabel = egoist.length === 1 ? "memory" : "memories";
       setPollStatus(
         "ready",
-        `NimGTP saved ${egoist.length} ${countLabel} to your passport. Select what Fieldline may see, then approve.`,
+        `NimGTP saved ${egoist.length} private note${egoist.length === 1 ? "" : "s"}. They are not eligible for this Identity presentation.`,
       );
     } else {
       setPollStatus(
         "waiting",
-        "Waiting for NimGTP memories. This page checks every few seconds.",
+        "NimGTP notes remain private and are not Identity proofs.",
       );
     }
     renderVaultFields();

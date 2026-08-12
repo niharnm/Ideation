@@ -226,49 +226,8 @@ function resolveRequest(pathname) {
 createServer(async (request, response) => {
   const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
 
-  // Set CORS headers for external ChatGPT / MCP client connections
-  response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
   if (request.method === "OPTIONS") {
     response.writeHead(204).end();
-    return;
-  }
-
-  if (pathname === "/api/smart-prep" && request.method === "POST") {
-    const groqKey = process.env.GROQ_API_KEY;
-    if (!groqKey) {
-      response.writeHead(503, { "Content-Type": "application/json" });
-      response.end(JSON.stringify({ error: "AI service unavailable" }));
-      return;
-    }
-    let payload = {};
-    try {
-      let bodyText = "";
-      for await (const chunk of request) bodyText += chunk;
-      payload = JSON.parse(bodyText);
-    } catch {
-      payload = {};
-    }
-    const constraints = Array.isArray(payload.constraints) ? payload.constraints : [];
-    const item = payload.item || "Pad Thai";
-    try {
-      const prompt = `You are an expert restaurant executive chef evaluating kitchen safety for DoorDash Fieldline orders.
-The order includes: ${item}.
-Customer's approved allergy constraints: ${JSON.stringify(constraints)}.
-Provide a concise, professional 1-2 sentence kitchen preparation recommendation explaining how to safely prepare this order or what substitution/dedicated surface is needed. Do not use markdown.`;
-
-      const aiSuggestion = await groqComplete(groqKey, [
-        { role: "system", content: "You are a precise, professional restaurant safety AI chef." },
-        { role: "user", content: prompt },
-      ]);
-      response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(JSON.stringify({ suggestion: aiSuggestion }));
-    } catch (err) {
-      response.writeHead(500, { "Content-Type": "application/json" });
-      response.end(JSON.stringify({ error: err.message }));
-    }
     return;
   }
 

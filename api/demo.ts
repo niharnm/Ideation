@@ -17,7 +17,7 @@ const recipient: ApiPrincipal = {
 const defaultPassport = {
   claimantId: "claimant-demo",
   constraints: [
-    { id: "order.constraint.peanut", label: "Peanut allergy", severity: "severe", crossContaminationTolerance: false },
+    { id: "order.constraint.peanut", label: "Peanut avoidance requirement", severity: "severe", crossContaminationTolerance: false },
   ],
 };
 

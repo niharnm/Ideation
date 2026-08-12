@@ -10,7 +10,7 @@ web
 
 **Primary (claimant):** A diner who already knows their dietary constraints and is about to order food through an AI assistant. They do not want to paste a full health profile into a restaurant, delivery app, or chat history that outlives the meal.
 
-**Verifier (restaurant staff):** A kitchen or checkout operator who needs only the constraint required to prepare one ticket, then must lose access when the order ends or the diner revokes.
+**Verifier (restaurant staff):** A kitchen or checkout operator who needs only one issuer-backed peanut avoidance requirement to prepare one ticket, then must lose access when the order ends or the diner revokes.
 
 **Evaluator (hackathon judges):** Reviewers of the Egoist Machines AI Passport Ideathon (7–12 August 2026). They need to understand the problem, the person, the passport claim, the check moment, and the first version in about one minute, then walk a live three-tab demo.
 
@@ -18,15 +18,16 @@ web
 
 ## Product Purpose
 
-Egoist Handshake is a local proof case for **AI Passport**: a person carries verified dietary context, grants a restaurant access on purpose for one order, and can take it back.
+Egoist Handshake is a local proof case for **AI Passport**: a person presents one credential-backed dietary fact to a restaurant for one order, and can take it back. Cedar Health Clinic is explicitly a local demo issuer, not a clinical integration.
 
 Success for this entry is that a stranger can name:
 
 1. the diner,
-2. the minimum fact being proved (selected dietary constraints),
+2. the minimum fact being presented (peanut avoidance requirement),
 3. the moment it is checked (consent, then kitchen review),
 4. what is never revealed,
-5. how access expires or is revoked.
+5. how a mistake is corrected by the issuer,
+6. how access expires or is revoked.
 
 Restaurant allergy handling is the proof case, not the product ceiling. The durable job is claimant-controlled, purpose-bound, revocable disclosure that can travel between an AI chat, a consent surface, and a verifier workspace.
 
@@ -36,15 +37,15 @@ Neighboring products store allergies inside one restaurant profile, one delivery
 
 Track for the Ideathon form: **Identity** (minimum necessary fact). Lane: **Build**. Agents-track mechanics (plugin, receipts, expiry) support the identity claim; they are not a second product.
 
-One-sentence entry: *This entry is for a diner, who needs to prove a selected dietary constraint to a restaurant so they can safely fulfill one order without giving away more context than necessary.*
+One-sentence entry: *This entry is for a diner, who needs to present a credential-backed peanut avoidance requirement from a demo health issuer to a restaurant verifier so they can prepare one order without giving away more context than necessary.*
 
 ## Operating Context
 
 Judges and builders use three browser tabs on the public proof or a local Node server (`npm start`, port 4173):
 
-1. `/chatgpt.html`, ChatGPT-like test chat with a local Egoist AI Passport plugin. It uses Groq when configured and a dietary-memory fallback otherwise. Dietary talk is saved to a local vault (`allergen.*`).
-2. `/index.html`, Handshake consent. Reads the local vault, lets the diner select fields, set an end time, approve, deny, or revoke.
-3. `/recipient.html`, Fieldline restaurant ops. Reads the approved API claim, shows only that scope, records a kitchen decision, and locks after revoke or expiry.
+1. `/chatgpt.html`, a Chat-like Groq surface for private, self-reported dietary notes. It is not an Identity credential source.
+2. `/index.html`, Handshake consent. Shows the demo issuer, credential status, exact fact, purpose, never-shared data, correction path, end time, approval, and revoke.
+3. `/recipient.html`, Fieldline restaurant ops. Reads only the approved scope, identifies the fact's demo source, records a kitchen decision, and locks after revoke or expiry.
 
 Landing `/demo.html` is the pitch and optional shortcut handshake. The root route, `/`, opens Handshake. Demo data is local and unlabeled as a live delivery-platform integration. `GROQ_API_KEY` lives in gitignored `.env` when configured; the client must never see it.
 
@@ -52,11 +53,11 @@ Landing `/demo.html` is the pitch and optional shortcut handshake. The root rout
 
 Confirmed in this repo:
 
-- Chat `POST /api/chat` proxies Groq when configured; when it is unavailable, the client labels and uses the local dietary-memory adapter.
-- Plugin memories replace the vault’s `allergen.*` set (empty list clears them). Handshake merges those into the claimant vault and auto-selects them.
-- Approve writes a local scoped claim and creates the matching demo API grant; Fieldline reads the API grant, not the full vault.
+- Chat `POST /api/chat` proxies Groq; missing key returns 503 with a setup message. Its memories are self-reported and never count as proof.
+- The local demo credential names Cedar Health Clinic as issuer, exposes only the peanut avoidance requirement, and is labeled as locally verified for the demo.
+- Approve writes a scoped claim and creates a matching demo API grant. Fieldline receives only the approved scope. Checkout never creates consent on the diner's behalf.
 - Deny shares nothing. Expiry and claimant revoke block later kitchen actions.
-- Kitchen can record one of four local outcomes; Handshake can preview an **unverified** receipt. Local events are not authenticated recipient proof.
+- Kitchen can record one of four local outcomes; Handshake can preview an **unverified** receipt. The AI chef safety suggestion is intentionally out of scope. Local events are not authenticated recipient proof.
 - MCP parse/sync endpoints exist for the same vault. The ChatGPT tab uses the local plugin path.
 
 Undecided / out of scope for this demo:
