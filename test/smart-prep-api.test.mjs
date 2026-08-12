@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const originalKey = process.env.GROQ_API_KEY;
 const originalFetch = globalThis.fetch;
 process.env.GROQ_API_KEY = "test-groq-key";
 
-const smartPrep = (await import("../api/smart-prep.ts")).default;
+const chat = (await import("../api/chat.ts")).default;
 
 test.after(() => {
   globalThis.fetch = originalFetch;
@@ -25,7 +26,7 @@ test("deployed smart preparation route sends scoped order context to Groq", asyn
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
 
-  const result = await smartPrep.fetch(new Request("http://localhost/api/smart-prep", {
+  const result = await chat.fetch(new Request("http://localhost/api/chat?mode=smart-prep", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ item: "Pad Thai", constraints: ["Peanut allergy"] }),
@@ -36,8 +37,11 @@ test("deployed smart preparation route sends scoped order context to Groq", asyn
   });
 });
 
-test("deployed smart preparation route rejects non-POST requests", async () => {
-  const result = await smartPrep.fetch(new Request("http://localhost/api/smart-prep"));
-  assert.equal(result.status, 405);
-  assert.equal((await result.json()).error.code, "method_not_allowed");
+test("deployed smart preparation rewrite is declared without adding a function", () => {
+  const config = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+  assert.deepEqual(config.rewrites[0], {
+    source: "/api/smart-prep",
+    destination: "/api/chat?mode=smart-prep",
+  });
+  assert.equal(config.functions["api/smart-prep.ts"], undefined);
 });
