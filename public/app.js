@@ -34,6 +34,11 @@ const endTimeView = document.querySelector("#end-time");
 const approveButton = document.querySelector("#approve");
 const denyButton = document.querySelector("#deny");
 const errorView = document.querySelector("#error");
+const scopeCountView = document.querySelector("#scope-count");
+const signalEndTimeView = document.querySelector("#signal-end-time");
+const passportCardTitle = document.querySelector("#passport-card-title");
+const passportCardDetail = document.querySelector("#passport-card-detail");
+const passportCardExpiry = document.querySelector("#passport-card-expiry");
 
 const addAllergyModal = document.querySelector("#add-allergy-modal");
 const openAddAllergyBtn = document.querySelector("#open-add-allergy-btn");
@@ -71,6 +76,7 @@ function renderVaultFields() {
     input.value = allergy.allergenId;
     input.checked = fieldOptions.find((field) => field.id === allergy.allergenId)?.selected ?? false;
     input.dataset.label = allergy.label;
+    input.addEventListener("change", renderScopeSummary);
 
     const textSpan = document.createElement("span");
     textSpan.textContent = allergy.label;
@@ -93,7 +99,7 @@ function renderVaultFields() {
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "remove-allergy-btn";
-    removeBtn.innerHTML = "&times;";
+    removeBtn.textContent = "Remove";
     removeBtn.title = `Remove ${allergy.label} from vault`;
     removeBtn.setAttribute("aria-label", `Remove ${allergy.label}`);
     removeBtn.addEventListener("click", (e) => {
@@ -107,6 +113,8 @@ function renderVaultFields() {
     labelEl.append(input, textSpan, badgeGroup, removeBtn);
     fieldsView.append(labelEl);
   }
+
+  renderScopeSummary();
 }
 
 renderVaultFields();
@@ -185,6 +193,39 @@ function updateEndTime() {
     minute: "2-digit",
     timeZoneName: "short",
   });
+  renderScopeSummary();
+}
+
+function formatScopeEndTime(value) {
+  return new Date(value).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+function renderScopeSummary() {
+  const selectedFields = [...fieldsView.querySelectorAll("input.field-checkbox")]
+    .filter((field) => field.checked);
+  const endsAt = draft().validUntil;
+
+  scopeCountView.textContent = selectedFields.length === 1
+    ? "One selected field"
+    : `${selectedFields.length} selected fields`;
+  signalEndTimeView.textContent = formatScopeEndTime(endsAt);
+
+  if (selectedFields.length === 0) {
+    passportCardTitle.textContent = "Nothing selected";
+    passportCardDetail.textContent = "Choose a constraint before approving this order.";
+  } else if (selectedFields.length === 1) {
+    passportCardTitle.textContent = selectedFields[0].dataset.label;
+    passportCardDetail.textContent = "Recipient can use this one constraint to evaluate the order.";
+  } else {
+    passportCardTitle.textContent = `${selectedFields.length} selected constraints`;
+    passportCardDetail.textContent = "Recipient can use only these selected constraints to evaluate the order.";
+  }
+
+  passportCardExpiry.textContent = `Ends ${formatScopeEndTime(endsAt)}`;
 }
 
 function showError(issues) {
@@ -583,7 +624,10 @@ if (mcpSubmitBtn && mcpInput && mcpStatus) {
       dependencies.storage
     );
 
-    mcpStatus.textContent = res.content[0]?.text || "MCP Tool Executed.";
+    const toolMessage = res.content[0]?.text;
+    mcpStatus.textContent = toolMessage?.includes("Natural language parsed successfully")
+      ? "Your passport was updated from that sentence."
+      : toolMessage || "Your passport could not be updated from that sentence.";
     mcpStatus.hidden = false;
     mcpInput.value = "";
 
@@ -591,4 +635,3 @@ if (mcpSubmitBtn && mcpInput && mcpStatus) {
     renderVaultFields();
   });
 }
-
