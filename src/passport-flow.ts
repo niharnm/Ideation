@@ -396,7 +396,7 @@ function composeRequestEvents(
   };
 }
 
-function appendHandshakeEvents(
+export function appendHandshakeEvents(
   storage: StorageLike,
   events: readonly HandshakeEvent[],
 ): void {

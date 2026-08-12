@@ -4,7 +4,7 @@ export * from "./claimant-receipt.ts";
 export * from "./decision-event.ts";
 export * from "./decision-policy.ts";
 export * from "./handshake-event.ts";
+export * from "./operator-demo.ts";
 export * from "./passport-flow.ts";
 export * from "./proof-case/allergy-ordering.ts";
 export * from "./validate-handshake-event.ts";
-
