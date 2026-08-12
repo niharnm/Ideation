@@ -1,4 +1,4 @@
-# Nimbus Ideation
+# Handshake Ideation
 
 Minimal TypeScript protocol workspace with no third-party dependencies.
 
