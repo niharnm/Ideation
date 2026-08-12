@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Handshake prototype</title>
+    <style>
+      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171714; background: #f3f1eb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; }
+      button, input, select { font: inherit; }
+      button { cursor: pointer; }
+      .shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+      header, footer { width: min(100% - 32px, 720px); margin: 0 auto; }
+      header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 20px; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 760; letter-spacing: -0.02em; }
+      .mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: white; background: #25251f; font-size: 14px; }
+      .private { font-size: 12px; color: #65645c; }
+      main { width: min(100% - 32px, 620px); margin: auto; padding: 28px 0 56px; }
+      .card { overflow: hidden; border: 1px solid #dedbd1; border-radius: 24px; background: #fffefa; box-shadow: 0 18px 50px rgba(51, 48, 38, 0.09); }
+      .hero { padding: 30px 30px 25px; border-bottom: 1px solid #ebe8df; }
+      .eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: #736c50; font-size: 12px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+      .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 99px; background: #bc9c37; box-shadow: 0 0 0 4px #f6edcc; }
+      h1 { margin: 0; max-width: 520px; font-size: clamp(28px, 6vw, 42px); line-height: 1.06; letter-spacing: -0.04em; }
+      .intro { margin: 14px 0 0; color: #65645c; line-height: 1.55; }
+      .details { display: grid; gap: 0; padding: 4px 30px; }
+      .detail { padding: 21px 0; border-bottom: 1px solid #ebe8df; }
+      .detail:last-child { border-bottom: 0; }
+      .label { margin: 0 0 9px; color: #77756c; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+      .value { margin: 0; font-size: 16px; line-height: 1.45; }
+      .field-list { display: grid; gap: 9px; }
+      .field { display: flex; align-items: center; gap: 11px; padding: 12px 13px; border: 1px solid #dfdcd2; border-radius: 12px; background: white; }
+      .field:has(input:checked) { border-color: #99906c; background: #fbf7e9; }
+      .field input { width: 18px; height: 18px; accent-color: #25251f; }
+      .time-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+      select { min-width: 124px; padding: 9px 32px 9px 11px; border: 1px solid #d6d2c7; border-radius: 10px; background: white; color: #25251f; }
+      .end-time { margin-top: 7px; color: #65645c; font-size: 14px; }
+      .actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; padding: 22px 30px 30px; }
+      .button { min-height: 50px; border-radius: 13px; border: 1px solid #d4d0c5; font-weight: 700; }
+      .button:focus-visible, .field:has(input:focus-visible) { outline: 3px solid #91b4fa; outline-offset: 2px; }
+      .deny { color: #3f3e39; background: transparent; }
+      .approve { border-color: #25251f; color: white; background: #25251f; }
+      .revoke { width: 100%; color: #8d2c23; border-color: #e4bcb7; background: #fff8f7; }
+      .button:disabled { cursor: not-allowed; opacity: .45; }
+      .error { margin: 0 30px 20px; padding: 12px 14px; border-radius: 10px; color: #8d2c23; background: #fff0ee; font-size: 14px; }
+      .outcome { padding: 34px 30px; }
+      .status-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 18px; border-radius: 50%; color: white; background: #2e6d4d; font-size: 22px; }
+      .status-icon.denied, .status-icon.revoked { background: #6d6760; }
+      .outcome h2 { margin: 0; font-size: 27px; letter-spacing: -0.03em; }
+      .outcome p { margin: 10px 0 0; color: #65645c; line-height: 1.55; }
+      .summary-grid { display: grid; gap: 14px; margin: 24px 0; padding: 18px; border-radius: 14px; background: #f5f3ed; }
+      .summary-grid p { margin: 2px 0 0; color: #25251f; }
+      footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
+      [hidden] { display: none !important; }
+      @media (max-width: 520px) { .hero, .details, .outcome { padding-left: 21px; padding-right: 21px; } .actions { grid-template-columns: 1fr; padding-left: 21px; padding-right: 21px; } .approve { order: -1; } .time-row { align-items: flex-start; flex-direction: column; } }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand"><span class="mark" aria-hidden="true">H</span> Handshake prototype</div>
+        <div class="private">Private by default</div>
+      </header>
+      <main>
+        <section class="card" aria-live="polite">
+          <div id="request-view">
+            <div class="hero">
+              <p class="eyebrow">One-order request</p>
+              <h1>A recipient is asking to use selected claimant fields.</h1>
+              <p class="intro">Review the requester, purpose, fields, and exact end time before you choose.</p>
+            </div>
+            <div class="details">
+              <div class="detail">
+                <p class="label">Who is asking</p>
+                <p class="value"><strong>Recipient</strong>, scoped request recipient</p>
+              </div>
+              <div class="detail">
+                <p class="label">Why</p>
+                <p class="value" id="purpose">Prepare one restaurant order from the constraints you choose.</p>
+              </div>
+              <fieldset class="detail" style="border-left:0;border-right:0;border-top:0;padding-inline:0;margin:0">
+                <legend class="label">Fields to share</legend>
+                <div class="field-list" id="fields"></div>
+              </fieldset>
+              <div class="detail">
+                <div class="time-row">
+                  <div>
+                    <p class="label">Access duration</p>
+                    <p class="value">Temporary access only</p>
+                  </div>
+                  <label>
+                    <span class="label" style="position:absolute;clip:rect(0 0 0 0)">Duration</span>
+                    <select id="duration">
+                      <option value="15">15 minutes</option>
+                      <option value="30" selected>30 minutes</option>
+                      <option value="60">1 hour</option>
+                    </select>
+                  </label>
+                </div>
+                <p class="end-time">Access ends <strong id="end-time"></strong>.</p>
+              </div>
+            </div>
+            <p class="error" id="error" role="alert" hidden></p>
+            <div class="actions">
+              <button class="button deny" id="deny" type="button">Deny, share nothing</button>
+              <button class="button approve" id="approve" type="button">Approve selected fields</button>
+            </div>
+          </div>
+          <div class="outcome" id="outcome-view" hidden></div>
+        </section>
+      </main>
+      <footer>The prototype records the claimant’s choice. The recipient separately owns any review or decision after approval.</footer>
+    </div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
