@@ -19,7 +19,7 @@ import { handleEgoistMCPRequest } from "/src/egoist-mcp-server.ts";
 const recipient = { id: "recipient-1", displayName: "Recipient" };
 const purpose = "Prepare one restaurant order from the constraint you choose.";
 const summary = "Use the selected scoped field for one restaurant order.";
-const fieldOptions = [
+const defaultFieldOptions = [
   { id: "order.constraint.peanut", label: "Peanut constraint", selected: true },
   { id: "order.constraint.dairy", label: "Dairy constraint", selected: false },
   { id: "order.preference.vegetarian", label: "Vegetarian preference", selected: false },
@@ -29,7 +29,7 @@ const LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY = "handshake:demo-linked-events:v1";
 const requestView = document.querySelector("#request-view");
 const outcomeView = document.querySelector("#outcome-view");
 const fieldsView = document.querySelector("#fields");
-const durationSelect = document.querySelector("#duration");
+const expiryInput = document.querySelector("#expiry");
 const endTimeView = document.querySelector("#end-time");
 const approveButton = document.querySelector("#approve");
 const denyButton = document.querySelector("#deny");
@@ -48,9 +48,14 @@ const addAllergyForm = document.querySelector("#add-allergy-form");
 const allergyLabelInput = document.querySelector("#allergy-label");
 const allergySeveritySelect = document.querySelector("#allergy-severity");
 const allergyCrossContamCheck = document.querySelector("#allergy-cross-contam");
+const shareNewAllergyCheck = document.querySelector("#share-new-allergy");
+const allergyFormError = document.querySelector("#allergy-form-error");
 
 let validFrom = new Date();
 let expiryTimer;
+const selectedFieldIds = new Set(
+  defaultFieldOptions.filter((field) => field.selected).map((field) => field.id),
+);
 
 const dependencies = {
   storage: window.localStorage,
@@ -74,9 +79,16 @@ function renderVaultFields() {
     input.type = "checkbox";
     input.className = "field-checkbox";
     input.value = allergy.allergenId;
-    input.checked = fieldOptions.find((field) => field.id === allergy.allergenId)?.selected ?? false;
+    input.checked = selectedFieldIds.has(allergy.allergenId);
     input.dataset.label = allergy.label;
-    input.addEventListener("change", renderScopeSummary);
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        selectedFieldIds.add(allergy.allergenId);
+      } else {
+        selectedFieldIds.delete(allergy.allergenId);
+      }
+      renderScopeSummary();
+    });
 
     const textSpan = document.createElement("span");
     textSpan.textContent = allergy.label;
@@ -99,13 +111,14 @@ function renderVaultFields() {
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "remove-allergy-btn";
-    removeBtn.textContent = "Remove";
+    removeBtn.textContent = "×";
     removeBtn.title = `Remove ${allergy.label} from vault`;
     removeBtn.setAttribute("aria-label", `Remove ${allergy.label}`);
     removeBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       userVault = removeVaultAllergy(userVault, allergy.allergenId);
+      selectedFieldIds.delete(allergy.allergenId);
       saveUserPassportVault(userVault, dependencies.storage);
       renderVaultFields();
     });
@@ -123,18 +136,35 @@ function closeModal() {
   if (addAllergyModal) {
     addAllergyModal.hidden = true;
     addAllergyForm.reset();
+    allergyFormError.hidden = true;
+    allergyFormError.textContent = "";
+    openAddAllergyBtn.focus();
   }
 }
 
 if (openAddAllergyBtn && addAllergyModal) {
   openAddAllergyBtn.addEventListener("click", () => {
     addAllergyModal.hidden = false;
+    allergyFormError.hidden = true;
+    allergyFormError.textContent = "";
     if (allergyLabelInput) allergyLabelInput.focus();
   });
 }
 
 if (closeAddAllergyBtn) closeAddAllergyBtn.addEventListener("click", closeModal);
 if (cancelAddAllergyBtn) cancelAddAllergyBtn.addEventListener("click", closeModal);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !addAllergyModal.hidden) {
+    closeModal();
+  }
+});
+
+addAllergyModal.addEventListener("click", (event) => {
+  if (event.target === addAllergyModal) {
+    closeModal();
+  }
+});
 
 if (addAllergyForm) {
   addAllergyForm.addEventListener("submit", (e) => {
@@ -153,7 +183,16 @@ if (addAllergyForm) {
       crossContaminationTolerance,
     };
 
+    if (userVault.allergies.some((allergy) => allergy.allergenId === newConstraint.allergenId)) {
+      allergyFormError.textContent = "That constraint is already in your passport.";
+      allergyFormError.hidden = false;
+      return;
+    }
+
     userVault = addCustomAllergyToVault(userVault, newConstraint);
+    if (shareNewAllergyCheck.checked) {
+      selectedFieldIds.add(newConstraint.allergenId);
+    }
     saveUserPassportVault(userVault, dependencies.storage);
     renderVaultFields();
     closeModal();
@@ -161,7 +200,7 @@ if (addAllergyForm) {
 }
 
 function draft(choice = null) {
-  const durationMs = Number(durationSelect.value) * 60 * 1_000;
+  const validUntil = expiryInput.value ? new Date(expiryInput.value) : null;
   return {
     purpose,
     fields: [...fieldsView.querySelectorAll("input.field-checkbox")].map((input) => ({
@@ -170,7 +209,9 @@ function draft(choice = null) {
       selected: input.checked,
     })),
     validFrom: validFrom.toISOString(),
-    validUntil: new Date(validFrom.getTime() + durationMs).toISOString(),
+    validUntil: validUntil && !Number.isNaN(validUntil.getTime())
+      ? validUntil.toISOString()
+      : "",
     choice,
   };
 }
@@ -187,6 +228,10 @@ function input(choice = null) {
 
 function updateEndTime() {
   const date = new Date(draft().validUntil);
+  if (Number.isNaN(date.getTime())) {
+    endTimeView.textContent = "an end time is required";
+    return;
+  }
   endTimeView.textContent = date.toLocaleString([], {
     weekday: "short",
     hour: "numeric",
@@ -197,6 +242,9 @@ function updateEndTime() {
 }
 
 function formatScopeEndTime(value) {
+  if (Number.isNaN(Date.parse(value))) {
+    return "an end time";
+  }
   return new Date(value).toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
@@ -226,6 +274,42 @@ function renderScopeSummary() {
   }
 
   passportCardExpiry.textContent = `Ends ${formatScopeEndTime(endsAt)}`;
+}
+
+function dateTimeLocalValue(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function resetRequestView() {
+  const currentClaim = expireScopedClaimIfNeeded(dependencies);
+  if (currentClaim?.status === "active") {
+    revokeScopedClaim(
+      currentClaim.claimantId,
+      dependencies,
+      "The claimant started a new request and ended this access.",
+    );
+  }
+  window.clearTimeout(expiryTimer);
+  validFrom = new Date();
+  const earliestAllowed = new Date(validFrom.getTime() + 60 * 1_000);
+  const latestAllowed = new Date(validFrom.getTime() + 24 * 60 * 60 * 1_000);
+  expiryInput.min = dateTimeLocalValue(earliestAllowed);
+  expiryInput.max = dateTimeLocalValue(latestAllowed);
+  expiryInput.value = dateTimeLocalValue(new Date(validFrom.getTime() + 30 * 60 * 1_000));
+  errorView.hidden = true;
+  requestView.hidden = false;
+  outcomeView.hidden = true;
+  updateEndTime();
+}
+
+function addStartNewRequest(container) {
+  const startAgain = document.createElement("button");
+  startAgain.className = "button";
+  startAgain.type = "button";
+  startAgain.textContent = "Start a new request";
+  startAgain.addEventListener("click", resetRequestView);
+  container.append(startAgain);
 }
 
 function showError(issues) {
@@ -291,6 +375,10 @@ function showOutcome(kind, title, message, claim = null) {
       );
     });
     outcomeView.append(revoke);
+  }
+
+  if (kind !== "approved") {
+    addStartNewRequest(outcomeView);
   }
 }
 
@@ -431,6 +519,10 @@ function showReceipt(receipt) {
     });
     outcomeView.append(revoke);
   }
+
+  if (receipt.access.status !== "active") {
+    addStartNewRequest(outcomeView);
+  }
 }
 
 function addReceiptPending() {
@@ -487,7 +579,7 @@ function scheduleExpiry(claim) {
   }, delay);
 }
 
-durationSelect.addEventListener("change", updateEndTime);
+expiryInput.addEventListener("change", updateEndTime);
 
 approveButton.addEventListener("click", () => {
   errorView.hidden = true;
@@ -523,8 +615,7 @@ if (storedClaim?.status === "active") {
 } else if (storedClaim?.status === "expired") {
   renderClaim(storedClaim);
 } else {
-  validFrom = new Date();
-  updateEndTime();
+  resetRequestView();
 }
 
 function showPreviewError(message) {

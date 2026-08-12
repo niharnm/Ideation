@@ -47,7 +47,7 @@
       .field:has(input:checked) { border-color: #1d1d20; background: #1d1d20; color: #fff; }
       .field input { width: 15px; height: 15px; margin: 0; accent-color: #fff; }
       .badge-group { display: none; }
-      .remove-allergy-btn { padding: 4px 7px; border: 0; border-radius: 999px; color: inherit; background: rgba(255,255,255,.14); font-size: 10px; font-weight: 750; line-height: 1; opacity: .76; }
+      .remove-allergy-btn { display: grid; place-items: center; width: 21px; height: 21px; padding: 0; border: 0; border-radius: 50%; color: inherit; background: rgba(255,255,255,.14); font-size: 16px; line-height: 1; opacity: .76; }
       .field:not(:has(input:checked)) .remove-allergy-btn { color: #747477; background: #f0f0ee; }
       .passport-stage { position: relative; isolation: isolate; min-height: 265px; margin: 29px 0 0; overflow: hidden; border-top: 1px solid #e5e5e2; }
       .passport-intro { position: absolute; z-index: 2; top: 38px; left: 0; max-width: 200px; }
@@ -101,6 +101,7 @@
       .select-full { width: 100%; padding: 10px; border: 1px solid #dededb; border-radius: 11px; background: #fff; }
       .checkbox-group { display: flex; align-items: center; }
       .checkbox-label { display: flex; gap: 8px; color: #515155; font-size: 13px; }
+      .modal-error { margin: 0; color: #952e27; font-size: 13px; line-height: 1.4; }
       .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
       footer { padding: 26px 0 35px; color: #8b8b8e; font-size: 11px; text-align: center; }
       @keyframes word-arrival { from { opacity: 0; filter: blur(11px); transform: translateY(115%) rotate(2deg); } to { opacity: 1; filter: blur(0); transform: translateY(0) rotate(0); } }
@@ -146,7 +147,7 @@
           <section class="details" aria-label="Permission details">
             <article class="detail"><span class="label">Who is asking</span><p class="value"><strong>Recipient</strong>, scoped request recipient</p></article>
             <article class="detail"><span class="label">Why</span><p class="value" id="purpose">Prepare one restaurant order from the constraints you choose.</p></article>
-            <article class="detail"><div class="time-row"><div><span class="label">Access duration</span><p class="value">Temporary access only</p></div><label><span class="label">Duration</span><select id="duration"><option value="15">15 minutes</option><option value="30" selected>30 minutes</option><option value="60">1 hour</option></select></label></div><p class="end-time">Access ends <strong id="end-time"></strong>.</p></article>
+            <article class="detail"><div class="time-row"><div><span class="label">Access expires</span><p class="value">Choose the exact end time</p></div><label for="expiry"><span class="label">Expires at</span><input id="expiry" type="datetime-local" required /></label></div><p class="end-time">The recipient loses access at <strong id="end-time"></strong>.</p></article>
           </section>
 
           <section class="detail vault-editor" aria-labelledby="vault-title">
@@ -165,11 +166,13 @@
 
     <div id="add-allergy-modal" class="modal-overlay" hidden>
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-allergy-title">
-        <div class="modal-header"><h3 id="add-allergy-title">Add a custom constraint</h3><button type="button" id="close-add-allergy-btn" class="close-btn">Close</button></div>
+          <div class="modal-header"><h3 id="add-allergy-title">Add a custom constraint</h3><button type="button" id="close-add-allergy-btn" class="close-btn" aria-label="Close">Close</button></div>
         <form id="add-allergy-form">
           <div class="form-group"><label for="allergy-label" class="label">Allergy or constraint</label><input type="text" id="allergy-label" placeholder="For example, sesame" required class="input-text" /></div>
           <div class="form-group"><label for="allergy-severity" class="label">Severity</label><select id="allergy-severity" class="select-full"><option value="severe">Severe</option><option value="moderate" selected>Moderate</option><option value="mild">Mild</option></select></div>
           <div class="form-group checkbox-group"><label class="checkbox-label"><input type="checkbox" id="allergy-cross-contam" /><span>Require zero cross-contamination</span></label></div>
+          <div class="form-group checkbox-group"><label class="checkbox-label"><input type="checkbox" id="share-new-allergy" checked /><span>Include this in this request</span></label></div>
+          <p id="allergy-form-error" class="modal-error" role="alert" hidden></p>
           <div class="modal-actions"><button type="button" id="cancel-add-allergy" class="button">Cancel</button><button type="submit" class="button" style="border-color:#1d1d20;background:#1d1d20;color:#fff">Save to passport</button></div>
         </form>
       </div>
