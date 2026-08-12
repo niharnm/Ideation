@@ -4,21 +4,120 @@ import {
   createRequiredChangeDecisionEvent,
   createDeclineDecisionEvent,
   createCannotDetermineDecisionEvent,
-  createRecipientDecisionEvent,
   recordRecipientDecision,
 } from "/src/recipient-console.ts";
 import {
+  evaluateUniversalAllergyPolicy,
+  UNIVERSAL_ALLERGEN_TAXONOMY,
+  getAllergenMetadata,
+} from "/src/universal-policy-engine.ts";
+import {
   readHandshakeEventLedger,
-  HANDSHAKE_EVENT_LEDGER_STORAGE_KEY,
 } from "/src/passport-flow.ts";
 
-// Sample recipient database data containing both requested fields AND unrequested claimant data
+const SAMPLE_DISH_PROFILES = {
+  "pad-thai": {
+    id: "pad-thai",
+    name: "Pad Thai",
+    ingredients: [
+      { id: "ing-rice-noodles", name: "Rice Noodles", allergens: [], isVerifiedSupplier: true },
+      { id: "ing-tofu", name: "Tofu", allergens: [], isVerifiedSupplier: true },
+      { id: "ing-peanuts", name: "Peanuts", allergens: ["allergen.peanut"], isVerifiedSupplier: true },
+      { id: "ing-soy-sauce", name: "Soy Sauce", allergens: ["allergen.gluten", "allergen.soy"], isVerifiedSupplier: true },
+    ],
+    allergens: ["allergen.peanut", "allergen.gluten", "allergen.soy"],
+    substitutions: [
+      {
+        id: "sub-tamari",
+        originalIngredientId: "ing-soy-sauce",
+        originalIngredientName: "Soy Sauce",
+        replacementIngredientId: "ing-tamari",
+        replacementIngredientName: "Tamari GF Soy Sauce",
+        description: "Substitute soy sauce with Tamari GF Soy Sauce",
+        removesAllergens: ["allergen.gluten"],
+      },
+      {
+        id: "sub-no-peanuts",
+        originalIngredientId: "ing-peanuts",
+        originalIngredientName: "Peanuts",
+        replacementIngredientId: "ing-none",
+        replacementIngredientName: "Omit Peanuts",
+        description: "Omit peanuts from dish preparation",
+        removesAllergens: ["allergen.peanut"],
+      },
+    ],
+    hasUnverifiedSuppliers: false,
+  },
+  "green-curry": {
+    id: "green-curry",
+    name: "Green Curry",
+    ingredients: [
+      { id: "ing-coconut-milk", name: "Coconut Milk", allergens: ["allergen.tree_nut"], isVerifiedSupplier: true },
+      { id: "ing-curry-paste", name: "Uncertified Special Curry Paste", allergens: [], isVerifiedSupplier: false },
+      { id: "ing-bamboo", name: "Bamboo Shoots", allergens: [], isVerifiedSupplier: true },
+    ],
+    allergens: ["allergen.tree_nut"],
+    substitutions: [],
+    hasUnverifiedSuppliers: true,
+  },
+  "peanut-noodle-bowl": {
+    id: "peanut-noodle-bowl",
+    name: "Peanut Noodle Bowl",
+    ingredients: [
+      { id: "ing-egg-noodles", name: "Egg Noodles", allergens: ["allergen.gluten", "allergen.egg"], isVerifiedSupplier: true },
+      { id: "ing-peanut-sauce", name: "Peanut Sauce", allergens: ["allergen.peanut"], isVerifiedSupplier: true },
+    ],
+    allergens: ["allergen.peanut", "allergen.gluten", "allergen.egg"],
+    substitutions: [],
+    hasUnverifiedSuppliers: false,
+  },
+  "gf-noodle-bowl": {
+    id: "gf-noodle-bowl",
+    name: "Gluten-Free Noodle Bowl",
+    ingredients: [
+      { id: "ing-rice-noodles", name: "Rice Noodles", allergens: [], isVerifiedSupplier: true },
+      { id: "ing-tamari", name: "Tamari GF Soy Sauce", allergens: [], isVerifiedSupplier: true },
+    ],
+    allergens: [],
+    substitutions: [],
+    hasUnverifiedSuppliers: false,
+  },
+  "eu-14-sampler": {
+    id: "eu-14-sampler",
+    name: "EU 14 & Custom Sampler",
+    ingredients: [
+      { id: "ing-mustard-seed", name: "Mustard Seeds", allergens: ["allergen.mustard"], isVerifiedSupplier: true },
+      { id: "ing-celery-root", name: "Celery Root", allergens: ["allergen.celery"], isVerifiedSupplier: true },
+      { id: "ing-lupin-flour", name: "Lupin Flour", allergens: ["allergen.lupin"], isVerifiedSupplier: true },
+      { id: "ing-beef-stock", name: "Beef Stock", allergens: ["allergen.alpha_gal"], isVerifiedSupplier: true },
+      { id: "ing-wine-reduction", name: "Wine Reduction", allergens: ["allergen.sulfite"], isVerifiedSupplier: true },
+    ],
+    allergens: ["allergen.mustard", "allergen.celery", "allergen.lupin", "allergen.alpha_gal", "allergen.sulfite"],
+    substitutions: [
+      {
+        id: "sub-veggie-stock",
+        originalIngredientId: "ing-beef-stock",
+        originalIngredientName: "Beef Stock",
+        replacementIngredientId: "ing-veggie-stock",
+        replacementIngredientName: "Organic Vegetable Broth",
+        description: "Substitute beef stock with vegetable broth to eliminate Alpha-Gal",
+        removesAllergens: ["allergen.alpha_gal"],
+      },
+    ],
+    hasUnverifiedSuppliers: false,
+  },
+};
+
+// Sample recipient database data
 const sampleRecipientData = {
   "order.constraint.peanut": "Severe Peanut Allergy (No Peanuts)",
   "order.constraint.dairy": "Dairy Free (No Lactose)",
+  "allergen.peanut": "Peanut Allergy",
+  "allergen.gluten": "Gluten Sensitivity",
+  "allergen.mustard": "Mustard Allergy",
+  "allergen.alpha_gal": "Alpha-Gal Allergy",
   "user.ssn": "999-00-1234 (UNREQUESTED PRIVACY FIELD)",
   "user.homeAddress": "123 Private St, Cityville (UNREQUESTED PRIVACY FIELD)",
-  "user.creditCard": "4111-XXXX-XXXX-1111 (UNREQUESTED PRIVACY FIELD)",
 };
 
 const dependencies = {
@@ -50,8 +149,9 @@ function getOrCreateSampleEvents() {
       dataScope: {
         purpose: "Prepare one restaurant order from requested dietary constraints.",
         fields: [
-          { id: "order.constraint.peanut", label: "Peanut constraint" },
-          { id: "order.constraint.dairy", label: "Dairy constraint" },
+          { id: "allergen.peanut", label: "Peanut Constraint" },
+          { id: "allergen.gluten", label: "Gluten Constraint" },
+          { id: "allergen.alpha_gal", label: "Alpha-Gal Constraint" },
         ],
         validFrom,
         validUntil,
@@ -59,7 +159,7 @@ function getOrCreateSampleEvents() {
       result: { status: "succeeded", failureCondition: null },
       payload: {
         recipient: { id: "recipient-1", displayName: "Bistro 42" },
-        summary: "Scoped dietary constraint request for dinner order.",
+        summary: "Universal allergen policy evaluation for dining order.",
       },
     };
 
@@ -73,8 +173,9 @@ function getOrCreateSampleEvents() {
       dataScope: {
         purpose: "Prepare one restaurant order from requested dietary constraints.",
         fields: [
-          { id: "order.constraint.peanut", label: "Peanut constraint" },
-          { id: "order.constraint.dairy", label: "Dairy constraint" },
+          { id: "allergen.peanut", label: "Peanut Constraint" },
+          { id: "allergen.gluten", label: "Gluten Constraint" },
+          { id: "allergen.alpha_gal", label: "Alpha-Gal Constraint" },
         ],
         validFrom,
         validUntil,
@@ -89,6 +190,7 @@ function getOrCreateSampleEvents() {
 
 let activeRequest = null;
 let currentTab = "accept";
+let selectedDishId = "pad-thai";
 
 // Tab Switching Logic
 const tabButtons = document.querySelectorAll(".tab-button");
@@ -97,20 +199,33 @@ const tabPanels = document.querySelectorAll(".tab-panel");
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     const tabName = btn.dataset.tab;
-    currentTab = tabName;
-
-    tabButtons.forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    tabPanels.forEach((panel) => {
-      if (panel.id === `tab-panel-${tabName}`) {
-        panel.hidden = false;
-      } else {
-        panel.hidden = true;
-      }
-    });
+    selectTab(tabName);
   });
 });
+
+function selectTab(tabName) {
+  currentTab = tabName;
+  tabButtons.forEach((b) => {
+    if (b.dataset.tab === tabName) {
+      b.classList.add("active");
+    } else {
+      b.classList.remove("active");
+    }
+  });
+
+  tabPanels.forEach((panel) => {
+    panel.hidden = panel.id !== `tab-panel-${tabName}`;
+  });
+}
+
+// Dish Selector Switcher
+const dishSelect = document.querySelector("#dish-select");
+if (dishSelect) {
+  dishSelect.addEventListener("change", (e) => {
+    selectedDishId = e.target.value;
+    renderRequest();
+  });
+}
 
 function renderRequest() {
   const { requestEvent, consentEvent } = getOrCreateSampleEvents();
@@ -122,6 +237,7 @@ function renderRequest() {
   document.querySelector("#consent-choice").textContent = activeRequest.consentChoice.toUpperCase();
   document.querySelector("#field-count").textContent = String(activeRequest.scopedFields.length);
 
+  // Render Scoped Fields Card List
   const container = document.querySelector("#scoped-fields-container");
   container.replaceChildren();
 
@@ -130,32 +246,82 @@ function renderRequest() {
     emptyMsg.style.color = "#65645c";
     emptyMsg.textContent = "No scoped fields available (consent denied or empty scope).";
     container.append(emptyMsg);
-    return;
+  } else {
+    for (const field of activeRequest.scopedFields) {
+      const card = document.createElement("div");
+      card.className = "field-card";
+
+      const header = document.createElement("div");
+      header.className = "field-card-header";
+
+      const label = document.createElement("span");
+      label.className = "field-label";
+      label.textContent = field.label;
+
+      const idTag = document.createElement("span");
+      idTag.className = "field-id";
+      idTag.textContent = field.id;
+
+      header.append(label, idTag);
+
+      const val = document.createElement("div");
+      val.className = "field-val";
+      val.textContent = field.value !== undefined ? String(field.value) : "(No value provided)";
+
+      card.append(header, val);
+      container.append(card);
+    }
   }
 
-  for (const field of activeRequest.scopedFields) {
-    const card = document.createElement("div");
-    card.className = "field-card";
+  // Universal Policy Engine Evaluation Logic
+  const dish = SAMPLE_DISH_PROFILES[selectedDishId] || SAMPLE_DISH_PROFILES["pad-thai"];
+  const requestedAllergies = activeRequest.scopedFields.map((f) => ({
+    id: f.id,
+    label: f.label,
+    requireDedicatedSurface: true,
+  }));
 
-    const header = document.createElement("div");
-    header.className = "field-card-header";
+  const kitchenCapabilities = { dedicatedPrepSurface: true };
+  const evalResult = evaluateUniversalAllergyPolicy(dish, requestedAllergies, kitchenCapabilities);
 
-    const label = document.createElement("span");
-    label.className = "field-label";
-    label.textContent = field.label;
+  // Render Severity Badges
+  const badgesContainer = document.querySelector("#severity-badges-container");
+  if (badgesContainer) {
+    badgesContainer.replaceChildren();
+    for (const badge of evalResult.severityBadges) {
+      const el = document.createElement("span");
+      el.className = `severity-badge ${badge.severity}`;
+      el.textContent = badge.badgeLabel;
+      badgesContainer.append(el);
+    }
+  }
 
-    const idTag = document.createElement("span");
-    idTag.className = "field-id";
-    idTag.textContent = field.id;
+  // Render Universal Policy Evaluation Rationale & Outcome
+  const titleEl = document.querySelector("#policy-eval-title");
+  const rationaleEl = document.querySelector("#policy-eval-rationale");
 
-    header.append(label, idTag);
+  if (titleEl && rationaleEl) {
+    titleEl.textContent = `Policy Outcome: ${evalResult.response.toUpperCase().replace("_", " ")} (Dish: ${dish.name})`;
+    rationaleEl.textContent = evalResult.rationale;
+  }
 
-    const val = document.createElement("div");
-    val.className = "field-val";
-    val.textContent = field.value !== undefined ? String(field.value) : "(No value provided)";
+  // Auto-switch decision tabs & prefill rationale based on policy evaluation
+  selectTab(evalResult.response);
 
-    card.append(header, val);
-    container.append(card);
+  if (evalResult.response === "accept") {
+    const acceptInput = document.querySelector("#accept-rationale");
+    if (acceptInput) acceptInput.value = evalResult.rationale;
+  } else if (evalResult.response === "required_change") {
+    const reqRationaleInput = document.querySelector("#req-change-rationale");
+    const reqListInput = document.querySelector("#req-change-list");
+    if (reqRationaleInput) reqRationaleInput.value = evalResult.rationale;
+    if (reqListInput) reqListInput.value = evalResult.requiredChanges.join("\n");
+  } else if (evalResult.response === "decline") {
+    const declineInput = document.querySelector("#decline-rationale");
+    if (declineInput) declineInput.value = evalResult.rationale;
+  } else if (evalResult.response === "cannot_determine") {
+    const cannotDetInput = document.querySelector("#cannot-determine-reason");
+    if (cannotDetInput) cannotDetInput.value = evalResult.rationale;
   }
 }
 
