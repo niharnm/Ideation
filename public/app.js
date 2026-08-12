@@ -208,7 +208,7 @@ function showOutcome(kind, title, message, claim = null) {
   outcomeView.replaceChildren();
   const icon = document.createElement("div");
   icon.className = `status-icon ${kind}`;
-  icon.textContent = kind === "approved" ? "✓" : "×";
+  icon.textContent = kind === "approved" ? "Access active" : "Access ended";
   const heading = document.createElement("h2");
   heading.textContent = title;
   const body = document.createElement("p");

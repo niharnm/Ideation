@@ -81,21 +81,57 @@
       pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 12px; overflow-x: auto; font-size: 13px; font-family: ui-monospace, monospace; }
       footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
       [hidden] { display: none !important; }
+
+      :root { color: #18181a; background: #f7f7f6; }
+      body { background: #f7f7f6; }
+      .shell { background: #f7f7f6; }
+      header, footer { width: min(100% - 48px, 1120px); }
+      header { padding: 24px 0; }
+      .brand { gap: 0; color: #171719; font-size: 15px; font-weight: 800; letter-spacing: -.055em; text-transform: uppercase; }
+      .mark { display: none; }
+      .brand::after { content: "Recipient console"; margin-left: 12px; padding-left: 12px; border-left: 1px solid #d9d9d7; color: #777779; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+      .console-tag { border: 1px solid #dce7df; border-radius: 999px; color: #326044; background: #eff7f0; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
+      main { width: min(100% - 48px, 880px); margin: 0 auto; padding: 54px 0 64px; }
+      .card { border: 1px solid #dfdfdc; border-radius: 28px; background: rgba(255,255,255,.9); box-shadow: 0 20px 60px rgba(24,24,26,.08); margin-bottom: 16px; }
+      .hero { padding: 36px 38px 28px; border-bottom: 0; }
+      .eyebrow { color: #6b6b6e; font-size: 10px; letter-spacing: .12em; }
+      .eyebrow::before { display: none; }
+      h1 { max-width: 600px; font-size: clamp(36px, 5vw, 52px); line-height: .98; letter-spacing: -.06em; }
+      .intro { max-width: 620px; margin-top: 18px; color: #68686c; font-size: 16px; }
+      .isolation-banner { margin: 0 38px 12px; padding: 14px 16px; border-color: #dce7df; border-radius: 16px; background: #f3f8f4; color: #356044; }
+      .details { padding: 0 38px; }
+      .detail { padding: 22px 0; border-color: #e7e7e5; }
+      .label { color: #858588; font-size: 10px; letter-spacing: .11em; }
+      .value { color: #242426; font-size: 16px; }
+      .field-card { padding: 15px 16px; border-color: #e2e2e0; border-radius: 16px; background: #fff; }
+      .field-id { border-radius: 999px; background: #eeeeec; color: #5c5c60; }
+      .policy-eval-box { border-color: #e2e2e0; border-radius: 16px; background: #f7f7f6; }
+      .decision-section, .outcome-card, .acknowledgement-section { padding: 34px 38px; }
+      .decision-section h2 { font-size: 29px !important; letter-spacing: -.045em !important; }
+      .decision-tabs { gap: 7px; padding-bottom: 14px; border-color: #e7e7e5; }
+      .tab-button { border-color: #dededb; border-radius: 999px; background: #fff; }
+      .form-group label { color: #444448; }
+      textarea, input[type="text"], select { border-color: #dededb; border-radius: 12px; }
+      .submit-btn { border-radius: 999px; }
+      .empty-state { margin: 12px 38px 30px; border-radius: 16px; }
+      .status-badge { border-radius: 999px; }
+      pre { border-radius: 16px; }
+      @media (max-width: 520px) { header, footer, main { width: min(100% - 32px, 880px); } header { padding-top: 18px; } main { padding-top: 25px; } .brand::after { display: none; } .console-tag { font-size: 9px; } .hero, .details, .decision-section, .outcome-card, .acknowledgement-section { padding-left: 22px; padding-right: 22px; } .isolation-banner, .empty-state { margin-left: 22px; margin-right: 22px; } h1 { font-size: 38px; } }
     </style>
   </head>
   <body>
     <div class="shell">
       <header>
-        <div class="brand"><span class="mark" aria-hidden="true">H</span> Handshake Staff Console</div>
+        <div class="brand">Handshake</div>
         <div class="console-tag">Universal Policy Engine</div>
       </header>
       <main>
         <!-- Universal Policy Evaluation Card -->
         <section class="card">
           <div class="hero">
-            <p class="eyebrow">Incoming Scoped Handshake Request</p>
-            <h1 id="req-title">Scoped Request Received</h1>
-            <p class="intro">Review the active request and its exact approved scope before responding. The policy evaluation supports the built-in allergen taxonomy and custom allergen identifiers.</p>
+            <p class="eyebrow">Incoming permission request</p>
+            <h1 id="req-title">Review the scope before the order.</h1>
+            <p class="intro">Only the claimant’s approved constraints are available here. Evaluate the order, document the decision, and leave unrelated data out of the process.</p>
           </div>
           <div class="isolation-banner" id="isolation-notice">
             <strong>Scope field isolation:</strong> This screen displays only fields in the active approved request. Other claimant information is not part of this review.
@@ -243,7 +279,7 @@ Confirm the approved ingredient substitution.</textarea>
           </div>
         </section>
       </main>
-      <footer>Handshake Staff Console — Recipient Review Interface. Powered by Universal Policy Engine.</footer>
+      <footer>Handshake recipient console. Scoped review for one order at a time.</footer>
     </div>
     <script type="module" src="/recipient.js"></script>
   </body>

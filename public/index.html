@@ -85,21 +85,74 @@
       footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
       [hidden] { display: none !important; }
       @media (max-width: 520px) { .hero, .details, .outcome { padding-left: 21px; padding-right: 21px; } .actions, .receipt-grid { grid-template-columns: 1fr; } .actions { padding-left: 21px; padding-right: 21px; } .approve { order: -1; } .time-row { align-items: flex-start; flex-direction: column; } }
+
+      :root { color: #18181a; background: #f7f7f6; }
+      body { background: #f7f7f6; }
+      .shell { background: #f7f7f6; }
+      header, footer { width: min(100% - 48px, 1120px); }
+      header { padding: 24px 0; }
+      .brand { gap: 0; color: #171719; font-size: 15px; font-weight: 800; letter-spacing: -.055em; text-transform: uppercase; }
+      .mark { display: none; }
+      .brand::after { content: "Local Passport"; margin-left: 12px; padding-left: 12px; border-left: 1px solid #d9d9d7; color: #777779; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+      .private { padding: 7px 11px; border: 1px solid #dededb; border-radius: 999px; color: #606063; background: rgba(255,255,255,.7); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+      main { width: min(100% - 48px, 760px); margin: 0 auto; padding: 54px 0 64px; }
+      .card { border: 1px solid #dfdfdc; border-radius: 28px; background: rgba(255,255,255,.9); box-shadow: 0 20px 60px rgba(24,24,26,.08); }
+      .hero { padding: 36px 38px 30px; border-bottom: 0; }
+      .eyebrow { margin-bottom: 17px; color: #6b6b6e; font-size: 10px; letter-spacing: .12em; }
+      .eyebrow::before { display: none; }
+      h1 { max-width: 580px; font-size: clamp(38px, 6vw, 58px); line-height: .98; letter-spacing: -.065em; }
+      .intro { max-width: 510px; margin-top: 18px; color: #68686c; font-size: 16px; line-height: 1.48; }
+      .details { gap: 0; padding: 0 38px; }
+      .detail { padding: 24px 0; border-color: #e7e7e5; }
+      .label { margin-bottom: 10px; color: #858588; font-size: 10px; letter-spacing: .11em; }
+      .value { color: #242426; font-size: 16px; line-height: 1.45; }
+      .vault-header { align-items: baseline; margin-bottom: 12px; }
+      .button-link { color: #171719; font-size: 12px; text-decoration-thickness: 1px; }
+      .field-list { gap: 8px; }
+      .field { min-height: 62px; gap: 12px; padding: 13px 14px; border-color: #e2e2e0; border-radius: 16px; background: #fff; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+      .field:hover { border-color: #b7b7b4; transform: translateY(-1px); }
+      .field:has(input:checked) { border-color: #202023; background: #fafafa; }
+      .field input { width: 17px; height: 17px; accent-color: #1c1c1f; }
+      .badge-group { gap: 5px; }
+      .badge { border-radius: 999px; font-size: 10px; font-weight: 750; letter-spacing: .02em; }
+      .badge.severe { background: #f7e5e4; color: #8f2b2c; }
+      .badge.moderate { background: #f7eedf; color: #855618; }
+      .badge.mild { background: #e7f1e9; color: #2a6547; }
+      .badge.cross-contam { background: #ececeb; color: #525255; }
+      .remove-allergy-btn { color: #9a9a9d; }
+      .time-row { align-items: end; }
+      select { min-width: 142px; padding: 10px 34px 10px 12px; border-color: #dededb; border-radius: 999px; }
+      .end-time { margin-top: 9px; color: #69696d; }
+      .actions { grid-template-columns: 1fr 1.65fr; gap: 10px; padding: 30px 38px 38px; }
+      .button { min-height: 54px; border-radius: 999px; font-size: 14px; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
+      .button:hover:not(:disabled) { transform: translateY(-1px); }
+      .deny { border-color: #dededb; background: #fff; }
+      .approve { border-color: #1b1b1d; background: #1b1b1d; }
+      .outcome { padding: 40px 38px; }
+      .status-icon { width: auto; height: auto; margin-bottom: 18px; padding: 7px 11px; border-radius: 999px; background: #e4f0e7; color: #256342; font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+      .status-icon.denied, .status-icon.expired, .status-icon.revoked { background: #ededec; color: #5c5c60; }
+      .outcome h2 { font-size: 38px; letter-spacing: -.055em; }
+      .summary-grid { gap: 16px; padding: 18px; border-radius: 18px; background: #f5f5f4; }
+      .modal-overlay { background: rgba(25,25,27,.38); backdrop-filter: blur(10px); }
+      .modal-card { border-radius: 24px; background: #fdfdfc; }
+      .input-text, .select-full { border-color: #dededb; border-radius: 12px; }
+      footer { color: #858588; }
+      @media (max-width: 520px) { header, footer, main { width: min(100% - 32px, 760px); } header { padding-top: 18px; } main { padding-top: 25px; } .brand::after { display: none; } .private { padding: 6px 9px; font-size: 9px; } .hero, .details, .outcome { padding-left: 22px; padding-right: 22px; } .hero { padding-top: 30px; } h1 { font-size: 39px; } .actions { padding: 24px 22px 22px; } }
     </style>
   </head>
   <body>
     <div class="shell">
       <header>
-        <div class="brand"><span class="mark" aria-hidden="true">H</span> Handshake prototype</div>
+        <div class="brand">Handshake</div>
         <div class="private">Private by default</div>
       </header>
       <main>
         <section class="card" aria-live="polite">
           <div id="request-view">
             <div class="hero">
-              <p class="eyebrow">One-order request</p>
-              <h1>A recipient is asking to use selected claimant fields.</h1>
-              <p class="intro">Review the requester, purpose, fields, and exact end time before you choose.</p>
+              <p class="eyebrow">Permission request, one order only</p>
+              <h1>Share only what this order needs.</h1>
+              <p class="intro">You decide the exact constraints, the recipient, and when this temporary access ends.</p>
             </div>
             <div class="details">
               <div class="detail">
@@ -137,14 +190,14 @@
             </div>
             <p class="error" id="error" role="alert" hidden></p>
             <div class="actions">
-              <button class="button deny" id="deny" type="button">Deny, share nothing</button>
-              <button class="button approve" id="approve" type="button">Approve selected fields</button>
+              <button class="button deny" id="deny" type="button">Keep my data private</button>
+              <button class="button approve" id="approve" type="button">Approve this exact scope</button>
             </div>
           </div>
           <div class="outcome" id="outcome-view" hidden></div>
         </section>
       </main>
-      <footer>The prototype records the claimant’s choice. The recipient separately owns any review or decision after approval.</footer>
+      <footer>Handshake records your choice. The recipient can review only the fields you approve, until access ends.</footer>
     </div>
 
     <div id="add-allergy-modal" class="modal-overlay" hidden>
