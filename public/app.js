@@ -18,7 +18,7 @@ import {
 const recipient = { id: "recipient-1", displayName: "Recipient" };
 const purpose = "Prepare one restaurant order from the constraint you choose.";
 const summary = "Use the selected scoped field for one restaurant order.";
-const fieldOptions = [
+const defaultFieldOptions = [
   { id: "order.constraint.peanut", label: "Peanut constraint", selected: true },
   { id: "order.constraint.dairy", label: "Dairy constraint", selected: false },
   { id: "order.preference.vegetarian", label: "Vegetarian preference", selected: false },
@@ -28,7 +28,7 @@ const LOCAL_DEMO_LINKED_EVENTS_STORAGE_KEY = "handshake:demo-linked-events:v1";
 const requestView = document.querySelector("#request-view");
 const outcomeView = document.querySelector("#outcome-view");
 const fieldsView = document.querySelector("#fields");
-const durationSelect = document.querySelector("#duration");
+const expiryInput = document.querySelector("#expiry");
 const endTimeView = document.querySelector("#end-time");
 const approveButton = document.querySelector("#approve");
 const denyButton = document.querySelector("#deny");
@@ -42,9 +42,14 @@ const addAllergyForm = document.querySelector("#add-allergy-form");
 const allergyLabelInput = document.querySelector("#allergy-label");
 const allergySeveritySelect = document.querySelector("#allergy-severity");
 const allergyCrossContamCheck = document.querySelector("#allergy-cross-contam");
+const shareNewAllergyCheck = document.querySelector("#share-new-allergy");
+const allergyFormError = document.querySelector("#allergy-form-error");
 
 let validFrom = new Date();
 let expiryTimer;
+const selectedFieldIds = new Set(
+  defaultFieldOptions.filter((field) => field.selected).map((field) => field.id),
+);
 
 const dependencies = {
   storage: window.localStorage,
@@ -57,6 +62,55 @@ const dependencies = {
 
 let userVault = loadUserPassportVault(dependencies.storage);
 
+async function demoApi(body) {
+  const response = await fetch("/api/demo", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error?.message ?? "The passport API could not complete this action.");
+  return data;
+}
+
+function apiConstraints(vault) {
+  return vault.allergies.map((allergy) => ({
+    id: allergy.allergenId,
+    label: allergy.label,
+    severity: allergy.severity,
+    crossContaminationTolerance: allergy.crossContaminationTolerance,
+  }));
+}
+
+async function savePassport(vault) {
+  return demoApi({ action: "passport-update", constraints: apiConstraints(vault) });
+}
+
+async function loadPassport() {
+  try {
+    const { passport } = await demoApi({ action: "passport-status" });
+    userVault = {
+      claimantId: passport.claimantId,
+      allergies: passport.constraints.map((constraint) => ({
+        allergenId: constraint.id,
+        label: constraint.label,
+        severity: constraint.severity,
+        crossContaminationTolerance: constraint.crossContaminationTolerance,
+      })),
+      updatedAt: passport.updatedAt,
+    };
+    saveUserPassportVault(userVault, dependencies.storage);
+    for (const selected of [...selectedFieldIds]) {
+      if (!userVault.allergies.some((allergy) => allergy.allergenId === selected)) selectedFieldIds.delete(selected);
+    }
+    if (selectedFieldIds.size === 0 && userVault.allergies[0]) selectedFieldIds.add(userVault.allergies[0].allergenId);
+    renderVaultFields();
+  } catch (error) {
+    errorView.textContent = error instanceof Error ? error.message : "The passport could not be loaded.";
+    errorView.hidden = false;
+  }
+}
+
 function renderVaultFields() {
   fieldsView.replaceChildren();
 
@@ -68,8 +122,15 @@ function renderVaultFields() {
     input.type = "checkbox";
     input.className = "field-checkbox";
     input.value = allergy.allergenId;
-    input.checked = fieldOptions.find((field) => field.id === allergy.allergenId)?.selected ?? false;
+    input.checked = selectedFieldIds.has(allergy.allergenId);
     input.dataset.label = allergy.label;
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        selectedFieldIds.add(allergy.allergenId);
+      } else {
+        selectedFieldIds.delete(allergy.allergenId);
+      }
+    });
 
     const textSpan = document.createElement("span");
     textSpan.textContent = allergy.label;
@@ -95,12 +156,20 @@ function renderVaultFields() {
     removeBtn.innerHTML = "&times;";
     removeBtn.title = `Remove ${allergy.label} from vault`;
     removeBtn.setAttribute("aria-label", `Remove ${allergy.label}`);
-    removeBtn.addEventListener("click", (e) => {
+    removeBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      userVault = removeVaultAllergy(userVault, allergy.allergenId);
-      saveUserPassportVault(userVault, dependencies.storage);
-      renderVaultFields();
+      const nextVault = removeVaultAllergy(userVault, allergy.allergenId);
+      try {
+        await savePassport(nextVault);
+        userVault = nextVault;
+        selectedFieldIds.delete(allergy.allergenId);
+        saveUserPassportVault(userVault, dependencies.storage);
+        renderVaultFields();
+      } catch (error) {
+        errorView.textContent = error instanceof Error ? error.message : "The passport was not updated.";
+        errorView.hidden = false;
+      }
     });
 
     labelEl.append(input, textSpan, badgeGroup, removeBtn);
@@ -109,17 +178,23 @@ function renderVaultFields() {
 }
 
 renderVaultFields();
+loadPassport();
 
 function closeModal() {
   if (addAllergyModal) {
     addAllergyModal.hidden = true;
     addAllergyForm.reset();
+    allergyFormError.hidden = true;
+    allergyFormError.textContent = "";
+    openAddAllergyBtn.focus();
   }
 }
 
 if (openAddAllergyBtn && addAllergyModal) {
   openAddAllergyBtn.addEventListener("click", () => {
     addAllergyModal.hidden = false;
+    allergyFormError.hidden = true;
+    allergyFormError.textContent = "";
     if (allergyLabelInput) allergyLabelInput.focus();
   });
 }
@@ -127,8 +202,20 @@ if (openAddAllergyBtn && addAllergyModal) {
 if (closeAddAllergyBtn) closeAddAllergyBtn.addEventListener("click", closeModal);
 if (cancelAddAllergyBtn) cancelAddAllergyBtn.addEventListener("click", closeModal);
 
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !addAllergyModal.hidden) {
+    closeModal();
+  }
+});
+
+addAllergyModal.addEventListener("click", (event) => {
+  if (event.target === addAllergyModal) {
+    closeModal();
+  }
+});
+
 if (addAllergyForm) {
-  addAllergyForm.addEventListener("submit", (e) => {
+  addAllergyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const label = allergyLabelInput.value.trim();
     if (!label) return;
@@ -144,15 +231,29 @@ if (addAllergyForm) {
       crossContaminationTolerance,
     };
 
-    userVault = addCustomAllergyToVault(userVault, newConstraint);
-    saveUserPassportVault(userVault, dependencies.storage);
-    renderVaultFields();
-    closeModal();
+    if (userVault.allergies.some((allergy) => allergy.allergenId === newConstraint.allergenId)) {
+      allergyFormError.textContent = "That constraint is already in your vault.";
+      allergyFormError.hidden = false;
+      return;
+    }
+
+    const nextVault = addCustomAllergyToVault(userVault, newConstraint);
+    try {
+      await savePassport(nextVault);
+      userVault = nextVault;
+      if (shareNewAllergyCheck.checked) selectedFieldIds.add(newConstraint.allergenId);
+      saveUserPassportVault(userVault, dependencies.storage);
+      renderVaultFields();
+      closeModal();
+    } catch (error) {
+      allergyFormError.textContent = error instanceof Error ? error.message : "The passport was not updated.";
+      allergyFormError.hidden = false;
+    }
   });
 }
 
 function draft(choice = null) {
-  const durationMs = Number(durationSelect.value) * 60 * 1_000;
+  const validUntil = expiryInput.value ? new Date(expiryInput.value) : null;
   return {
     purpose,
     fields: [...fieldsView.querySelectorAll("input.field-checkbox")].map((input) => ({
@@ -161,7 +262,9 @@ function draft(choice = null) {
       selected: input.checked,
     })),
     validFrom: validFrom.toISOString(),
-    validUntil: new Date(validFrom.getTime() + durationMs).toISOString(),
+    validUntil: validUntil && !Number.isNaN(validUntil.getTime())
+      ? validUntil.toISOString()
+      : "",
     choice,
   };
 }
@@ -178,12 +281,43 @@ function input(choice = null) {
 
 function updateEndTime() {
   const date = new Date(draft().validUntil);
+  if (Number.isNaN(date.getTime())) {
+    endTimeView.textContent = "an end time is required";
+    return;
+  }
   endTimeView.textContent = date.toLocaleString([], {
     weekday: "short",
     hour: "numeric",
     minute: "2-digit",
     timeZoneName: "short",
   });
+}
+
+function dateTimeLocalValue(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function resetRequestView() {
+  const currentClaim = expireScopedClaimIfNeeded(dependencies);
+  if (currentClaim?.status === "active") {
+    revokeScopedClaim(
+      currentClaim.claimantId,
+      dependencies,
+      "The claimant started a new request and ended this access.",
+    );
+  }
+  window.clearTimeout(expiryTimer);
+  validFrom = new Date();
+  const earliestAllowed = new Date(validFrom.getTime() + 60 * 1_000);
+  const latestAllowed = new Date(validFrom.getTime() + 24 * 60 * 60 * 1_000);
+  expiryInput.min = dateTimeLocalValue(earliestAllowed);
+  expiryInput.max = dateTimeLocalValue(latestAllowed);
+  expiryInput.value = dateTimeLocalValue(new Date(validFrom.getTime() + 30 * 60 * 1_000));
+  errorView.hidden = true;
+  requestView.hidden = false;
+  outcomeView.hidden = true;
+  updateEndTime();
 }
 
 function showError(issues) {
@@ -249,6 +383,15 @@ function showOutcome(kind, title, message, claim = null) {
       );
     });
     outcomeView.append(revoke);
+  }
+
+  if (kind !== "approved") {
+    const startAgain = document.createElement("button");
+    startAgain.className = "button deny";
+    startAgain.type = "button";
+    startAgain.textContent = "Start a new request";
+    startAgain.addEventListener("click", resetRequestView);
+    outcomeView.append(startAgain);
   }
 }
 
@@ -445,7 +588,7 @@ function scheduleExpiry(claim) {
   }, delay);
 }
 
-durationSelect.addEventListener("change", updateEndTime);
+expiryInput.addEventListener("change", updateEndTime);
 
 approveButton.addEventListener("click", () => {
   errorView.hidden = true;
@@ -481,8 +624,7 @@ if (storedClaim?.status === "active") {
 } else if (storedClaim?.status === "expired") {
   renderClaim(storedClaim);
 } else {
-  validFrom = new Date();
-  updateEndTime();
+  resetRequestView();
 }
 
 function showPreviewError(message) {

@@ -8,7 +8,7 @@ specific purpose, approves or denies access, sets a fixed end time, can revoke,
 and can review a recorded recipient outcome. Restaurant allergy handling is one
 proof case only.
 
-## Live demo, 45 to 60 seconds
+## Live demo, 60 to 75 seconds
 
 Prerequisite: Node.js 22.18 or newer.
 
@@ -17,21 +17,23 @@ npm test
 npm start
 ```
 
-1. Open the claimant view at `http://127.0.0.1:4173/` and the staff view at
-   `http://127.0.0.1:4173/recipient.html` in separate tabs. Use a fresh local
-   session.
-2. In the claimant tab, keep the single default constraint, `Peanut
-   constraint`, select `15 minutes`, and choose **Approve selected fields**.
-   Point out the one shared field, stated purpose, and access end time.
-3. In the staff tab, show that only the approved peanut constraint appears.
-   Choose **Required change**, enter the preparation or substitution detail,
-   enter a named acknowledgement role such as `Kitchen manager`, and submit.
-4. Return to the claimant tab. Show the required change, named role, access
-   end, and the labels **Unverified receipt preview** and **Delivery pending.
-   No recipient delivery is confirmed.**
-5. Select **Revoke access now** in the claimant tab. Return to the staff tab
-   and show there is no active request. This demonstrates that later staff
-   actions are blocked after claimant revocation.
+1. Open the customer permission screen at `http://127.0.0.1:4173/`. Explain
+   that the customer talks to an AI, and Egoist asks for a narrow permission
+   for one restaurant order.
+2. Keep the default **Peanut constraint**, choose the displayed end time, and
+   select **Approve this exact scope**. Point out that the permission is
+   temporary and limited to the selected field.
+3. Select **Fieldline restaurant ops** in the header. In the Fieldline order
+   queue, open **Pad Thai · #A1024** and show the green **Allergy scope active**
+   card. It contains only the approved constraint, the order purpose, context,
+   and remaining access time.
+4. In **Kitchen decision**, choose **Request preparation change** and record
+   the prefilled peanut-free preparation surface and substitution detail. This
+   is a local proof-case decision for the active order scope only.
+5. Return to the customer screen with **View customer permission**, select
+   **Revoke access now**, then return to Fieldline. Show the red **Access ended
+   by customer** state: the allergy detail is gone and future kitchen actions
+   are locked.
 6. Keep automated tests as fallback evidence, not the main demo:
 
    ```sh
@@ -53,13 +55,12 @@ those claims.
 
 ## 45 to 60 second pitch
 
-“Food ordering often asks people to expose more health information than a
-restaurant needs, and special-request boxes are inconsistent. Here, the
-claimant shares one fact, a peanut constraint, for one order and 15 minutes.
-The staff view receives only that field, records a required preparation change,
-and adds a named acknowledgement role. Back on the claimant side, the person
-can see that outcome and revoke access immediately. Restaurant ordering is the
-proof case. The Identity idea is minimal, purpose-bound, time-bounded,
-revocable disclosure with an auditable outcome. This two-tab bridge is an
-explicitly unverified local preview, not recipient-authenticated delivery or a
-DoorDash integration.”
+“Today, people have to repeat sensitive context whenever they order food. With
+Egoist, they simply ask their AI to order Thai food and mention a peanut
+allergy. The AI asks Egoist for a narrow, fifteen-minute permission, and the
+restaurant receives only the one constraint needed for this order. The kitchen
+can record a preparation change, and the customer can revoke future access at
+any time. Restaurants are the proof case. The bigger idea is AI-mediated,
+purpose-bound, revocable permission for any context a person chooses to share.
+This is an explicitly local proof case, not an authenticated delivery-platform
+integration.”

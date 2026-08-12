@@ -5,31 +5,38 @@ import test from "node:test";
 const html = readFileSync(new URL("../public/recipient.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../public/recipient.js", import.meta.url), "utf8");
 
-test("recipient page has an honest empty state and named acknowledgement controls", () => {
-  assert.match(html, /id="empty-state"/);
-  assert.match(html, /id="acknowledgement-form"/);
-  assert.match(html, /id="acknowledger-role"/);
-  assert.match(html, /id="acknowledgement-outcome"/);
-  assert.match(app, /unverified local preview/);
-  assert.match(app, /delivery is pending authenticated recipient transport/);
+test("Fieldline restaurant view starts with a locked scope and no rendered allergy detail", () => {
+  assert.match(html, /Fieldline Restaurant Ops/);
+  assert.match(html, /id="scope-card"/);
+  assert.match(html, /Allergy details are unavailable\./);
+  assert.match(app, /fetch\("\/api\/demo"/);
+  assert.match(app, /localStorage\.getItem\(HANDSHAKE_STORAGE_KEY\)/);
+  assert.match(app, /workspace\.phase === "locked"/);
 });
 
-test("recipient proof case defaults to one peanut constraint and no unrelated profile data", () => {
-  assert.match(app, /"order\.constraint\.peanut"/);
-  assert.doesNotMatch(app, /order\.constraint\.dairy/);
+test("approved restaurant scope is minimized to the customer-approved field", () => {
+  assert.match(app, /const field = workspace\.handshake\.dataScope\.fields\[0\]/);
+  assert.match(app, /workspace\.grant\.values\[field\.id\]/);
+  assert.match(app, /Customer data", "One approved constraint"/);
   assert.doesNotMatch(app, /user\.ssn|homeAddress|creditCard/i);
 });
 
-test("recipient page builds an acknowledgement only after a decision and marks its handoff as local", () => {
-  assert.match(app, /if \(!activeRequest \|\| !activeDecision\)/);
-  assert.match(app, /buildAcknowledgementEvent/);
-  assert.match(app, /handshake:demo-linked-events/);
-  assert.match(app, /delivery is pending authenticated recipient transport/);
-  assert.match(app, /handshake:demo-linked-events:v1/);
+test("revocation removes scope detail and locks later restaurant actions", () => {
+  assert.match(app, /Access ended by customer/);
+  assert.match(app, /Allergy detail was removed by the Handshake API/);
+  assert.match(app, /button\.disabled = !enabled/);
+  assert.match(app, /Future kitchen actions are locked because the customer ended access/);
+  assert.match(app, /action: "record-decision"/);
 });
 
-test("recipient page ignores demo bridge storage changes after acknowledgement", () => {
-  assert.match(app, /event\.key === HANDSHAKE_CLAIM_STORAGE_KEY/);
-  assert.match(app, /event\.key === HANDSHAKE_EVENT_LEDGER_STORAGE_KEY/);
-  assert.doesNotMatch(app, /if \(event\.key\) \{\s*renderRequest\(\)/);
+test("business UI contains merchant queue, active scope, kitchen actions, and status history", () => {
+  assert.match(html, /Open orders/);
+  assert.match(html, /Pad Thai <span aria-hidden="true">·<\/span> #A1024/);
+  assert.match(app, /Allergy scope active/);
+  assert.match(html, /Confirm safe/);
+  assert.match(html, /Request preparation change/);
+  assert.match(html, /Cannot safely fulfill/);
+  assert.match(html, /Cannot determine/);
+  assert.match(html, /Status history/);
+  assert.match(app, /Access ended by customer/);
 });

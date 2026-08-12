@@ -30,7 +30,7 @@
       .label { margin: 0 0 9px; color: #77756c; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
       .value { margin: 0; font-size: 16px; line-height: 1.45; }
       .field-list { display: grid; gap: 9px; }
-      .field { display: flex; align-items: center; gap: 11px; padding: 12px 13px; border: 1px solid #dfdcd2; border-radius: 12px; background: white; }
+      .field { position: relative; display: flex; align-items: center; gap: 11px; padding: 12px 42px 12px 13px; border: 1px solid #dfdcd2; border-radius: 12px; background: white; }
       .field:has(input:checked) { border-color: #99906c; background: #fbf7e9; }
       .field input { width: 18px; height: 18px; accent-color: #25251f; }
       .time-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -66,8 +66,9 @@
       .badge.moderate { background: #fff3db; color: #8c5800; }
       .badge.mild { background: #eaf5ea; color: #2d6a4f; }
       .badge.cross-contam { background: #f0f0f0; color: #555; font-size: 10px; }
-      .remove-allergy-btn { background: none; border: none; color: #a3a097; font-size: 16px; font-weight: bold; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1; transition: all 0.2s; }
+      .remove-allergy-btn { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid transparent; border-radius: 50%; background: none; color: #a3a097; font-size: 18px; cursor: pointer; padding: 0; line-height: 1; transition: all .15s ease; }
       .remove-allergy-btn:hover { color: #8d2c23; background: #fff0ee; }
+      .remove-allergy-btn:focus-visible, .close-btn:focus-visible, .button-link:focus-visible { outline: 3px solid #91b4fa; outline-offset: 2px; }
       .vault-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
       .button-link { background: none; border: none; color: #25251f; font-weight: 750; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
       .button-link:hover { opacity: 0.75; }
@@ -81,6 +82,7 @@
       .input-text, .select-full { width: 100%; padding: 10px 12px; border: 1px solid #d6d2c7; border-radius: 10px; background: white; color: #25251f; }
       .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
       .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: #35342f; }
+      .modal-error { margin: 0 0 16px; color: #8d2c23; font-size: 13px; line-height: 1.4; }
       .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
       footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
       [hidden] { display: none !important; }
@@ -95,6 +97,7 @@
       .mark { display: none; }
       .brand::after { content: "Local Passport"; margin-left: 12px; padding-left: 12px; border-left: 1px solid #d9d9d7; color: #777779; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
       .private { padding: 7px 11px; border: 1px solid #dededb; border-radius: 999px; color: #606063; background: rgba(255,255,255,.7); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+      .merchant-link { text-decoration: none; }
       main { width: min(100% - 48px, 760px); margin: 0 auto; padding: 54px 0 64px; }
       .card { border: 1px solid #dfdfdc; border-radius: 28px; background: rgba(255,255,255,.9); box-shadow: 0 20px 60px rgba(24,24,26,.08); }
       .hero { padding: 36px 38px 30px; border-bottom: 0; }
@@ -144,13 +147,12 @@
     <div class="shell">
       <header>
         <div class="brand">Handshake</div>
-        <div class="private">Private by default</div>
+        <a class="private merchant-link" href="/recipient.html">Fieldline restaurant ops</a>
       </header>
       <main>
         <section class="card" aria-live="polite">
           <div id="request-view">
             <div class="hero">
-              <p class="eyebrow">Permission request, one order only</p>
               <h1>Share only what this order needs.</h1>
               <p class="intro">You decide the exact constraints, the recipient, and when this temporary access ends.</p>
             </div>
@@ -165,27 +167,23 @@
               </div>
               <fieldset class="detail" style="border-left:0;border-right:0;border-top:0;padding-inline:0;margin:0">
                 <div class="vault-header">
-                  <legend class="label" style="margin:0">Fields to share (Local Vault)</legend>
-                  <button type="button" id="open-add-allergy-btn" class="button-link">+ Add Custom Allergy</button>
+                  <legend class="label" style="margin:0">Constraints to share</legend>
+                  <button type="button" id="open-add-allergy-btn" class="button-link">+ Add constraint</button>
                 </div>
                 <div class="field-list" id="fields"></div>
               </fieldset>
               <div class="detail">
                 <div class="time-row">
                   <div>
-                    <p class="label">Access duration</p>
-                    <p class="value">Temporary access only</p>
+                    <p class="label">Access expires</p>
+                    <p class="value">Choose the exact end time</p>
                   </div>
-                  <label>
-                    <span class="label" style="position:absolute;clip:rect(0 0 0 0)">Duration</span>
-                    <select id="duration">
-                      <option value="15">15 minutes</option>
-                      <option value="30" selected>30 minutes</option>
-                      <option value="60">1 hour</option>
-                    </select>
+                  <label for="expiry">
+                    <span class="label" style="position:absolute;clip:rect(0 0 0 0)">Access expiration</span>
+                    <input id="expiry" type="datetime-local" required />
                   </label>
                 </div>
-                <p class="end-time">Access ends <strong id="end-time"></strong>.</p>
+                <p class="end-time">The recipient loses access at <strong id="end-time"></strong>.</p>
               </div>
             </div>
             <p class="error" id="error" role="alert" hidden></p>
@@ -201,14 +199,14 @@
     </div>
 
     <div id="add-allergy-modal" class="modal-overlay" hidden>
-      <div class="modal-card">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-allergy-title">
         <div class="modal-header">
-          <h3>Add Custom Allergy to Vault</h3>
+          <h3 id="add-allergy-title">Add a constraint</h3>
           <button type="button" id="close-add-allergy-btn" class="close-btn" aria-label="Close">&times;</button>
         </div>
         <form id="add-allergy-form">
           <div class="form-group">
-            <label for="allergy-label" class="label">Allergy / Constraint Name</label>
+            <label for="allergy-label" class="label">Constraint name</label>
             <input type="text" id="allergy-label" placeholder="e.g. Alpha-gal, Tree Nuts, Sesame" required class="input-text" />
           </div>
           <div class="form-group">
@@ -225,9 +223,16 @@
               <span>Strict zero cross-contamination preference</span>
             </label>
           </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="share-new-allergy" checked />
+              <span>Include this in this request</span>
+            </label>
+          </div>
+          <p id="allergy-form-error" class="modal-error" role="alert" hidden></p>
           <div class="modal-actions">
             <button type="button" id="cancel-add-allergy" class="button deny" style="min-height:42px">Cancel</button>
-            <button type="submit" class="button approve" style="min-height:42px">Save to Local Vault</button>
+            <button type="submit" class="button approve" style="min-height:42px">Save to Passport</button>
           </div>
         </form>
       </div>
