@@ -49,11 +49,10 @@ The event description also stresses product thinking, clear communication, and a
 Open one browser window with these tabs in this order:
 
 1. `https://ideation-handshake.vercel.app/demo.html`
-2. `https://ideation-handshake.vercel.app/chatgpt.html`
-3. `https://ideation-handshake.vercel.app/index.html`
-4. `https://ideation-handshake.vercel.app/recipient.html`
+2. `https://ideation-handshake.vercel.app/index.html`
+3. `https://ideation-handshake.vercel.app/recipient.html`
 
-The first tab is used only for the opening frame. Tabs 2 through 4 are the actual product demonstration.
+The first tab is used only for the opening frame. Tabs 2 and 3 are the judged product demonstration. Keep `https://ideation-handshake.vercel.app/chatgpt.html` closed during the final take. NimGTP is an optional private-note surface, not the source of the credential shown in this Identity flow.
 
 Do not keep Devpost, GitHub, the terminal, Vercel, email, or private API settings open in the recorded browser. If an architecture frame is needed, insert the diagram below during editing rather than changing to source code mid-demo.
 
@@ -78,7 +77,7 @@ lsof -i:4173
 npm start
 ```
 
-If port 4173 is occupied, stop only the known old demo process or use another explicit port. Restarting the local server clears its in-memory demo state. Reload all four tabs after the restart.
+If port 4173 is occupied, stop only the known old demo process or use another explicit port. Restarting the local server clears its in-memory demo state. Reload all three tabs after the restart.
 
 Verified state on 2026-08-12:
 
@@ -114,7 +113,7 @@ Fieldline restaurant verifier
 
 The API implementation includes an authenticated `/api/v1` boundary for passports, handshakes, grants, decisions, acknowledgements, receipts, and revocations. The browser proof also has local demo routes. Production configuration is designed for Neon Postgres and AWS KMS through Vercel OIDC, and it fails closed when required production settings are absent.
 
-Groq is active for the public proof, and its key stays in Vercel's sensitive environment storage. If the provider is unavailable, NimGTP uses the explicitly local dietary-memory adapter so the judged consent flow still runs. No secret may appear in the browser, recording, repository, or Devpost text. Rotate the current key after recording because it was shared in chat during setup.
+Groq is configured only for the optional NimGTP private-note surface, and its key stays in Vercel's sensitive environment storage. Self-reported NimGTP notes are not accepted as the credential shown in the judged flow. No secret may appear in the browser, recording, repository, or Devpost text. Rotate the current key after recording because it was shared in chat during setup.
 
 ## Exact video plan
 
@@ -124,7 +123,7 @@ Record the screen demonstration once without talking. Then record Nihar and Vach
 
 ### 0:00 to 0:16, problem and entry
 
-**Screen:** Root landing page. Keep the headline and Identity track label visible. Do not click yet.
+**Screen:** Demo landing page. Keep the headline and Identity track label visible. Do not click yet.
 
 **Nihar:**
 
@@ -168,7 +167,7 @@ Record the screen demonstration once without talking. Then record Nihar and Vach
 
 **Nihar:**
 
-> NimGTP calls Groq through our server-side chat API, so the key never reaches the browser. Our versioned Handshake API handles passports, scoped grants, decisions, acknowledgements, expiry, and revocation. We did not have access to a documented Egoist production API, so our local Egoist-style adapter stands in for that connection. With hosted access, only that adapter changes.
+> The judged fact comes from our clearly labeled local demo issuer, not from chat memory. Our versioned Handshake API handles passports, scoped grants, decisions, acknowledgements, expiry, and revocation. We did not have access to a documented Egoist production API, so our local AI Passport adapter stands in for that connection. Groq powers only the optional private-note client through a server-side route, so its key never reaches the browser.
 
 ### 2:13 to 2:25, close
 
@@ -183,7 +182,7 @@ Record the screen demonstration once without talking. Then record Nihar and Vach
 ### Nihar
 
 - Open with the user problem and track fit.
-- Drive NimGTP and the Handshake consent screen.
+- Drive the Handshake consent screen.
 - Explain minimum disclosure, purpose, expiry, and revocation choices.
 - Give the honest API and Egoist-access explanation.
 - Control the recorded browser so Vachan can focus on delivery.
@@ -201,7 +200,7 @@ Both presenters should say **Fieldline**, **one order**, and **one approved cons
 
 Use this answer in the video or judge questions:
 
-> We did not have access to a documented Egoist production API during the build. We therefore created the boundary we would need: a local Egoist-style memory plugin, MCP tools for reading and writing selected passport constraints, and a versioned Handshake API for grants and recipient responses. We are demonstrating that adapter in this browser-local proof, not claiming an Egoist-hosted connection. With production access, the hosted passport provider replaces the local adapter while the consent, scoping, decision, expiry, and revocation rules remain.
+> We did not have access to a documented Egoist production API during the build. We therefore created the boundary we would need: a clearly labeled local demo issuer, a local AI Passport adapter, MCP tools for private notes, and a versioned Handshake API for grants and recipient responses. We are demonstrating that adapter in this browser-local proof, not claiming an Egoist-hosted connection. With production access, the hosted passport provider replaces the local adapter while the consent, scoping, decision, expiry, and revocation rules remain.
 
 Do not say, `We could not finish because Egoist gave us no API.` The product is still a complete local Build-lane proof. The missing hosted connector is a named integration boundary, not a hidden failure.
 
@@ -272,4 +271,4 @@ Do not say, `We could not finish because Egoist gave us no API.` The product is 
 
 ## Final readiness decision
 
-The product links and script are ready for the judged recording. The complete public flow passed with live Groq chat, the local passport adapter, the Handshake API, the Fieldline response, and revocation. Start the final take with cleared site data, reload all four tabs, and run one rehearsal immediately before recording. Rotate the Groq key after the final take.
+The product links and script are ready for the judged recording after the hard preflight gates pass on the final deployment. Start the final take with cleared site data, reload all three tabs, and run one rehearsal immediately before recording. Rotate the Groq key after the final take.
