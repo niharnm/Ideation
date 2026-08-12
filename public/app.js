@@ -8,15 +8,16 @@ import {
   previewClaimantReceipt,
   previewDemoLinkedEvents,
 } from "/src/claimant-receipt.ts";
+import {
+  addCustomAllergyToVault,
+  loadUserPassportVault,
+  removeVaultAllergy,
+  saveUserPassportVault,
+} from "/src/passport-vault.ts";
 
 const recipient = { id: "recipient-1", displayName: "Recipient" };
 const purpose = "Prepare one restaurant order from the constraints you choose.";
 const summary = "Use the selected scoped fields for one restaurant order.";
-const fieldOptions = [
-  { id: "order.constraint.peanut", label: "Peanut constraint", selected: true },
-  { id: "order.constraint.dairy", label: "Dairy constraint", selected: true },
-  { id: "order.preference.vegetarian", label: "Vegetarian preference", selected: false },
-];
 
 const requestView = document.querySelector("#request-view");
 const outcomeView = document.querySelector("#outcome-view");
@@ -27,22 +28,17 @@ const approveButton = document.querySelector("#approve");
 const denyButton = document.querySelector("#deny");
 const errorView = document.querySelector("#error");
 
+const addAllergyModal = document.querySelector("#add-allergy-modal");
+const openAddAllergyBtn = document.querySelector("#open-add-allergy-btn");
+const closeAddAllergyBtn = document.querySelector("#close-add-allergy-btn");
+const cancelAddAllergyBtn = document.querySelector("#cancel-add-allergy");
+const addAllergyForm = document.querySelector("#add-allergy-form");
+const allergyLabelInput = document.querySelector("#allergy-label");
+const allergySeveritySelect = document.querySelector("#allergy-severity");
+const allergyCrossContamCheck = document.querySelector("#allergy-cross-contam");
+
 let validFrom = new Date();
 let expiryTimer;
-
-for (const field of fieldOptions) {
-  const label = document.createElement("label");
-  label.className = "field";
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.value = field.id;
-  input.checked = field.selected;
-  input.dataset.label = field.label;
-  const text = document.createElement("span");
-  text.textContent = field.label;
-  label.append(input, text);
-  fieldsView.append(label);
-}
 
 const dependencies = {
   storage: window.localStorage,
@@ -53,11 +49,107 @@ const dependencies = {
   },
 };
 
+let userVault = loadUserPassportVault(dependencies.storage);
+
+function renderVaultFields() {
+  fieldsView.replaceChildren();
+
+  for (const allergy of userVault.allergies) {
+    const labelEl = document.createElement("label");
+    labelEl.className = "field";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "field-checkbox";
+    input.value = allergy.allergenId;
+    input.checked = true;
+    input.dataset.label = allergy.label;
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = allergy.label;
+
+    const badgeGroup = document.createElement("div");
+    badgeGroup.className = "badge-group";
+
+    const severityBadge = document.createElement("span");
+    severityBadge.className = `badge ${allergy.severity}`;
+    severityBadge.textContent = allergy.severity;
+    badgeGroup.append(severityBadge);
+
+    if (allergy.crossContaminationTolerance === false) {
+      const ccBadge = document.createElement("span");
+      ccBadge.className = "badge cross-contam";
+      ccBadge.textContent = "Zero cross-contam";
+      badgeGroup.append(ccBadge);
+    }
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "remove-allergy-btn";
+    removeBtn.innerHTML = "&times;";
+    removeBtn.title = `Remove ${allergy.label} from vault`;
+    removeBtn.setAttribute("aria-label", `Remove ${allergy.label}`);
+    removeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      userVault = removeVaultAllergy(userVault, allergy.allergenId);
+      saveUserPassportVault(userVault, dependencies.storage);
+      renderVaultFields();
+    });
+
+    labelEl.append(input, textSpan, badgeGroup, removeBtn);
+    fieldsView.append(labelEl);
+  }
+}
+
+renderVaultFields();
+
+function closeModal() {
+  if (addAllergyModal) {
+    addAllergyModal.hidden = true;
+    addAllergyForm.reset();
+  }
+}
+
+if (openAddAllergyBtn && addAllergyModal) {
+  openAddAllergyBtn.addEventListener("click", () => {
+    addAllergyModal.hidden = false;
+    if (allergyLabelInput) allergyLabelInput.focus();
+  });
+}
+
+if (closeAddAllergyBtn) closeAddAllergyBtn.addEventListener("click", closeModal);
+if (cancelAddAllergyBtn) cancelAddAllergyBtn.addEventListener("click", closeModal);
+
+if (addAllergyForm) {
+  addAllergyForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const label = allergyLabelInput.value.trim();
+    if (!label) return;
+
+    const severity = allergySeveritySelect.value;
+    const zeroCrossContamRequired = allergyCrossContamCheck.checked;
+    const crossContaminationTolerance = !zeroCrossContamRequired;
+
+    const newConstraint = {
+      allergenId: `order.constraint.${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+      label,
+      severity,
+      crossContaminationTolerance,
+    };
+
+    userVault = addCustomAllergyToVault(userVault, newConstraint);
+    saveUserPassportVault(userVault, dependencies.storage);
+    renderVaultFields();
+    closeModal();
+  });
+}
+
 function draft(choice = null) {
   const durationMs = Number(durationSelect.value) * 60 * 1_000;
   return {
     purpose,
-    fields: [...fieldsView.querySelectorAll("input")].map((input) => ({
+    fields: [...fieldsView.querySelectorAll("input.field-checkbox")].map((input) => ({
       id: input.value,
       label: input.dataset.label,
       selected: input.checked,
@@ -67,6 +159,7 @@ function draft(choice = null) {
     choice,
   };
 }
+
 
 function input(choice = null) {
   return {

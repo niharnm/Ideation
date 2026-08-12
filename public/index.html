@@ -60,6 +60,28 @@
       .receipt-error { margin: 20px 0 0; }
       .unverified-notice { padding: 12px 14px; border: 1px solid #d6b661; border-radius: 10px; background: #fff8df; color: #62501f !important; font-weight: 650; }
       .delivery-pending { color: #8d5b23 !important; font-weight: 650; }
+      .badge-group { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+      .badge { padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 650; text-transform: capitalize; }
+      .badge.severe { background: #fbeae9; color: #9e2a2b; }
+      .badge.moderate { background: #fff3db; color: #8c5800; }
+      .badge.mild { background: #eaf5ea; color: #2d6a4f; }
+      .badge.cross-contam { background: #f0f0f0; color: #555; font-size: 10px; }
+      .remove-allergy-btn { background: none; border: none; color: #a3a097; font-size: 16px; font-weight: bold; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1; transition: all 0.2s; }
+      .remove-allergy-btn:hover { color: #8d2c23; background: #fff0ee; }
+      .vault-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+      .button-link { background: none; border: none; color: #25251f; font-weight: 750; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+      .button-link:hover { opacity: 0.75; }
+      .modal-overlay { position: fixed; inset: 0; background: rgba(23, 23, 20, 0.45); display: grid; place-items: center; z-index: 1000; padding: 16px; backdrop-filter: blur(4px); }
+      .modal-card { background: #fffefa; border: 1px solid #dedbd1; border-radius: 20px; width: min(100%, 460px); padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.18); }
+      .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+      .modal-header h3 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+      .close-btn { background: none; border: none; font-size: 24px; color: #77756c; cursor: pointer; padding: 0 4px; line-height: 1; }
+      .form-group { margin-bottom: 16px; }
+      .form-group .label { display: block; margin-bottom: 4px; }
+      .input-text, .select-full { width: 100%; padding: 10px 12px; border: 1px solid #d6d2c7; border-radius: 10px; background: white; color: #25251f; }
+      .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+      .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: #35342f; }
+      .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
       footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
       [hidden] { display: none !important; }
       @media (max-width: 520px) { .hero, .details, .outcome { padding-left: 21px; padding-right: 21px; } .actions, .receipt-grid { grid-template-columns: 1fr; } .actions { padding-left: 21px; padding-right: 21px; } .approve { order: -1; } .time-row { align-items: flex-start; flex-direction: column; } }
@@ -89,7 +111,10 @@
                 <p class="value" id="purpose">Prepare one restaurant order from the constraints you choose.</p>
               </div>
               <fieldset class="detail" style="border-left:0;border-right:0;border-top:0;padding-inline:0;margin:0">
-                <legend class="label">Fields to share</legend>
+                <div class="vault-header">
+                  <legend class="label" style="margin:0">Fields to share (Local Vault)</legend>
+                  <button type="button" id="open-add-allergy-btn" class="button-link">+ Add Custom Allergy</button>
+                </div>
                 <div class="field-list" id="fields"></div>
               </fieldset>
               <div class="detail">
@@ -121,6 +146,40 @@
       </main>
       <footer>The prototype records the claimant’s choice. The recipient separately owns any review or decision after approval.</footer>
     </div>
+
+    <div id="add-allergy-modal" class="modal-overlay" hidden>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Add Custom Allergy to Vault</h3>
+          <button type="button" id="close-add-allergy-btn" class="close-btn" aria-label="Close">&times;</button>
+        </div>
+        <form id="add-allergy-form">
+          <div class="form-group">
+            <label for="allergy-label" class="label">Allergy / Constraint Name</label>
+            <input type="text" id="allergy-label" placeholder="e.g. Alpha-gal, Tree Nuts, Sesame" required class="input-text" />
+          </div>
+          <div class="form-group">
+            <label for="allergy-severity" class="label">Severity Level</label>
+            <select id="allergy-severity" class="select-full">
+              <option value="severe">Severe (Anaphylaxis risk)</option>
+              <option value="moderate" selected>Moderate (Intolerance / Reaction)</option>
+              <option value="mild">Mild (Preference / Sensitivity)</option>
+            </select>
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="allergy-cross-contam" />
+              <span>Strict zero cross-contamination preference</span>
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="cancel-add-allergy" class="button deny" style="min-height:42px">Cancel</button>
+            <button type="submit" class="button approve" style="min-height:42px">Save to Local Vault</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script type="module" src="/app.js"></script>
   </body>
 </html>
