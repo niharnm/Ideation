@@ -35,12 +35,14 @@ test("revocation removes scope detail and locks later restaurant actions", () =>
 
 test("business UI contains merchant queue, active scope, kitchen actions, and status history", () => {
   assert.match(html, /Open orders/);
-  assert.match(html, /Pad Thai <span aria-hidden="true">·<\/span> #A1024/);
+  assert.match(html, /Order management/);
+  assert.match(html, /<table class="orders-table">/);
+  assert.match(html, /Pad Thai · #A1024/);
   assert.match(app, /Allergy scope active/);
   assert.match(html, /Confirm safe/);
   assert.match(html, /Request preparation change/);
   assert.match(html, /Cannot safely fulfill/);
   assert.match(html, /Cannot determine/);
-  assert.match(html, /Status history/);
+  assert.match(html, /Order activity/);
   assert.match(app, /Access ended by customer/);
 });
