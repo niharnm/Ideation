@@ -1,7 +1,7 @@
 import {
   approveScopedRequest,
   denyScopedRequest,
-  readScopedClaim,
+  expireScopedClaimIfNeeded,
   revokeScopedClaim,
 } from "/src/passport-flow.ts";
 
@@ -148,6 +148,31 @@ function showOutcome(kind, title, message, claim = null) {
   }
 }
 
+function showExpiredOutcome() {
+  showOutcome(
+    "expired",
+    "Access expired",
+    "The end time passed. The recipient is blocked from future use of this claim.",
+  );
+}
+
+function scheduleExpiry(claim) {
+  const delay = Date.parse(claim.dataScope.validUntil) - Date.now();
+  if (delay <= 0) {
+    const expired = expireScopedClaimIfNeeded(dependencies);
+    if (expired?.status === "expired") {
+      showExpiredOutcome();
+    }
+    return;
+  }
+  window.setTimeout(() => {
+    const expired = expireScopedClaimIfNeeded(dependencies);
+    if (expired?.status === "expired") {
+      showExpiredOutcome();
+    }
+  }, delay);
+}
+
 durationSelect.addEventListener("change", updateEndTime);
 
 approveButton.addEventListener("click", () => {
@@ -163,6 +188,7 @@ approveButton.addEventListener("click", () => {
     "Only the selected fields are available to the recipient until the stated time.",
     result.value.claim,
   );
+  scheduleExpiry(result.value.claim);
 });
 
 denyButton.addEventListener("click", () => {
@@ -179,7 +205,7 @@ denyButton.addEventListener("click", () => {
   );
 });
 
-const storedClaim = readScopedClaim(window.localStorage);
+const storedClaim = expireScopedClaimIfNeeded(dependencies);
 if (storedClaim?.status === "active") {
   showOutcome(
     "approved",
@@ -187,12 +213,15 @@ if (storedClaim?.status === "active") {
     "Only the selected fields are available to the recipient until the stated time.",
     storedClaim,
   );
+  scheduleExpiry(storedClaim);
 } else if (storedClaim?.status === "revoked") {
   showOutcome(
     "revoked",
     "Access revoked",
     "The recipient is blocked from future use of this claim.",
   );
+} else if (storedClaim?.status === "expired") {
+  showExpiredOutcome();
 } else {
   validFrom = new Date();
   updateEndTime();

@@ -7,6 +7,7 @@ import {
 import {
   HANDSHAKE_EVENT_SCHEMA_VERSION,
   type ConsentEvent,
+  type ExpiryEvent,
   type HandshakeDataScope,
   type HandshakeEvent,
   type PartyReference,
@@ -40,7 +41,7 @@ export interface ScopedRequestInput {
 
 export interface StoredScopedClaim {
   schemaVersion: 1;
-  status: "active" | "revoked";
+  status: "active" | "expired" | "revoked";
   handshakeId: string;
   claimantId: string;
   recipient: PartyReference;
@@ -48,6 +49,8 @@ export interface StoredScopedClaim {
   requestEventId: string;
   consentEventId: string;
   createdAt: string;
+  expiryEventId?: string;
+  expiredAt?: string;
   revocationEventId?: string;
   revokedAt?: string;
 }
@@ -62,6 +65,25 @@ export type ScopedRequestResult<T> =
   | { success: false; issues: readonly { path: string; message: string }[] };
 
 export class ScopedRequestError extends Error {}
+
+export type ScopedGrantReadResult =
+  | {
+      allowed: true;
+      grant: {
+        handshakeId: string;
+        recipient: PartyReference;
+        dataScope: HandshakeDataScope;
+      };
+    }
+  | {
+      allowed: false;
+      reason:
+        | "not_found"
+        | "recipient_mismatch"
+        | "not_started"
+        | "expired"
+        | "revoked";
+    };
 
 export function approveScopedRequest(
   input: ScopedRequestInput,
@@ -174,6 +196,82 @@ export function revokeScopedClaim(
   dependencies.emit(revocationEvent);
 
   return revocationEvent;
+}
+
+export function expireScopedClaimIfNeeded(
+  dependencies: ScopedRequestDependencies,
+  at = dependencies.now?.() ?? new Date(),
+): StoredScopedClaim | null {
+  const claim = readScopedClaim(dependencies.storage);
+  if (
+    !claim ||
+    claim.status !== "active" ||
+    at.getTime() < Date.parse(claim.dataScope.validUntil)
+  ) {
+    return claim;
+  }
+
+  const id = dependencies.createId ?? defaultId;
+  const occurredAt = at.toISOString();
+  const expiryEvent: ExpiryEvent = {
+    schemaVersion: HANDSHAKE_EVENT_SCHEMA_VERSION,
+    eventId: `event-${id()}`,
+    handshakeId: claim.handshakeId,
+    type: "expiry",
+    occurredAt,
+    actor: { id: "claim-ledger", role: "system" },
+    dataScope: claim.dataScope,
+    result: { status: "succeeded", failureCondition: null },
+    payload: { reason: "duration_elapsed" },
+  };
+  assertValidEvent(expiryEvent);
+
+  const expiredClaim: StoredScopedClaim = {
+    ...claim,
+    status: "expired",
+    expiryEventId: expiryEvent.eventId,
+    expiredAt: occurredAt,
+  };
+  dependencies.storage.setItem(
+    HANDSHAKE_CLAIM_STORAGE_KEY,
+    JSON.stringify(expiredClaim),
+  );
+  appendHandshakeEvents(dependencies.storage, [expiryEvent]);
+  dependencies.emit(expiryEvent);
+
+  return expiredClaim;
+}
+
+export function readScopedGrantForRecipient(
+  recipientId: string,
+  dependencies: ScopedRequestDependencies,
+  at = dependencies.now?.() ?? new Date(),
+): ScopedGrantReadResult {
+  const claim = expireScopedClaimIfNeeded(dependencies, at);
+  if (!claim) {
+    return { allowed: false, reason: "not_found" };
+  }
+  if (recipientId !== claim.recipient.id) {
+    return { allowed: false, reason: "recipient_mismatch" };
+  }
+  if (claim.status === "expired") {
+    return { allowed: false, reason: "expired" };
+  }
+  if (claim.status === "revoked") {
+    return { allowed: false, reason: "revoked" };
+  }
+  if (at.getTime() < Date.parse(claim.dataScope.validFrom)) {
+    return { allowed: false, reason: "not_started" };
+  }
+
+  return {
+    allowed: true,
+    grant: {
+      handshakeId: claim.handshakeId,
+      recipient: claim.recipient,
+      dataScope: claim.dataScope,
+    },
+  };
 }
 
 export function readHandshakeEventLedger(
@@ -326,7 +424,9 @@ function isStoredClaim(value: unknown): value is StoredScopedClaim {
   }
   if (
     value.schemaVersion !== 1 ||
-    (value.status !== "active" && value.status !== "revoked") ||
+    (value.status !== "active" &&
+      value.status !== "expired" &&
+      value.status !== "revoked") ||
     !nonEmpty(value.handshakeId) ||
     !nonEmpty(value.claimantId) ||
     !nonEmpty(value.requestEventId) ||
@@ -356,9 +456,28 @@ function isStoredClaim(value: unknown): value is StoredScopedClaim {
     return false;
   }
 
-  return value.status === "active"
-    ? value.revocationEventId === undefined && value.revokedAt === undefined
-    : nonEmpty(value.revocationEventId) && isTimestamp(value.revokedAt);
+  if (value.status === "active") {
+    return (
+      value.expiryEventId === undefined &&
+      value.expiredAt === undefined &&
+      value.revocationEventId === undefined &&
+      value.revokedAt === undefined
+    );
+  }
+  if (value.status === "expired") {
+    return (
+      nonEmpty(value.expiryEventId) &&
+      isTimestamp(value.expiredAt) &&
+      value.revocationEventId === undefined &&
+      value.revokedAt === undefined
+    );
+  }
+  return (
+    nonEmpty(value.revocationEventId) &&
+    isTimestamp(value.revokedAt) &&
+    value.expiryEventId === undefined &&
+    value.expiredAt === undefined
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

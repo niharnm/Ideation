@@ -8,6 +8,8 @@ import {
   approveScopedRequest,
   canUseScopedClaim,
   denyScopedRequest,
+  expireScopedClaimIfNeeded,
+  readScopedGrantForRecipient,
   readScopedClaim,
   readHandshakeEventLedger,
   revokeScopedClaim,
@@ -217,4 +219,87 @@ test("rejects a malformed persisted event ledger on reload", () => {
     JSON.stringify({ schemaVersion: 1, events: [{ type: "request" }] }),
   );
   assert.throws(() => readHandshakeEventLedger(storage), ScopedRequestError);
+});
+
+test("the named recipient can read only the active scoped grant", () => {
+  const context = dependencies();
+  const approved = approveScopedRequest(requestInput(), context.value);
+  assert.equal(approved.success, true);
+
+  const wrongRecipient = readScopedGrantForRecipient(
+    "recipient-2",
+    context.value,
+    new Date("2026-08-12T18:15:00Z"),
+  );
+  assert.deepEqual(wrongRecipient, {
+    allowed: false,
+    reason: "recipient_mismatch",
+  });
+
+  const read = readScopedGrantForRecipient(
+    "recipient-1",
+    context.value,
+    new Date("2026-08-12T18:15:00Z"),
+  );
+  assert.equal(read.allowed, true);
+  assert.equal(read.grant.handshakeId, approved.value.claim.handshakeId);
+  assert.deepEqual(read.grant.dataScope.fields, [
+    { id: "order.constraint.peanut", label: "Peanut constraint" },
+  ]);
+  assert.deepEqual(context.events.map((event) => event.type), [
+    "request",
+    "consent",
+  ]);
+});
+
+test("expiry emits once, persists through reload, and blocks recipient reads", () => {
+  const storage = new MemoryStorage();
+  const firstPage = dependencies(storage);
+  const approved = approveScopedRequest(requestInput(), firstPage.value);
+  assert.equal(approved.success, true);
+
+  const expired = expireScopedClaimIfNeeded(
+    firstPage.value,
+    new Date("2026-08-12T18:30:00Z"),
+  );
+  assert.equal(expired.status, "expired");
+  assert.deepEqual(firstPage.events.map((event) => event.type), [
+    "request",
+    "consent",
+    "expiry",
+  ]);
+  assert.equal(validateHandshakeEvent(firstPage.events[2]).success, true);
+
+  const reloadedPage = dependencies(storage);
+  const blocked = readScopedGrantForRecipient(
+    "recipient-1",
+    reloadedPage.value,
+    new Date("2026-08-12T18:45:00Z"),
+  );
+  assert.deepEqual(blocked, { allowed: false, reason: "expired" });
+  assert.deepEqual(reloadedPage.events, []);
+
+  const recoveredClaim = readScopedClaim(storage);
+  assert.equal(recoveredClaim.status, "expired");
+  assert.equal(recoveredClaim.expiryEventId, firstPage.events[2].eventId);
+  assert.deepEqual(
+    readHandshakeEventLedger(storage).events.map((event) => event.type),
+    ["request", "consent", "expiry"],
+  );
+});
+
+test("revocation blocks later recipient reads", () => {
+  const context = dependencies();
+  const approved = approveScopedRequest(requestInput(), context.value);
+  assert.equal(approved.success, true);
+  revokeScopedClaim("person-1", context.value);
+
+  assert.deepEqual(
+    readScopedGrantForRecipient(
+      "recipient-1",
+      context.value,
+      new Date("2026-08-12T18:15:00Z"),
+    ),
+    { allowed: false, reason: "revoked" },
+  );
 });
