@@ -119,13 +119,13 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        width: 100%;
         height: 38px;
         min-width: 0;
-        flex: 1 1 280px;
-        max-width: 420px;
         padding: 0 14px;
         background: rgba(118, 118, 128, 0.08);
         border-radius: var(--apple-radius-pill);
+        justify-self: center;
       }
 
       .search-box svg { fill: var(--dd-gray-600); flex-shrink: 0; }
@@ -699,7 +699,11 @@
       @media (max-width: 900px) {
         .main-layout { grid-template-columns: 1fr; padding: 20px; }
         .sidebar-nav { display: none; }
-        .top-nav { padding: 0 16px; }
+        .top-nav {
+          grid-template-columns: auto 1fr auto;
+          padding: 0 16px;
+        }
+        .search-box { max-width: none; }
         .top-nav-right { gap: 8px; }
         .mode-segmented, .address-trigger { display: none; }
       }
