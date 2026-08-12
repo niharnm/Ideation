@@ -50,7 +50,7 @@ async function buildSourceDirectory(directory) {
     }
 
     const sourceRelativePath = relative(root, sourcePath);
-    if (!entry.isFile() || extname(entry.name) !== ".ts" || sourceRelativePath === "src/recipient-console.ts") {
+    if (!entry.isFile() || extname(entry.name) !== ".ts") {
       return;
     }
 
