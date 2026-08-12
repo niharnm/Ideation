@@ -1,108 +1,71 @@
 import {
   approveScopedRequest,
-  denyScopedRequest,
   expireScopedClaimIfNeeded,
   revokeScopedClaim,
 } from "/src/passport-flow.ts";
-import {
-  previewClaimantReceipt,
-  previewDemoLinkedEvents,
-} from "/src/claimant-receipt.ts";
+import { evaluateMenuSafety } from "/src/proof-case/restaurant-fixtures.ts";
+import { processRecipientRequest, recordRecipientDecision } from "/src/recipient-console.ts";
+import { recordStaffAcknowledgement } from "/src/operator-demo.ts";
 
-const recipient = { id: "recipient-1", displayName: "Recipient" };
+const recipient = { id: "restaurant-42", displayName: "Golden Thai Kitchen" };
 const purpose = "Prepare one restaurant order from the constraints you choose.";
 const summary = "Use the selected scoped fields for one restaurant order.";
-const fieldOptions = [
-  { id: "order.constraint.peanut", label: "Peanut constraint", selected: true },
-  { id: "order.constraint.dairy", label: "Dairy constraint", selected: true },
-  { id: "order.preference.vegetarian", label: "Vegetarian preference", selected: false },
-];
 
-const requestView = document.querySelector("#request-view");
-const outcomeView = document.querySelector("#outcome-view");
-const fieldsView = document.querySelector("#fields");
-const durationSelect = document.querySelector("#duration");
-const endTimeView = document.querySelector("#end-time");
-const approveButton = document.querySelector("#approve");
-const denyButton = document.querySelector("#deny");
-const errorView = document.querySelector("#error");
+const btnPlaceOrder = document.querySelector("#btn-place-order");
+const btnRevokeOrder = document.querySelector("#btn-revoke-order");
+const dinerOutcome = document.querySelector("#diner-outcome");
+const dinerDuration = document.querySelector("#diner-duration");
+const kitchenIncomingScope = document.querySelector("#kitchen-incoming-scope");
+const kitchenOutcome = document.querySelector("#kitchen-outcome");
+const eventLedgerTrace = document.querySelector("#event-ledger-trace");
 
-let validFrom = new Date();
-let expiryTimer;
-
-for (const field of fieldOptions) {
-  const label = document.createElement("label");
-  label.className = "field";
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.value = field.id;
-  input.checked = field.selected;
-  input.dataset.label = field.label;
-  const text = document.createElement("span");
-  text.textContent = field.label;
-  label.append(input, text);
-  fieldsView.append(label);
-}
+const btnKitchenAccept = document.querySelector("#btn-kitchen-accept");
+const btnKitchenChange = document.querySelector("#btn-kitchen-change");
+const btnKitchenDecline = document.querySelector("#btn-kitchen-decline");
+const btnKitchenCannot = document.querySelector("#btn-kitchen-cannot");
 
 const dependencies = {
   storage: window.localStorage,
   emit(event) {
-    window.dispatchEvent(
-      new CustomEvent("handshake:event", { detail: event }),
-    );
+    window.dispatchEvent(new CustomEvent("handshake:event", { detail: event }));
   },
 };
 
-function draft(choice = null) {
-  const durationMs = Number(durationSelect.value) * 60 * 1_000;
-  return {
-    purpose,
-    fields: [...fieldsView.querySelectorAll("input")].map((input) => ({
-      id: input.value,
-      label: input.dataset.label,
-      selected: input.checked,
-    })),
-    validFrom: validFrom.toISOString(),
-    validUntil: new Date(validFrom.getTime() + durationMs).toISOString(),
-    choice,
-  };
+let activeClaim = null;
+let currentRequestEvent = null;
+let currentConsentEvent = null;
+
+function getSelectedScopeFields() {
+  return [...document.querySelectorAll("#diner-fields input:checked")].map((input) => ({
+    id: input.value,
+    label: input.dataset.label,
+    selected: true,
+  }));
 }
 
-function input(choice = null) {
-  return {
+function updateTrace() {
+  const rawLedger = window.localStorage.getItem("handshake.prototype.event-ledger.v1");
+  if (rawLedger) {
+    try {
+      const parsed = JSON.parse(rawLedger);
+      eventLedgerTrace.textContent = JSON.stringify(parsed.events, null, 2);
+    } catch {
+      eventLedgerTrace.textContent = rawLedger;
+    }
+  } else {
+    eventLedgerTrace.textContent = "// Event stream empty";
+  }
+}
+
+btnPlaceOrder.addEventListener("click", () => {
+  const durationMs = Number(dinerDuration.value) * 60 * 1_000;
+  const validFrom = new Date();
+  const validUntil = new Date(validFrom.getTime() + durationMs);
+
+  const inputData = {
     claimantId: "claimant-1",
     recipient,
     summary,
-    draft: draft(choice),
-  };
-}
-
-function updateEndTime() {
-  const date = new Date(draft().validUntil);
-  endTimeView.textContent = date.toLocaleString([], {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
-}
-
-function showError(issues) {
-  errorView.textContent = issues
-    .map((issue) => `${issue.path.replace("$.", "")}: ${issue.message}`)
-    .join(" ");
-  errorView.hidden = false;
-}
-
-function showOutcome(kind, title, message, claim = null) {
-  requestView.hidden = true;
-  outcomeView.hidden = false;
-  const fields = claim?.dataScope.fields.map((field) => field.label).join(", ");
-  const end = claim
-    ? new Date(claim.dataScope.validUntil).toLocaleString([], {
-        weekday: "short",
-        hour: "numeric",
-        minute: "2-digit",
         timeZoneName: "short",
       })
     : null;

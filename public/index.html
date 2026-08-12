@@ -4,123 +4,182 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>Handshake prototype</title>
+    <title>Egoist Handshakes — Live Dual Surface Demo</title>
     <style>
-      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171714; background: #f3f1eb; }
+      :root {
+        --brand-red: #ff3008;
+        --bg-main: #f7f6f2;
+        --card-bg: #ffffff;
+        --text-dark: #1e1e1e;
+        --text-muted: #686762;
+        --border-color: #e5e3db;
+        --success-bg: #e6f4ea;
+        --success-text: #137333;
+        --warning-bg: #fef7e0;
+        --warning-text: #b06000;
+        --danger-bg: #fce8e6;
+        --danger-text: #c5221f;
+      }
       * { box-sizing: border-box; }
-      body { margin: 0; min-width: 320px; }
+      body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text-dark); background: var(--bg-main); }
       button, input, select { font: inherit; }
       button { cursor: pointer; }
-      .shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
-      header, footer { width: min(100% - 32px, 720px); margin: 0 auto; }
-      header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 20px; }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 760; letter-spacing: -0.02em; }
-      .mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: white; background: #25251f; font-size: 14px; }
-      .private { font-size: 12px; color: #65645c; }
-      main { width: min(100% - 32px, 620px); margin: auto; padding: 28px 0 56px; }
-      .card { overflow: hidden; border: 1px solid #dedbd1; border-radius: 24px; background: #fffefa; box-shadow: 0 18px 50px rgba(51, 48, 38, 0.09); }
-      .hero { padding: 30px 30px 25px; border-bottom: 1px solid #ebe8df; }
-      .eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: #736c50; font-size: 12px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
-      .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 99px; background: #bc9c37; box-shadow: 0 0 0 4px #f6edcc; }
-      h1 { margin: 0; max-width: 520px; font-size: clamp(28px, 6vw, 42px); line-height: 1.06; letter-spacing: -0.04em; }
-      .intro { margin: 14px 0 0; color: #65645c; line-height: 1.55; }
-      .details { display: grid; gap: 0; padding: 4px 30px; }
-      .detail { padding: 21px 0; border-bottom: 1px solid #ebe8df; }
-      .detail:last-child { border-bottom: 0; }
-      .label { margin: 0 0 9px; color: #77756c; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-      .value { margin: 0; font-size: 16px; line-height: 1.45; }
-      .field-list { display: grid; gap: 9px; }
-      .field { display: flex; align-items: center; gap: 11px; padding: 12px 13px; border: 1px solid #dfdcd2; border-radius: 12px; background: white; }
-      .field:has(input:checked) { border-color: #99906c; background: #fbf7e9; }
-      .field input { width: 18px; height: 18px; accent-color: #25251f; }
-      .time-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-      select { min-width: 124px; padding: 9px 32px 9px 11px; border: 1px solid #d6d2c7; border-radius: 10px; background: white; color: #25251f; }
-      .end-time { margin-top: 7px; color: #65645c; font-size: 14px; }
-      .actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; padding: 22px 30px 30px; }
-      .button { min-height: 50px; border-radius: 13px; border: 1px solid #d4d0c5; font-weight: 700; }
-      .button:focus-visible, .field:has(input:focus-visible) { outline: 3px solid #91b4fa; outline-offset: 2px; }
-      .deny { color: #3f3e39; background: transparent; }
-      .approve { border-color: #25251f; color: white; background: #25251f; }
-      .revoke { width: 100%; color: #8d2c23; border-color: #e4bcb7; background: #fff8f7; }
-      .button:disabled { cursor: not-allowed; opacity: .45; }
-      .error { margin: 0 30px 20px; padding: 12px 14px; border-radius: 10px; color: #8d2c23; background: #fff0ee; font-size: 14px; }
-      .outcome { padding: 34px 30px; }
-      .status-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 18px; border-radius: 50%; color: white; background: #2e6d4d; font-size: 22px; }
-      .status-icon.denied, .status-icon.expired, .status-icon.revoked { background: #6d6760; }
-      .outcome h2 { margin: 0; font-size: 27px; letter-spacing: -0.03em; }
-      .outcome p { margin: 10px 0 0; color: #65645c; line-height: 1.55; }
-      .summary-grid { display: grid; gap: 14px; margin: 24px 0; padding: 18px; border-radius: 14px; background: #f5f3ed; }
-      .summary-grid p { margin: 2px 0 0; color: #25251f; }
-      .receipt-section { margin: 24px 0; }
-      .receipt-fields { display: grid; gap: 8px; }
-      .receipt-fields code { padding: 10px 12px; border: 1px solid #dedbd1; border-radius: 10px; background: white; color: #35342f; font-size: 13px; overflow-wrap: anywhere; }
-      .receipt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .receipt-pending { margin: 20px 0 0; padding: 16px; border: 1px dashed #c8c2af; border-radius: 12px; background: #faf8f1; }
-      .receipt-pending p, .receipt-section p { margin: 4px 0 0; }
-      .receipt-error { margin: 20px 0 0; }
-      .unverified-notice { padding: 12px 14px; border: 1px solid #d6b661; border-radius: 10px; background: #fff8df; color: #62501f !important; font-weight: 650; }
-      .delivery-pending { color: #8d5b23 !important; font-weight: 650; }
-      footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
-      [hidden] { display: none !important; }
-      @media (max-width: 520px) { .hero, .details, .outcome { padding-left: 21px; padding-right: 21px; } .actions, .receipt-grid { grid-template-columns: 1fr; } .actions { padding-left: 21px; padding-right: 21px; } .approve { order: -1; } .time-row { align-items: flex-start; flex-direction: column; } }
+      .app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: #ffffff; border-bottom: 1px solid var(--border-color); }
+      .brand-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: -0.03em; }
+      .brand-badge { background: var(--brand-red); color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+      .privacy-pill { background: #eeede8; color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+      .split-screen { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1400px; margin: 24px auto; padding: 0 24px; }
+      @media (max-width: 960px) { .split-screen { grid-template-columns: 1fr; } }
+
+      .surface-card { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 8px 30px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
+      .surface-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color); background: #faf9f6; display: flex; align-items: center; justify-content: space-between; }
+      .surface-title { margin: 0; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+      .surface-body { padding: 24px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+      .restaurant-banner { background: #25251f; color: white; padding: 18px 20px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; }
+      .restaurant-name { margin: 0; font-size: 20px; font-weight: 800; }
+      .restaurant-meta { margin: 4px 0 0; color: #a3a199; font-size: 13px; }
+
+      .order-item { border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+      .item-name { font-weight: 700; margin: 0 0 4px; }
+      .item-desc { margin: 0; color: var(--text-muted); font-size: 13px; }
+      .item-price { font-weight: 800; font-size: 16px; }
+
+      .passport-box { background: #fdfbf7; border: 2px solid #e0d8c3; border-radius: 16px; padding: 20px; }
+      .passport-title { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; color: #574b21; font-weight: 800; font-size: 15px; }
+      .field-options { display: grid; gap: 10px; margin: 14px 0; }
+      .field-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: white; border: 1px solid var(--border-color); border-radius: 10px; }
+      .field-row input { width: 18px; height: 18px; accent-color: var(--brand-red); }
+
+      .duration-select { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 13px; color: var(--text-muted); }
+      .duration-select select { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); }
+
+      .btn { min-height: 48px; border-radius: 12px; border: none; font-weight: 700; font-size: 15px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s ease; }
+      .btn-primary { background: var(--brand-red); color: white; }
+      .btn-primary:hover { background: #e02600; }
+      .btn-danger { background: #fff0ee; color: var(--danger-text); border: 1px solid #f5c2bc; }
+      .btn-danger:hover { background: #fce8e6; }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .incoming-request-card { background: #f5f4ef; border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; }
+      .isolation-banner { background: #eef4ff; color: #1e40af; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+      .decision-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+      .btn-outline { background: white; border: 1px solid var(--border-color); color: var(--text-dark); }
+      .btn-outline:hover { background: #f7f6f2; }
+
+      .outcome-box { padding: 18px; border-radius: 14px; margin-top: 14px; }
+      .outcome-box.accept { background: var(--success-bg); color: var(--success-text); border: 1px solid #b7e1cd; }
+      .outcome-box.required_change { background: var(--warning-bg); color: var(--warning-text); border: 1px solid #fce8b2; }
+      .outcome-box.decline, .outcome-box.cannot_determine { background: var(--danger-bg); color: var(--danger-text); border: 1px solid #f5c2bc; }
+
+      .event-ledger-inspect { margin-top: 20px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-size: 11px; background: #1b1b18; color: #a3e635; padding: 14px; border-radius: 12px; overflow-x: auto; max-height: 200px; }
+
+      footer { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; border-top: 1px solid var(--border-color); background: white; margin-top: 40px; }
     </style>
   </head>
   <body>
-    <div class="shell">
-      <header>
-        <div class="brand"><span class="mark" aria-hidden="true">H</span> Handshake prototype</div>
-        <div class="private">Private by default</div>
-      </header>
-      <main>
-        <section class="card" aria-live="polite">
-          <div id="request-view">
-            <div class="hero">
-              <p class="eyebrow">One-order request</p>
-              <h1>A recipient is asking to use selected claimant fields.</h1>
-              <p class="intro">Review the requester, purpose, fields, and exact end time before you choose.</p>
+    <header class="app-header">
+      <div class="brand-logo">
+        <span class="brand-badge">DOORDASH</span>
+        <span>+ Egoist AI Passport</span>
+      </div>
+      <div class="privacy-pill">Zero-Surveillance Portable Trust</div>
+    </header>
+
+    <main class="split-screen">
+      <!-- LEFT SURFACE: DINER PASSPORT CHECKOUT -->
+      <section class="surface-card">
+        <div class="surface-header">
+          <h2 class="surface-title">📱 Diner Checkout (Claimant)</h2>
+          <span style="font-size: 12px; color: var(--text-muted);">Step 1: Grant Scope</span>
+        </div>
+        <div class="surface-body">
+          <div class="restaurant-banner">
+            <div>
+              <p class="restaurant-name">Golden Thai Kitchen</p>
+              <p class="restaurant-meta">⭐ 4.8 (1,200+) · 25-35 min · $1.99 Fee</p>
             </div>
-            <div class="details">
-              <div class="detail">
-                <p class="label">Who is asking</p>
-                <p class="value"><strong>Recipient</strong>, scoped request recipient</p>
-              </div>
-              <div class="detail">
-                <p class="label">Why</p>
-                <p class="value" id="purpose">Prepare one restaurant order from the constraints you choose.</p>
-              </div>
-              <fieldset class="detail" style="border-left:0;border-right:0;border-top:0;padding-inline:0;margin:0">
-                <legend class="label">Fields to share</legend>
-                <div class="field-list" id="fields"></div>
-              </fieldset>
-              <div class="detail">
-                <div class="time-row">
-                  <div>
-                    <p class="label">Access duration</p>
-                    <p class="value">Temporary access only</p>
-                  </div>
-                  <label>
-                    <span class="label" style="position:absolute;clip:rect(0 0 0 0)">Duration</span>
-                    <select id="duration">
-                      <option value="15">15 minutes</option>
-                      <option value="30" selected>30 minutes</option>
-                      <option value="60">1 hour</option>
-                    </select>
-                  </label>
-                </div>
-                <p class="end-time">Access ends <strong id="end-time"></strong>.</p>
-              </div>
+            <span style="font-size: 24px;">🍲</span>
+          </div>
+
+          <div class="order-item">
+            <div>
+              <p class="item-name">1x Spicy Peanut Noodle Bowl</p>
+              <p class="item-desc">Rice noodles, crushed peanuts, sprouts, chili oil</p>
             </div>
-            <p class="error" id="error" role="alert" hidden></p>
-            <div class="actions">
-              <button class="button deny" id="deny" type="button">Deny, share nothing</button>
-              <button class="button approve" id="approve" type="button">Approve selected fields</button>
+            <span class="item-price">$18.50</span>
+          </div>
+
+          <div class="passport-box">
+            <h3 class="passport-title">🛡️ Attach Egoist AI Passport Allergy Guarantee</h3>
+            <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Select exact constraints to disclose for this single order only:</p>
+            <div class="field-options" id="diner-fields">
+              <label class="field-row">
+                <input type="checkbox" value="order.constraint.peanut" checked data-label="Peanut Anaphylaxis" />
+                <span><strong>Peanut Anaphylaxis</strong> (order.constraint.peanut)</span>
+              </label>
+              <label class="field-row">
+                <input type="checkbox" value="order.constraint.treenut" checked data-label="Tree Nut Allergy" />
+                <span><strong>Tree Nut Allergy</strong> (order.constraint.treenut)</span>
+              </label>
+              <label class="field-row">
+                <input type="checkbox" value="order.constraint.dairy" data-label="Dairy Intolerance" />
+                <span><strong>Dairy Intolerance</strong> (order.constraint.dairy)</span>
+              </label>
+            </div>
+            <div class="duration-select">
+              <span>Access Expiry (Auto-deletes after order):</span>
+              <select id="diner-duration">
+                <option value="15">15 minutes</option>
+                <option value="30" selected>30 minutes</option>
+                <option value="60">1 hour</option>
+              </select>
             </div>
           </div>
-          <div class="outcome" id="outcome-view" hidden></div>
-        </section>
-      </main>
-      <footer>The prototype records the claimant’s choice. The recipient separately owns any review or decision after approval.</footer>
-    </div>
+
+          <button class="btn btn-primary" id="btn-place-order">🔴 Place DoorDash Order & Grant Passport</button>
+          <button class="btn btn-danger" id="btn-revoke-order" style="display: none;">🔒 Revoke Passport Access Instantly</button>
+
+          <div id="diner-outcome"></div>
+        </div>
+      </section>
+
+      <!-- RIGHT SURFACE: KITCHEN POS STAFF CONSOLE -->
+      <section class="surface-card">
+        <div class="surface-header">
+          <h2 class="surface-title">👨‍🍳 Kitchen POS Staff Console (Recipient)</h2>
+          <span style="font-size: 12px; color: var(--text-muted);">Step 2: Evaluate & Sign</span>
+        </div>
+        <div class="surface-body">
+          <div class="incoming-request-card">
+            <div class="isolation-banner">🔒 SCOPED FIELD ISOLATION ACTIVE — Unrequested User Profile Data Hidden</div>
+            <p style="margin: 0 0 8px; font-weight: 700; font-size: 14px;">Incoming Scoped Request:</p>
+            <div id="kitchen-incoming-scope" style="font-size: 13px; color: var(--text-muted);">Waiting for DoorDash order placement...</div>
+          </div>
+
+          <div>
+            <p style="margin: 0 0 8px; font-weight: 700; font-size: 14px;">Kitchen Staff Decision & Acknowledgement:</p>
+            <div class="decision-buttons">
+              <button class="btn btn-outline" id="btn-kitchen-accept" disabled>✅ Accept</button>
+              <button class="btn btn-outline" id="btn-kitchen-change" disabled>⚠️ Require Substitution</button>
+              <button class="btn btn-outline" id="btn-kitchen-decline" disabled>❌ Decline</button>
+              <button class="btn btn-outline" id="btn-kitchen-cannot" disabled>❓ Cannot Determine</button>
+            </div>
+          </div>
+
+          <div id="kitchen-outcome"></div>
+
+          <div>
+            <p style="margin: 0 0 6px; font-weight: 700; font-size: 13px; color: var(--text-muted);">Verifiable Handshake Event Ledger (Trace):</p>
+            <pre class="event-ledger-inspect" id="event-ledger-trace">// Real-time Handshake Event Stream will appear here...</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>Egoist Handshakes Protocol v0.1.0 · Portable Trust & Minimal Disclosure Specification</footer>
     <script type="module" src="/app.js"></script>
   </body>
 </html>
