@@ -6,5 +6,5 @@ export * from "./decision-policy.ts";
 export * from "./handshake-event.ts";
 export * from "./passport-flow.ts";
 export * from "./proof-case/allergy-ordering.ts";
+export * from "./recipient-console.ts";
 export * from "./validate-handshake-event.ts";
-

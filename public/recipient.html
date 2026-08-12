@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Handshake Recipient Staff Console</title>
+    <style>
+      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171714; background: #f3f1eb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; }
+      button, input, select, textarea { font: inherit; }
+      button { cursor: pointer; }
+      .shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+      header, footer { width: min(100% - 32px, 800px); margin: 0 auto; }
+      header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 20px; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 760; letter-spacing: -0.02em; }
+      .mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: white; background: #25251f; font-size: 14px; }
+      .console-tag { font-size: 12px; font-weight: 650; color: #435e4d; background: #e3f2e8; padding: 4px 10px; border-radius: 6px; }
+      main { width: min(100% - 32px, 800px); margin: auto; padding: 20px 0 56px; }
+      .card { overflow: hidden; border: 1px solid #dedbd1; border-radius: 24px; background: #fffefa; box-shadow: 0 18px 50px rgba(51, 48, 38, 0.09); margin-bottom: 24px; }
+      .hero { padding: 30px 30px 25px; border-bottom: 1px solid #ebe8df; }
+      .eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: #736c50; font-size: 12px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+      .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 99px; background: #bc9c37; box-shadow: 0 0 0 4px #f6edcc; }
+      h1 { margin: 0; max-width: 650px; font-size: clamp(26px, 5vw, 36px); line-height: 1.1; letter-spacing: -0.03em; }
+      .intro { margin: 12px 0 0; color: #65645c; line-height: 1.55; }
+      .isolation-banner { margin: 20px 30px 0; padding: 14px 16px; border: 1px solid #bce3c9; border-radius: 12px; background: #f0fdf4; color: #166534; font-size: 14px; line-height: 1.45; font-weight: 500; }
+      .isolation-banner strong { font-weight: 700; color: #14532d; }
+      .details { display: grid; gap: 0; padding: 4px 30px; }
+      .detail { padding: 20px 0; border-bottom: 1px solid #ebe8df; }
+      .detail:last-child { border-bottom: 0; }
+      .label { margin: 0 0 8px; color: #77756c; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+      .value { margin: 0; font-size: 15px; line-height: 1.45; }
+      .scoped-fields-list { display: grid; gap: 10px; margin-top: 8px; }
+      .field-card { padding: 14px 16px; border: 1px solid #dfdcd2; border-radius: 12px; background: #faf9f5; }
+      .field-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+      .field-label { font-weight: 700; font-size: 14px; color: #25251f; }
+      .field-id { font-family: ui-monospace, monospace; font-size: 12px; color: #65645c; background: #ebe8df; padding: 2px 6px; border-radius: 4px; }
+      .field-val { font-size: 14px; color: #35342f; word-break: break-word; }
+      .decision-section { padding: 30px; }
+      .decision-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #ebe8df; padding-bottom: 12px; flex-wrap: wrap; }
+      .tab-button { padding: 10px 16px; border: 1px solid #d4d0c5; border-radius: 10px; background: #f5f3ed; font-size: 14px; font-weight: 650; color: #45443e; transition: all 0.15s ease; }
+      .tab-button.active { background: #25251f; color: white; border-color: #25251f; }
+      .tab-button.active[data-tab="accept"] { background: #1b6338; border-color: #1b6338; }
+      .tab-button.active[data-tab="required_change"] { background: #b45309; border-color: #b45309; }
+      .tab-button.active[data-tab="decline"] { background: #991b1b; border-color: #991b1b; }
+      .tab-button.active[data-tab="cannot_determine"] { background: #4b5563; border-color: #4b5563; }
+      .form-group { display: grid; gap: 8px; margin-bottom: 18px; }
+      .form-group label { font-size: 13px; font-weight: 700; color: #45443e; }
+      textarea, input[type="text"] { width: 100%; padding: 12px; border: 1px solid #d6d2c7; border-radius: 10px; background: white; color: #25251f; }
+      textarea { min-height: 80px; resize: vertical; }
+      .submit-btn { width: 100%; padding: 14px; border: 0; border-radius: 12px; font-weight: 700; font-size: 15px; color: white; background: #25251f; cursor: pointer; transition: opacity 0.15s ease; }
+      .submit-btn:hover { opacity: 0.9; }
+      .submit-btn.accept-btn { background: #1b6338; }
+      .submit-btn.required_change-btn { background: #b45309; }
+      .submit-btn.decline-btn { background: #991b1b; }
+      .submit-btn.cannot_determine-btn { background: #4b5563; }
+      .outcome-card { padding: 30px; }
+      .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+      .status-badge.accept { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+      .status-badge.required_change { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+      .status-badge.decline { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+      .status-badge.cannot_determine { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+      pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 12px; overflow-x: auto; font-size: 13px; font-family: ui-monospace, monospace; }
+      footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand"><span class="mark" aria-hidden="true">H</span> Handshake Staff Console</div>
+        <div class="console-tag">Recipient Review</div>
+      </header>
+      <main>
+        <!-- Incoming Request Card -->
+        <section class="card">
+          <div class="hero">
+            <p class="eyebrow">Incoming Scoped Handshake Request</p>
+            <h1 id="req-title">Scoped Request Received</h1>
+            <p class="intro">Review claimant request details and verified scope data below.</p>
+          </div>
+          <div class="isolation-banner" id="isolation-notice">
+            <strong>🔒 Scope Field Isolation Enforced:</strong> Displaying strictly requested data fields. Unrequested claimant profile data (SSN, home address, credit card, etc.) is strictly filtered out and inaccessible to staff.
+          </div>
+          <div class="details">
+            <div class="detail">
+              <p class="label">Handshake ID</p>
+              <p class="value"><code id="handshake-id">-</code></p>
+            </div>
+            <div class="detail">
+              <p class="label">Claimant ID</p>
+              <p class="value" id="claimant-id">-</p>
+            </div>
+            <div class="detail">
+              <p class="label">Purpose</p>
+              <p class="value" id="purpose">-</p>
+            </div>
+            <div class="detail">
+              <p class="label">Consent Choice</p>
+              <p class="value" id="consent-choice">-</p>
+            </div>
+            <div class="detail">
+              <p class="label">Accessible Scoped Fields (<span id="field-count">0</span>)</p>
+              <div class="scoped-fields-list" id="scoped-fields-container"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Decision Response Panel -->
+        <section class="card">
+          <div class="decision-section">
+            <h2 style="margin: 0 0 16px; font-size: 22px; letter-spacing: -0.02em;">Select Recipient Decision Response</h2>
+            <div class="decision-tabs" role="tablist">
+              <button class="tab-button active" data-tab="accept" type="button">1. Accept</button>
+              <button class="tab-button" data-tab="required_change" type="button">2. Required Change</button>
+              <button class="tab-button" data-tab="decline" type="button">3. Decline</button>
+              <button class="tab-button" data-tab="cannot_determine" type="button">4. Cannot Determine</button>
+            </div>
+
+            <form id="decision-form">
+              <!-- Accept Panel -->
+              <div id="tab-panel-accept" class="tab-panel">
+                <div class="form-group">
+                  <label for="accept-rationale">Acceptance Rationale</label>
+                  <textarea id="accept-rationale" placeholder="Enter rationale for accepting request...">All requested allergy constraints are satisfied and confirmed by recipient kitchen staff.</textarea>
+                </div>
+                <button type="submit" class="submit-btn accept-btn">Emit Accept Decision Event</button>
+              </div>
+
+              <!-- Required Change Panel -->
+              <div id="tab-panel-required_change" class="tab-panel" hidden>
+                <div class="form-group">
+                  <label for="req-change-rationale">Rationale</label>
+                  <input type="text" id="req-change-rationale" value="Kitchen policy requires constraint specification." placeholder="Enter rationale..." />
+                </div>
+                <div class="form-group">
+                  <label for="req-change-list">Required Changes (one per line)</label>
+                  <textarea id="req-change-list" placeholder="Enter required changes...">Specify cross-contamination tolerance threshold for peanut allergy.
+Provide updated allergy clearance date from healthcare provider.</textarea>
+                </div>
+                <button type="submit" class="submit-btn required_change-btn">Emit Required Change Decision Event</button>
+              </div>
+
+              <!-- Decline Panel -->
+              <div id="tab-panel-decline" class="tab-panel" hidden>
+                <div class="form-group">
+                  <label for="decline-rationale">Decline Rationale (Required)</label>
+                  <textarea id="decline-rationale" placeholder="Enter reason for declining...">Recipient kitchen cannot guarantee nut-free environment for requested order.</textarea>
+                </div>
+                <button type="submit" class="submit-btn decline-btn">Emit Decline Decision Event</button>
+              </div>
+
+              <!-- Cannot Determine Panel -->
+              <div id="tab-panel-cannot_determine" class="tab-panel" hidden>
+                <div class="form-group">
+                  <label for="cannot-determine-reason">Missing Data / Reason (Required)</label>
+                  <textarea id="cannot-determine-reason" placeholder="Enter reason why decision cannot be determined...">Missing ingredient supplier allergen certification for dinner menu items.</textarea>
+                </div>
+                <button type="submit" class="submit-btn cannot_determine-btn">Emit Cannot Determine Decision Event</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- Decision Outcome Display -->
+        <section class="card" id="outcome-card" hidden>
+          <div class="outcome-card">
+            <div id="status-badge" class="status-badge">ACC-ACCEPTED</div>
+            <h3 id="outcome-heading" style="margin: 0 0 10px; font-size: 20px;">Decision Recorded</h3>
+            <p id="outcome-rationale" style="color: #45443e; margin: 0 0 16px; line-height: 1.5;"></p>
+            <div id="required-changes-box" hidden style="margin-bottom: 16px; padding: 12px; border-radius: 10px; background: #fffbeb; border: 1px solid #fef3c7;">
+              <strong style="color: #92400e; font-size: 13px;">Required Changes Requested:</strong>
+              <ul id="required-changes-list" style="margin: 8px 0 0 20px; color: #78350f; font-size: 14px;"></ul>
+            </div>
+            <h4 style="margin: 16px 0 8px; font-size: 14px; text-transform: uppercase; color: #77756c;">Broadcasted N1 Decision Event Payload</h4>
+            <pre id="event-json"></pre>
+          </div>
+        </section>
+      </main>
+      <footer>Handshake Staff Console — Recipient Review Interface. Only scoped request fields are displayed.</footer>
+    </div>
+    <script type="module" src="/recipient.js"></script>
+  </body>
+</html>
