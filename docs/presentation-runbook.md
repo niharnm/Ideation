@@ -83,13 +83,13 @@ If port 4173 is occupied, stop only the known old demo process or use another ex
 
 Verified state on 2026-08-12:
 
-- Repository tests: 146 passed, 0 failed.
+- Repository tests: 148 passed, 0 failed.
 - Build: passed.
 - Type check for the deployable API surface: passed.
 - Public landing, NimGTP, Handshake, and Fieldline pages: HTTP 200 with the expected page titles.
 - Public chat status: available. Live Groq request: HTTP 200 with one peanut constraint.
 - Public `POST /api/demo`: HTTP 201.
-- Public browser rehearsal: passed from peanut memory through approval, exact kitchen note, API response, revocation, scope removal, and locked kitchen actions.
+- A complete public browser rehearsal passed before the latest Fieldline interface merge. The merged production build now serves the Fieldline browser module correctly, but the final automated headless run stalled in the browser runner during recipient navigation. Run the manual rehearsal in the hard preflight gates once before recording.
 
 ## Final demonstration state
 
@@ -281,4 +281,4 @@ Do not say, `We could not finish because Egoist gave us no API.` The product is 
 
 ## Final readiness decision
 
-The product links and script are ready for the judged recording. The complete public flow passed with live Groq chat, the local passport adapter, the Handshake API, the Fieldline response, and revocation. Start the final take with cleared site data, reload all four tabs, and run one rehearsal immediately before recording. Rotate the Groq key after the final take.
+The product links and script are ready for the judged recording. Live routes, Groq chat, the Handshake API, the production browser modules, tests, type checking, and the build pass. Start the final take with cleared site data, reload all four tabs, and run one manual rehearsal immediately before recording. Rotate the Groq key after the final take.
