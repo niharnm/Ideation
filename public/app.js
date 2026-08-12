@@ -4,6 +4,10 @@ import {
   expireScopedClaimIfNeeded,
   revokeScopedClaim,
 } from "/src/passport-flow.ts";
+import {
+  previewClaimantReceipt,
+  previewDemoLinkedEvents,
+} from "/src/claimant-receipt.ts";
 
 const recipient = { id: "recipient-1", displayName: "Recipient" };
 const purpose = "Prepare one restaurant order from the constraints you choose.";
@@ -24,6 +28,7 @@ const denyButton = document.querySelector("#deny");
 const errorView = document.querySelector("#error");
 
 let validFrom = new Date();
+let expiryTimer;
 
 for (const field of fieldOptions) {
   const label = document.createElement("label");
@@ -156,19 +161,186 @@ function showExpiredOutcome() {
   );
 }
 
+function formatTimestamp(value) {
+  return new Date(value).toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function addReceiptItem(container, label, value) {
+  const item = document.createElement("div");
+  const itemLabel = document.createElement("span");
+  itemLabel.className = "label";
+  itemLabel.textContent = label;
+  const itemValue = document.createElement("p");
+  itemValue.textContent = value;
+  item.append(itemLabel, itemValue);
+  container.append(item);
+}
+
+function showReceipt(receipt) {
+  requestView.hidden = true;
+  outcomeView.hidden = false;
+  outcomeView.replaceChildren();
+
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  eyebrow.textContent = "Unverified receipt preview";
+  const heading = document.createElement("h2");
+  heading.textContent = `Recipient outcome: ${receipt.decision.outcome.replaceAll("_", " ")}`;
+  const authenticity = document.createElement("p");
+  authenticity.className = "unverified-notice";
+  authenticity.textContent = receipt.authenticity.message;
+  const rationale = document.createElement("p");
+  rationale.textContent = receipt.decision.rationale;
+  outcomeView.append(eyebrow, heading, authenticity, rationale);
+
+  if (receipt.decision.requiredChanges) {
+    const changes = document.createElement("div");
+    changes.className = "receipt-section";
+    const changesLabel = document.createElement("p");
+    changesLabel.className = "label";
+    changesLabel.textContent = "Required changes";
+    const changesList = document.createElement("ul");
+    for (const change of receipt.decision.requiredChanges) {
+      const item = document.createElement("li");
+      item.textContent = change;
+      changesList.append(item);
+    }
+    changes.append(changesLabel, changesList);
+    outcomeView.append(changes);
+  }
+
+  const scope = document.createElement("div");
+  scope.className = "receipt-section";
+  const scopeLabel = document.createElement("p");
+  scopeLabel.className = "label";
+  scopeLabel.textContent = "Exactly shared fields";
+  const fields = document.createElement("div");
+  fields.className = "receipt-fields";
+  for (const field of receipt.fields) {
+    const value = document.createElement("code");
+    value.textContent = `${field.label} · ${field.id}`;
+    fields.append(value);
+  }
+  scope.append(scopeLabel, fields);
+
+  const facts = document.createElement("div");
+  facts.className = "summary-grid receipt-grid";
+  addReceiptItem(facts, "Recipient", receipt.recipient.displayName);
+  addReceiptItem(
+    facts,
+    "Reported acknowledgement role",
+    `${receipt.acknowledgement.roleName} · ${receipt.acknowledgement.outcome}`,
+  );
+  if (receipt.acknowledgement.note) {
+    addReceiptItem(facts, "Reported acknowledgement note", receipt.acknowledgement.note);
+  }
+  addReceiptItem(facts, "Current access", receipt.access.status.replaceAll("_", " "));
+  addReceiptItem(facts, "Access ends", formatTimestamp(receipt.access.validUntil));
+
+  const times = document.createElement("div");
+  times.className = "summary-grid receipt-grid";
+  for (const [label, value] of [
+    ["Requested", receipt.timestamps.requestedAt],
+    ["Approved", receipt.timestamps.consentedAt],
+    ["Recipient decision", receipt.timestamps.decidedAt],
+    ["Reported acknowledgement time", receipt.timestamps.acknowledgedAt],
+    ["Preview prepared", receipt.timestamps.preparedAt],
+    ...(receipt.timestamps.terminalAt
+      ? [["Access ended", receipt.timestamps.terminalAt]]
+      : []),
+  ]) {
+    addReceiptItem(times, label, formatTimestamp(value));
+  }
+
+  const delivery = document.createElement("div");
+  delivery.className = "receipt-section";
+  const deliveryLabel = document.createElement("p");
+  deliveryLabel.className = "label";
+  deliveryLabel.textContent = "Intended receipt recipients";
+  const deliveryValue = document.createElement("p");
+  deliveryValue.textContent = receipt.delivery.intendedRecipients
+    .map((party) => `${party.displayName} (${party.role})`)
+    .join(" and ");
+  const deliveryStatus = document.createElement("p");
+  deliveryStatus.className = "delivery-pending";
+  deliveryStatus.textContent = "Delivery pending. No recipient delivery is confirmed.";
+  delivery.append(deliveryLabel, deliveryValue, deliveryStatus);
+  outcomeView.append(scope, facts, times, delivery);
+
+  const localClaim = expireScopedClaimIfNeeded(dependencies);
+  if (
+    receipt.access.status === "active" &&
+    localClaim?.status === "active" &&
+    localClaim.handshakeId === receipt.handshakeId
+  ) {
+    const revoke = document.createElement("button");
+    revoke.className = "button revoke";
+    revoke.type = "button";
+    revoke.textContent = "Revoke access now";
+    revoke.addEventListener("click", () => {
+      revokeScopedClaim(localClaim.claimantId, dependencies);
+      const updated = previewClaimantReceipt(receipt.handshakeId, dependencies);
+      if (updated.success) {
+        showReceipt(updated.value.receipt);
+      }
+    });
+    outcomeView.append(revoke);
+  }
+}
+
+function addReceiptPending() {
+  const pending = document.createElement("div");
+  pending.className = "receipt-pending";
+  const label = document.createElement("span");
+  label.className = "label";
+  label.textContent = "Receipt pending";
+  const message = document.createElement("p");
+  message.textContent =
+    "Authenticated recipient decision and acknowledgement transport is required before receipt delivery.";
+  pending.append(label, message);
+  outcomeView.append(pending);
+}
+
+function renderClaim(claim) {
+  const receipt = previewClaimantReceipt(claim.handshakeId, dependencies);
+  if (receipt.success) {
+    showReceipt(receipt.value.receipt);
+  } else if (claim.status === "active") {
+    showOutcome(
+      "approved",
+      "Approved for one order",
+      "Only the selected fields are available to the recipient until the stated time.",
+      claim,
+    );
+    addReceiptPending();
+  } else if (claim.status === "revoked") {
+    showOutcome(
+      "revoked",
+      "Access revoked",
+      "The recipient is blocked from future use of this claim.",
+    );
+  } else {
+    showExpiredOutcome();
+  }
+}
+
 function scheduleExpiry(claim) {
+  window.clearTimeout(expiryTimer);
   const delay = Date.parse(claim.dataScope.validUntil) - Date.now();
   if (delay <= 0) {
     const expired = expireScopedClaimIfNeeded(dependencies);
     if (expired?.status === "expired") {
-      showExpiredOutcome();
+      renderClaim(expired);
     }
     return;
   }
-  window.setTimeout(() => {
+  expiryTimer = window.setTimeout(() => {
     const expired = expireScopedClaimIfNeeded(dependencies);
     if (expired?.status === "expired") {
-      showExpiredOutcome();
+      renderClaim(expired);
     }
   }, delay);
 }
@@ -182,12 +354,7 @@ approveButton.addEventListener("click", () => {
     showError(result.issues);
     return;
   }
-  showOutcome(
-    "approved",
-    "Approved for one order",
-    "Only the selected fields are available to the recipient until the stated time.",
-    result.value.claim,
-  );
+  renderClaim(result.value.claim);
   scheduleExpiry(result.value.claim);
 });
 
@@ -207,22 +374,40 @@ denyButton.addEventListener("click", () => {
 
 const storedClaim = expireScopedClaimIfNeeded(dependencies);
 if (storedClaim?.status === "active") {
-  showOutcome(
-    "approved",
-    "Approved for one order",
-    "Only the selected fields are available to the recipient until the stated time.",
-    storedClaim,
-  );
+  renderClaim(storedClaim);
   scheduleExpiry(storedClaim);
 } else if (storedClaim?.status === "revoked") {
-  showOutcome(
-    "revoked",
-    "Access revoked",
-    "The recipient is blocked from future use of this claim.",
-  );
+  renderClaim(storedClaim);
 } else if (storedClaim?.status === "expired") {
-  showExpiredOutcome();
+  renderClaim(storedClaim);
 } else {
   validFrom = new Date();
   updateEndTime();
 }
+
+window.addEventListener("handshake:demo-linked-events", (event) => {
+  const claim = expireScopedClaimIfNeeded(dependencies);
+  const incomingEvents = event instanceof CustomEvent ? event.detail : null;
+  if (!Array.isArray(incomingEvents) || incomingEvents.length === 0) {
+    return;
+  }
+  const handshakeId = incomingEvents[0]?.handshakeId ?? claim?.handshakeId;
+  if (typeof handshakeId !== "string" || handshakeId.length === 0) {
+    return;
+  }
+  const result = previewDemoLinkedEvents(
+    handshakeId,
+    incomingEvents,
+    dependencies,
+  );
+  if (result.success) {
+    showReceipt(result.value.receipt);
+    return;
+  }
+  const message = document.createElement("p");
+  message.className = "error receipt-error";
+  message.textContent = `Preview not available. ${result.issues
+    .map((issue) => issue.message)
+    .join(" ")}`;
+  outcomeView.append(message);
+});

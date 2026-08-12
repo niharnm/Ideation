@@ -1,5 +1,6 @@
 export * from "./acknowledgement-event.ts";
 export * from "./claim-composer.ts";
+export * from "./claimant-receipt.ts";
 export * from "./decision-event.ts";
 export * from "./decision-policy.ts";
 export * from "./handshake-event.ts";

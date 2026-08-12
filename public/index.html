@@ -51,9 +51,18 @@
       .outcome p { margin: 10px 0 0; color: #65645c; line-height: 1.55; }
       .summary-grid { display: grid; gap: 14px; margin: 24px 0; padding: 18px; border-radius: 14px; background: #f5f3ed; }
       .summary-grid p { margin: 2px 0 0; color: #25251f; }
+      .receipt-section { margin: 24px 0; }
+      .receipt-fields { display: grid; gap: 8px; }
+      .receipt-fields code { padding: 10px 12px; border: 1px solid #dedbd1; border-radius: 10px; background: white; color: #35342f; font-size: 13px; overflow-wrap: anywhere; }
+      .receipt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .receipt-pending { margin: 20px 0 0; padding: 16px; border: 1px dashed #c8c2af; border-radius: 12px; background: #faf8f1; }
+      .receipt-pending p, .receipt-section p { margin: 4px 0 0; }
+      .receipt-error { margin: 20px 0 0; }
+      .unverified-notice { padding: 12px 14px; border: 1px solid #d6b661; border-radius: 10px; background: #fff8df; color: #62501f !important; font-weight: 650; }
+      .delivery-pending { color: #8d5b23 !important; font-weight: 650; }
       footer { padding: 20px 0 30px; color: #77756c; font-size: 12px; line-height: 1.5; text-align: center; }
       [hidden] { display: none !important; }
-      @media (max-width: 520px) { .hero, .details, .outcome { padding-left: 21px; padding-right: 21px; } .actions { grid-template-columns: 1fr; padding-left: 21px; padding-right: 21px; } .approve { order: -1; } .time-row { align-items: flex-start; flex-direction: column; } }
+      @media (max-width: 520px) { .hero, .details, .outcome { padding-left: 21px; padding-right: 21px; } .actions, .receipt-grid { grid-template-columns: 1fr; } .actions { padding-left: 21px; padding-right: 21px; } .approve { order: -1; } .time-row { align-items: flex-start; flex-direction: column; } }
     </style>
   </head>
   <body>
