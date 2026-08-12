@@ -5,6 +5,7 @@ import test from "node:test";
 const html = readFileSync(new URL("../public/recipient.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../public/recipient.js", import.meta.url), "utf8");
 const customerHtml = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+const buildScript = readFileSync(new URL("../build.mjs", import.meta.url), "utf8");
 
 test("customer permission screen links to Fieldline Restaurant Ops", () => {
   assert.match(customerHtml, /href="\/recipient\.html">Fieldline restaurant ops<\/a>/);
@@ -17,6 +18,7 @@ test("Fieldline restaurant view starts with a locked scope and no rendered aller
   assert.match(app, /fetch\("\/api\/demo"/);
   assert.match(app, /storage\.getItem\(API_HANDSHAKE_STORAGE_KEY\)/);
   assert.match(app, /phase: "locked"/);
+  assert.doesNotMatch(buildScript, /sourceRelativePath === "src\/recipient-console\.ts"/);
 });
 
 test("approved restaurant scope is minimized to the customer-approved field", () => {
